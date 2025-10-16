@@ -64,7 +64,8 @@ GLOBAL_LIST_INIT(heretic_path_datums, init_heretic_path_datums())
 	var/guaranteed_side_tier2
 	/// Knowledge guaranteed to show up in the third draft
 	var/guaranteed_side_tier3
-
+	/// What's the highest tier of shop knowledge we can buy from?
+	var/max_shop_tier = 4
 
 /datum/heretic_knowledge_tree_column/proc/get_ui_data(datum/antagonist/heretic/our_heretic, category)
 	var/list/power_info = our_heretic.heretic_shops[category]
@@ -225,7 +226,7 @@ GLOBAL_LIST_INIT(heretic_path_datums, init_heretic_path_datums())
  * Also generates shop knowledges as their validation is shared.
  * Modifies shop_list and final_draft that are provided in the arguments.
  */
-/proc/determine_drafted_knowledge(route, list/tree = list(), list/shop = list(), list/final_draft = list())
+/proc/determine_drafted_knowledge(route, list/tree = list(), list/shop = list(), list/final_draft = list(), max_shop_tier = 5)
 	if(!route)
 		stack_trace("somehow called determine_drafted_knowledge with a falsey current_path")
 		return
@@ -357,7 +358,7 @@ GLOBAL_LIST_INIT(heretic_path_datums, init_heretic_path_datums())
 			final_draft[blacklist_path][HKT_BAN] += (blacklist_ids - id)
 
 	// all possible drafts are added to the shop, this time with costs
-	for(var/drafting_tier in 1 to length(shop_knowledge))
+	for(var/drafting_tier in 1 to min(max_shop_tier, length(shop_knowledge)))
 		var/unlocked_by = shop_unlock_order[drafting_tier]
 		var/list/eligible_tier = shop_knowledge[drafting_tier]
 		for(var/knowledge_type in eligible_tier)

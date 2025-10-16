@@ -290,6 +290,7 @@
 		our_heretic.heretic_shops[HERETIC_KNOWLEDGE_TREE],
 		our_heretic.heretic_shops[HERETIC_KNOWLEDGE_SHOP],
 		our_heretic.heretic_shops[HERETIC_KNOWLEDGE_DRAFT],
+		our_heretic.heretic_path.max_shop_tier
 	)
 	SEND_SIGNAL(src, COMSIG_HERETIC_SHOP_SETUP)
 

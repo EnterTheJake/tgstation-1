@@ -3,6 +3,7 @@
 	ui_bgr = "node_lock"
 	complexity = "Medium"
 	complexity_color = COLOR_YELLOW
+	max_shop_tier = 5 // lock gets all the fun toys
 	icon = list(
 		"icon" = 'icons/obj/weapons/khopesh.dmi',
 		"state" = "key_blade",
