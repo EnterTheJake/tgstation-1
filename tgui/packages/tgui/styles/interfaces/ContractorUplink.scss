@@ -107,7 +107,6 @@
     border-bottom: none;
   }
 
-  // Dividers between the top tabs...
   .Tabs--horizontal .Tab {
     border-right: 1px solid rgba(212, 132, 20, 0.3);
 
@@ -116,7 +115,6 @@
     }
   }
 
-  // ...and between the marketplace category tabs.
   .uplink-category-tabs .Tab {
     border-bottom: 1px solid rgba(212, 132, 20, 0.2);
 
@@ -252,6 +250,11 @@
       font-weight: bold;
       letter-spacing: 0.03em;
 
+      .Button__content {
+        display: flex;
+        align-items: center;
+      }
+
       &:hover {
         background-color: rgba(255, 102, 0, 0.15) !important;
       }
@@ -261,6 +264,19 @@
         background-color: rgba(42, 246, 188, 0.15) !important;
         color: #2af6bc !important;
       }
+    }
+
+    &__track-blink {
+      margin: auto 0;
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 6px;
+      border-radius: 50%;
+      vertical-align: middle;
+      background: #2af6bc;
+      box-shadow: 0 0 6px #2af6bc;
+      animation: contractor-track-blink 3s ease-in-out infinite;
     }
 
     &--tracked {
@@ -292,8 +308,6 @@
     }
   }
 
-  // Safe / Unsafe / Dangerous extraction buttons.
-  // Two lines (label + dropoff location); all three stretch to equal height.
   .BountyExtract {
     height: 100%;
     padding: 7px 4px !important;
@@ -462,5 +476,17 @@
   }
   50% {
     opacity: 1;
+  }
+}
+
+@keyframes contractor-track-blink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 6px #2af6bc;
+  }
+  50% {
+    opacity: 0.15;
+    box-shadow: 0 0 1px #2af6bc2c;
   }
 }

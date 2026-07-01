@@ -276,112 +276,119 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
     bounty_targets?.map((target, index) => {
       const isTracked = Number(target.contract_id) === tracked_contract_id;
       return (
-      <Box
-        key={index}
-        className={`BountyTarget ${isTracked ? 'BountyTarget--tracked' : ''}`}
-      >
-        <Box className="BountyTarget__mug">
-          <Image
-            width="128px"
-            height="128px"
-            src={`data:image/jpeg;base64,${target.mugshot_icon}`}
-          />
-        </Box>
-        <Stack vertical>
-          <Stack.Item>
-            <Box className="BountyTarget__name">
-              {target.name}
-              {!!target.is_head && (
-                <Box as="span" className="BountyTarget__headtag">
-                  Head of Staff
+        <Box
+          key={index}
+          className={`BountyTarget ${isTracked ? 'BountyTarget--tracked' : ''}`}
+        >
+          <Box className="BountyTarget__mug">
+            <Image
+              width="128px"
+              height="128px"
+              src={`data:image/jpeg;base64,${target.mugshot_icon}`}
+            />
+          </Box>
+          <Stack vertical>
+            <Stack.Item>
+              <Box className="BountyTarget__name">
+                {target.name}
+                {!!target.is_head && (
+                  <Box as="span" className="BountyTarget__headtag">
+                    Head of Staff
+                  </Box>
+                )}
+              </Box>
+              <Box className="BountyTarget__rank">{target.target_rank}</Box>
+              <Box className="BountyTarget__loc">
+                <Icon name="location-dot" mr={0.5} />
+                {target.location}
+              </Box>
+              <Box className="BountyTarget__track">
+                <Box className="BountyTarget__track-icon">
+                  <DmIcon
+                    icon="icons/ui_icons/minimap/map_blips.dmi"
+                    icon_state="locator"
+                    width="32px"
+                    height="32px"
+                  />
                 </Box>
-              )}
-            </Box>
-            <Box className="BountyTarget__rank">{target.target_rank}</Box>
-            <Box className="BountyTarget__loc">
-              <Icon name="location-dot" mr={0.5} />
-              {target.location}
-            </Box>
-            <Box className="BountyTarget__track">
-              <Box className="BountyTarget__track-icon">
-                <DmIcon
-                  icon="icons/ui_icons/minimap/map_blips.dmi"
-                  icon_state="locator"
-                  width="32px"
-                  height="32px"
-                />
-              </Box>
-              <Button
-                icon="location-crosshairs"
-                selected={isTracked}
-                className="BountyTarget__track-btn"
-                onClick={() =>
-                  act('track', { contract_id: target.contract_id })
-                }
-              >
-                {isTracked ? 'Tracking' : 'Track on Minimap'}
-              </Button>
-            </Box>
-          </Stack.Item>
-
-          {!!target.tc_reward && (
-            <Stack.Item>
-              <Box className="BountyTarget__reward">
-                Reward: <b>{target.tc_reward}</b>
-                <Image
-                  height="32px"
-                  src={resolveAsset(
-                    `coin${BountyRange(target.tc_reward, low_bounty, high_bounty)}.png`,
+                <Button
+                  icon={isTracked ? undefined : 'location-crosshairs'}
+                  selected={isTracked}
+                  className="BountyTarget__track-btn"
+                  onClick={() =>
+                    act('track', { contract_id: target.contract_id })
+                  }
+                >
+                  {isTracked ? (
+                    <>
+                      <Box as="span" className="BountyTarget__track-blink" />
+                      Tracking
+                    </>
+                  ) : (
+                    'Track on Minimap'
                   )}
-                />
+                </Button>
               </Box>
             </Stack.Item>
-          )}
 
-          {!!target.wanted_message && (
+            {!!target.tc_reward && (
+              <Stack.Item>
+                <Box className="BountyTarget__reward">
+                  Reward: <b>{target.tc_reward}</b>
+                  <Image
+                    height="32px"
+                    src={resolveAsset(
+                      `coin${BountyRange(target.tc_reward, low_bounty, high_bounty)}.png`,
+                    )}
+                  />
+                </Box>
+              </Stack.Item>
+            )}
+
+            {!!target.wanted_message && (
+              <Stack.Item>
+                <Box className="BountyTarget__wanted">
+                  {target.wanted_message}
+                </Box>
+              </Stack.Item>
+            )}
+
             <Stack.Item>
-              <Box className="BountyTarget__wanted">
-                {target.wanted_message}
+              <Box className="BountyTarget__extract-title" mb={0.5}>
+                Choose Extraction Type
               </Box>
+              <Stack>
+                {extractionInfo.map((info) => (
+                  <Stack.Item grow key={info.type}>
+                    <Button
+                      fluid
+                      textAlign="center"
+                      className={`BountyExtract BountyExtract--${info.type}`}
+                      onClick={() => {
+                        act('call_extraction', {
+                          extraction_type: info.type,
+                          contract_id: target.contract_id,
+                          target: target.name,
+                        });
+                      }}
+                      tooltip={info.description}
+                    >
+                      <Box>
+                        {info.type.charAt(0).toUpperCase() + info.type.slice(1)}
+                      </Box>
+                      <Box className="BountyExtract__sub">
+                        {dropoffLocationText(
+                          target,
+                          info.type as EXTRACTION_TYPE,
+                        )}
+                      </Box>
+                    </Button>
+                  </Stack.Item>
+                ))}
+              </Stack>
             </Stack.Item>
-          )}
-
-          <Stack.Item>
-            <Box className="BountyTarget__extract-title" mb={0.5}>
-              Choose Extraction Type
-            </Box>
-            <Stack>
-              {extractionInfo.map((info) => (
-                <Stack.Item grow key={info.type}>
-                  <Button
-                    fluid
-                    textAlign="center"
-                    className={`BountyExtract BountyExtract--${info.type}`}
-                    onClick={() => {
-                      act('call_extraction', {
-                        extraction_type: info.type,
-                        contract_id: target.contract_id,
-                        target: target.name,
-                      });
-                    }}
-                    tooltip={info.description}
-                  >
-                    <Box>
-                      {info.type.charAt(0).toUpperCase() + info.type.slice(1)}
-                    </Box>
-                    <Box className="BountyExtract__sub">
-                      {dropoffLocationText(
-                        target,
-                        info.type as EXTRACTION_TYPE,
-                      )}
-                    </Box>
-                  </Button>
-                </Stack.Item>
-              ))}
-            </Stack>
-          </Stack.Item>
-        </Stack>
-      </Box>
+          </Stack>
+        </Box>
       );
     }) ?? [];
 

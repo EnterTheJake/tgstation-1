@@ -851,7 +851,7 @@
 
 /obj/item/storage/box/syndicate/contract_kit
 	name = "Contract Kit"
-	desc = "Supplied to Syndicate contractors."
+	desc = "Supplied to Cybersun Syndicate contractors."
 	icon_state = "contractor_box"
 	illustration = null
 

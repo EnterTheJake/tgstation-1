@@ -35,6 +35,10 @@
 	update_processing()
 	update_appearance()
 
+/obj/item/storage/contractor_gun_case/update_overlays()
+	. = ..()
+	. += emissive_appearance(icon, "[icon_state]_emissive", src, alpha = alpha)
+
 /obj/item/storage/contractor_gun_case/Destroy()
 	STOP_PROCESSING(SSobj, src)
 	if(atom_storage)
