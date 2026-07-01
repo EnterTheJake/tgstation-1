@@ -65,7 +65,6 @@
 	pixel_y = p_y
 	if(color_override)
 		color = color_override
-	// This object acts as a manager; visible segments are spawned below.
 	alpha = 0
 
 	QDEL_LIST(beam_cap_effects)
