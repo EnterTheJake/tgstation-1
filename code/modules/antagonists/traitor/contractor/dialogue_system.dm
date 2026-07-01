@@ -282,6 +282,9 @@
 
 /datum/component/dialogue_system/proc/on_pickup(obj/item/source, mob/taker)
 	SIGNAL_HANDLER
+	var/atom/atom_parent = parent
+	if(!isturf(atom_parent.loc))
+		return
 	if(drop_line_timerid)
 		deltimer(drop_line_timerid)
 		drop_line_timerid = null
