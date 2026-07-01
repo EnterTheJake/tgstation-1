@@ -11,3 +11,7 @@
 	var/datum/antagonist/traitor/contractor_support/contractor_teammate
 	/// List of currently active bombs that exist
 	var/list/bomb_implants = list()
+	/// The id of the contract currently tracked on the minimap - only one at a time, null if none.
+	var/tracked_contract_id
+	/// Weakref to the mob whose blip is on the minimap, used to clear it when switching or untracking.
+	var/datum/weakref/tracked_target_ref

@@ -44,7 +44,7 @@
 			),
 		),
 		)
-	inbuilt_modules = list(/obj/item/mod/module/infiltrator/contractor, /obj/item/mod/module/contractor_uplink)
+	inbuilt_modules = list(/obj/item/mod/module/infiltrator/contractor, /obj/item/mod/module/contractor_uplink, /obj/item/mod/module/contractor_minimap)
 
 /datum/armor/mod_theme_contractor
 	melee = 30

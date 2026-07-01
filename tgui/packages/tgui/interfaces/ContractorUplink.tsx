@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   Dimmer,
+  DmIcon,
   Icon,
   Image,
   Stack,
@@ -16,16 +17,10 @@ import {
   type ItemExtraData,
   Uplink,
   type UplinkData,
+  type UplinkItem,
   type UplinkState,
 } from './Uplink';
 import { GenericUplink } from './Uplink/GenericUplink';
-import {
-  ItemExtraData,
-  Uplink,
-  UplinkData,
-  UplinkItem,
-  UplinkState,
-} from './Uplink';
 import '../styles/interfaces/ContractorUplink.scss';
 
 enum EXTRACTION_TYPE {
@@ -42,6 +37,8 @@ type ContractorUplinkData = UplinkData & {
   low_bounty?: number;
   allCategories?: string[];
   refresh_time?: number;
+  /** contract_id of the target currently tracked on the minimap, if any. */
+  tracked_contract_id?: number;
 };
 
 type TabViewProps = ContractorUplinkData & {
@@ -146,6 +143,7 @@ function TabView(props: TabViewProps) {
     high_bounty,
     low_bounty,
     refresh_time,
+    tracked_contract_id,
   } = props;
 
   const tabs: Tab[] = [
@@ -162,6 +160,7 @@ function TabView(props: TabViewProps) {
           high_bounty={high_bounty}
           low_bounty={low_bounty}
           refresh_time={refresh_time}
+          tracked_contract_id={tracked_contract_id}
         />
       ),
       footer: 'Complete contracts alive for the full payout bonus',
@@ -242,6 +241,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
     low_bounty = 0,
     high_bounty = 30,
     refresh_time = 0,
+    tracked_contract_id,
   } = props;
   const { act } = useBackend();
 
@@ -263,21 +263,23 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
     },
   ];
 
-  const dropoffLocationMessage = (
+  const dropoffLocationText = (
     target: BountyTargets,
     type: EXTRACTION_TYPE,
   ) => {
     const location = target[`dropoff_location_${type}`];
-    if (!location) return 'Location: Unknown';
-    const locationString = Array.isArray(location)
-      ? location.join(', ')
-      : location;
-    return `Location: ${locationString}`;
+    if (!location) return 'Unknown';
+    return Array.isArray(location) ? location.join(' · ') : location;
   };
 
   const targetsElements =
-    bounty_targets?.map((target, index) => (
-      <Box key={index} className="BountyTarget">
+    bounty_targets?.map((target, index) => {
+      const isTracked = Number(target.contract_id) === tracked_contract_id;
+      return (
+      <Box
+        key={index}
+        className={`BountyTarget ${isTracked ? 'BountyTarget--tracked' : ''}`}
+      >
         <Box className="BountyTarget__mug">
           <Image
             width="128px"
@@ -299,6 +301,26 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
             <Box className="BountyTarget__loc">
               <Icon name="location-dot" mr={0.5} />
               {target.location}
+            </Box>
+            <Box className="BountyTarget__track">
+              <Box className="BountyTarget__track-icon">
+                <DmIcon
+                  icon="icons/ui_icons/minimap/map_blips.dmi"
+                  icon_state="locator"
+                  width="32px"
+                  height="32px"
+                />
+              </Box>
+              <Button
+                icon="location-crosshairs"
+                selected={isTracked}
+                className="BountyTarget__track-btn"
+                onClick={() =>
+                  act('track', { contract_id: target.contract_id })
+                }
+              >
+                {isTracked ? 'Tracking' : 'Track on Minimap'}
+              </Button>
             </Box>
           </Stack.Item>
 
@@ -342,9 +364,17 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
                         target: target.name,
                       });
                     }}
-                    tooltip={`${info.description}\n\n ${dropoffLocationMessage(target, info.type as EXTRACTION_TYPE)}`}
+                    tooltip={info.description}
                   >
-                    {info.type.charAt(0).toUpperCase() + info.type.slice(1)}
+                    <Box>
+                      {info.type.charAt(0).toUpperCase() + info.type.slice(1)}
+                    </Box>
+                    <Box className="BountyExtract__sub">
+                      {dropoffLocationText(
+                        target,
+                        info.type as EXTRACTION_TYPE,
+                      )}
+                    </Box>
                   </Button>
                 </Stack.Item>
               ))}
@@ -352,7 +382,8 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
           </Stack.Item>
         </Stack>
       </Box>
-    )) ?? [];
+      );
+    }) ?? [];
 
   return (
     <Stack vertical fill>

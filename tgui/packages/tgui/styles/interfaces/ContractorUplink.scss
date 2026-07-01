@@ -12,15 +12,12 @@
   // --color-base-start: #341108;
   // --color-base-end: #341108;
 
-  /* Scrollbar */
   --color-scrollbar-base: var(--color-section);
   --color-scrollbar-thumb: hsl(from var(--color-base) h s calc(l + 9.25));
 
-  /* Candystripe */
   --candystripe-odd: hsla(0, 0%, 0%, 0.25);
   --candystripe-even: transparent;
 
-  /* Base colors */
   --color-red: hsl(0, 70%, 50%);
   --color-orange: hsl(25, 90%, 50%);
   --color-yellow: hsl(50, 97.5%, 50%);
@@ -33,7 +30,6 @@
   --color-pink: hsl(325, 70%, 50%);
   --color-brown: hsl(25, 47.5%, 45%);
 
-  /* Grayscale colors */
   --color-black: hsl(0, 0%, 0%);
   --color-white: hsl(0, 0%, 100%);
   --color-grey: hsl(0, 0%, 50%);
@@ -41,13 +37,11 @@
   --color-gray: var(--color-grey);
   --color-light-gray: var(--color-light-grey);
 
-  /* Action colors */
   --color-action: hsl(0, 0%, 50%);
   --color-hover: hsl(from var(--color-action) h s l / 0.25);
   --color-active: hsl(from var(--color-action) h s l / 0.3);
   --color-selected: hsl(from var(--color-action) h s l / 0.4);
 
-  /* Semantic colors */
   --primary-hue: 5;
   --primary-saturation: 37.5%;
   --primary-lightness: 45%;
@@ -57,20 +51,17 @@
   --color-bad: hsl(0, 72.5%, 50%);
   --color-label: hsl(from var(--color-primary) h 17.5 57.5);
 
-  /* Text colors */
   --color-text: #ffd000;
   --color-text-translucent: hsl(from var(--color-text) h s l / 0.5);
   --color-text-translucent-light: hsl(from var(--color-text) h s l / 0.75);
   --color-text-fixed-white: var(--color-white);
   --color-text-fixed-black: var(--color-black);
 
-  /* Link colors */
   --color-hyperlink: hsl(220, 100%, 70%);
   --color-hyperlink-visited: hsl(260, 100%, 70%);
   --color-hyperlink-new: hsl(0, 100%, 70%);
   --color-hyperlink-new-visited: hsl(15, 100%, 70%);
 
-  /* Border */
   --color-border: hsla(0, 0%, 100%, 0.1);
   --color-border-dark: hsla(0, 0%, 0%, 0.33);
   --border-primary-saturation: 100;
@@ -93,8 +84,6 @@
 
   --input-border-radius: var(--main-border-size);
   --input-border-color: var(--main-border-color);
-
-  // --tab-transition: 1s;
 
   .Input {
     border-radius: var(--main-border-radius);
@@ -167,7 +156,6 @@
     position: absolute;
     background-repeat: no-repeat;
     background-image: url('../assets/scuttle.svg');
-    // opacity: 0.5;
 
     background-position-x: 75%;
     background-position-y: 65%;
@@ -187,7 +175,6 @@
     }
   }
 
-  // ===== Bounty Targets =====
   .BountyTarget {
     @include shared.contractor-card;
     display: flex;
@@ -195,7 +182,6 @@
     padding: 12px;
     margin-bottom: 8px;
 
-    // Identity/vitals column fills the space beside the mugshot.
     > .Stack {
       flex: 1;
       min-width: 0;
@@ -216,7 +202,6 @@
       color: #f1aa03;
     }
 
-    // "Head of Staff" pill next to the name.
     &__headtag {
       margin-left: 8px;
       padding: 1px 7px;
@@ -235,7 +220,6 @@
       color: #db7317;
     }
 
-    // Target's current area; teal locator icon.
     &__loc {
       font-size: 0.85em;
       color: var(--color-text);
@@ -243,6 +227,45 @@
       .Icon {
         color: #2af6bc;
       }
+    }
+
+    &__track {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    &__track-icon {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &__track-btn {
+      border: var(--main-border-size) solid var(--main-border-color) !important;
+      border-radius: var(--main-border-radius) !important;
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      color: var(--color-text) !important;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+
+      &:hover {
+        background-color: rgba(255, 102, 0, 0.15) !important;
+      }
+
+      &.Button--selected {
+        border-color: #2af6bc !important;
+        background-color: rgba(42, 246, 188, 0.15) !important;
+        color: #2af6bc !important;
+      }
+    }
+
+    &--tracked {
+      border-color: #2af6bc;
+      box-shadow: inset 0 0 12px rgba(42, 246, 188, 0.18);
     }
 
     &__reward {
@@ -270,8 +293,20 @@
   }
 
   // Safe / Unsafe / Dangerous extraction buttons.
+  // Two lines (label + dropoff location); all three stretch to equal height.
   .BountyExtract {
+    height: 100%;
+    padding: 7px 4px !important;
+    line-height: 1.25;
+    white-space: normal;
     color: var(--color-white) !important;
+
+    &__sub {
+      font-size: 0.75em;
+      font-weight: normal;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
 
     &--safe {
       background-color: var(--color-good) !important;
@@ -289,22 +324,15 @@
     }
   }
 
-  // ===== Marketplace (GenericUplink wrapped in .ContractorMarket) =====
   .ContractorMarket {
     height: 100%;
-    // GenericUplink's item pane uses a `mr={-1}` scrollbar-gutter trick that overflows
-    // ~0.5rem to the right; clip it here so the tab view doesn't get a horizontal scrollbar.
     overflow: hidden;
 
-    // GenericUplink nests 3 Sections deep (list wrapper > per-item > titled name/cost/desc).
-    // Card the per-item wrapper. The base nested-section rule adds negative horizontal
-    // margins (for direct nesting); zero them here or the cards spill past the edge.
     .Section .Section {
       @include shared.contractor-card;
       margin: 0 0 8px;
     }
 
-    // ...and flatten the inner titled one, else it's a bordered box inside a bordered box.
     .Section .Section .Section {
       border: none;
       border-radius: 0;
@@ -316,8 +344,6 @@
       }
     }
 
-    // Framed item sprite, like the mockup's thumbnail. On the container, not the
-    // image - the sprite itself can be oddly sized.
     .UplinkItemIcon {
       border: 1px solid rgba(212, 132, 20, 0.4);
       border-radius: 3px;
@@ -327,8 +353,6 @@
       }
     }
 
-    // Lay the title row out as name + cost button, truncating long names so the
-    // button can't push the row past the edge, and so it clears the header divider.
     .Section__title {
       display: flex;
       align-items: center;
@@ -349,7 +373,6 @@
       flex: none;
     }
 
-    // Cost button on each item.
     .Section__buttons .Button {
       border: var(--main-border-size) solid var(--main-border-color);
       border-radius: var(--main-border-radius);
@@ -361,7 +384,6 @@
     }
   }
 
-  // Sticky footer under the Bounty Targets list.
   .ContractorFooter {
     display: flex;
     justify-content: space-between;
@@ -372,7 +394,6 @@
     color: #b9842a;
   }
 
-  // Empty state for when no contracts are assigned.
   .ContractorEmpty {
     display: flex;
     flex-direction: column;

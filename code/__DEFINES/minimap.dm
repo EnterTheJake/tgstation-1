@@ -59,4 +59,5 @@
 #define MINIMAP_SYNDIE_TURRET_BLIP "syndie_turret"
 #define MINIMAP_LADDER_BLIP "ladder"
 #define MINIMAP_STAIR_BLIP "stair"
+#define MINIMAP_CONTRACTOR_BLIP "contractor_track"
 #define MINIMAP_ANNOTATION_TAG_NUCLEAR "nuclear_ops"

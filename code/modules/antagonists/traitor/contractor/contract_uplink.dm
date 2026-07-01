@@ -42,6 +42,7 @@
 	var/datum/antagonist/traitor/traitor = user?.mind?.has_antag_datum(/datum/antagonist/traitor)
 	var/datum/contractor_state/contract_state = traitor?.uplink_handler?.contractor_state
 	data["redeemable_tc"] = contract_state?.contract_TC_to_redeem || 0
+	data["tracked_contract_id"] = contract_state?.tracked_contract_id
 
 	data["refresh_time"] = timeleft(handler.contract_refresh_timer)
 
@@ -152,6 +153,31 @@
 			var/datum/syndicate_contract/contract_holder = handler.assigned_contracts[contract_id]
 			contract_holder.status = CONTRACT_STATUS_ABORTED
 			// program_open_overlay = "contractor-contractlist"
+			return TRUE
+
+		if("track")
+			var/contract_id = text2num(params["contract_id"])
+			var/datum/syndicate_contract/contract_holder = handler.assigned_contracts[contract_id]
+			if(isnull(contract_holder))
+				return TRUE
+			// Clear the previously tracked blip - only one target is tracked at a time.
+			var/mob/previous = contract_state.tracked_target_ref?.resolve()
+			if(!isnull(previous))
+				remove_minimap_blip(MINIMAP_CONTRACTOR_BLIP, previous)
+			contract_state.tracked_target_ref = null
+			// Pressing the already-tracked target untracks it.
+			if(contract_state.tracked_contract_id == contract_id)
+				contract_state.tracked_contract_id = null
+				return TRUE
+			var/mob/target_mob = contract_holder.contract.target?.current
+			if(QDELETED(target_mob))
+				contract_state.tracked_contract_id = null
+				user.playsound_local(user, 'sound/machines/uplink/uplinkerror.ogg', 50)
+				error = "Target signal lost - cannot acquire a lock."
+				return TRUE
+			add_minimap_blip(target_mob, MINIMAP_CONTRACTOR_BLIP, "locator")
+			contract_state.tracked_target_ref = WEAKREF(target_mob)
+			contract_state.tracked_contract_id = contract_id
 			return TRUE
 
 		if("redeem_tc")
