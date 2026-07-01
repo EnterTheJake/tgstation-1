@@ -11,10 +11,17 @@
 /obj/item/restraints/handcuffs/contractor
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_handcuffs.dmi'
 	icon_state = "handcuffs"
-	worn_icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_handcuffs.dmi'
-	worn_icon_state = "handcuffs"
 	handcuff_icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_handcuffs.dmi'
 	handcuff_icon_state = "handcuffs_worn"
+	handcuff_emissive_icon_state = "handcuffs_worn_emissive"
+
+/obj/item/restraints/handcuffs/contractor/Initialize(mapload)
+	. = ..()
+	update_appearance()
+
+/obj/item/restraints/handcuffs/contractor/update_overlays()
+	. = ..()
+	. += emissive_appearance(icon, "[icon_state]_emissive", src, alpha = alpha)
 
 /obj/item/restraints/handcuffs/contractor/equipped(mob/living/user, slot)
 	. = ..()
