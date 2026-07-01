@@ -408,6 +408,8 @@
 		var/mutable_appearance/handcuff_overlay = mutable_appearance(handcuffed.handcuff_icon, handcuffed.handcuff_icon_state, -HANDCUFF_LAYER)
 		if(handcuffed.blocks_emissive != EMISSIVE_BLOCK_NONE)
 			handcuff_overlay.overlays += emissive_blocker(handcuff_overlay.icon, handcuff_overlay.icon_state, src, alpha = handcuff_overlay.alpha)
+		if(handcuffed.handcuff_emissive_icon_state)
+			handcuff_overlay.overlays += emissive_appearance(handcuffed.handcuff_icon, handcuffed.handcuff_emissive_icon_state, src, alpha = handcuff_overlay.alpha)
 
 		overlays_standing[HANDCUFF_LAYER] = handcuff_overlay
 		apply_overlay(HANDCUFF_LAYER)

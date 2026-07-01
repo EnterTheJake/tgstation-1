@@ -17,6 +17,8 @@
 	var/handcuff_icon = 'icons/mob/simple/mob.dmi'
 	/// the icon state of the cuffs
 	var/handcuff_icon_state = "handcuff1"
+	/// If set, an emissive overlay (from handcuff_icon) drawn over the worn cuffs so they glow in the dark.
+	var/handcuff_emissive_icon_state
 
 /obj/item/restraints/suicide_act(mob/living/carbon/user)
 	user.visible_message(span_suicide("[user] is strangling [user.p_them()]self with [src]! It looks like [user.p_theyre()] trying to commit suicide!"))
