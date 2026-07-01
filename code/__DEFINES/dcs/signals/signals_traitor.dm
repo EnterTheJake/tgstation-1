@@ -21,3 +21,15 @@
 
 /// Fired on a contractor mob when they successfully kidnap a target. Passes (mob/living/victim).
 #define COMSIG_CONTRACTOR_KIDNAPPED "contractor_kidnapped"
+
+/// Called when a wire on the contractor bomb is cut
+#define COMSIG_CONTRACTOR_BOMB_WIRE_CUT "contractor_bomb_wire_cut"
+
+/// Called when the contractor arms the bomb via the UI
+#define COMSIG_CONTRACTOR_UI_BOMB_ARMED "contractor_bomb_ui_armed"
+
+/// Called when the contractor disarms the bomb via the UI
+#define COMSIG_CONTRACTOR_UI_BOMB_DEFUSED "contractor_bomb_ui_defused"
+
+/// Called when a fork is stuck into the bomb
+#define COMSIG_FORK_STUCK_IN_BOMB "contractor_bomb_got_forked"

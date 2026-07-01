@@ -361,3 +361,13 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define EMPATH_SEE_COLD (1<<7)
 /// Can the empath see if living mob has the fundamentally evil trait
 #define EMPATH_SEE_EVIL (1<<8)
+
+// Flags for the contractor bomb's wires (wire_flags)
+/// Detonates the bomb if both are cut (or 1 if the bomb isnt active)
+#define CONTRACTOR_WIRE_EXPLOSIVE (1<<0)
+/// Defuses the bomb when cut
+#define CONTRACTOR_WIRE_DEFUSIVE (1<<1)
+/// Adds time to the countdown when cut
+#define CONTRACTOR_WIRE_TIME_ADDER (1<<2)
+/// Reduces time from the countdown when cut
+#define CONTRACTOR_WIRE_TIME_REDUCER (1<<3)

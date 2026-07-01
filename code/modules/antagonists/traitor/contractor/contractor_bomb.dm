@@ -36,6 +36,15 @@
 	/// Cached base64 mugshot of the owner, generated for the detonation suite UI
 	var/cached_mugshot
 
+	/// List of greetings, we don't need to use the dialogue system here because it'll be played only once
+	var/static/list/greetings_sounds = list(
+		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting1_take1_variant.ogg',
+		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting2_take4.ogg',
+		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting3_take3.ogg',
+		'sound/items/weapons/contractor_bomb/bomb_greeting/greeting4_take3_variant1.ogg',
+		'sound/items/weapons/contractor_bomb/bomb_greeting/greeting5_take1.ogg',
+	)
+
 /obj/item/contractor_bomb/Initialize(mapload)
 	. = ..()
 	plastic_overlay = mutable_appearance(icon, planted_icon_state, HIGH_OBJ_LAYER)
@@ -43,6 +52,7 @@
 		cable_icons += list(new_cable.name = image(icon = new_cable.cable_icon, icon_state = new_cable.cable_icon_state))
 		cable_list += list(new_cable.name = new new_cable(src))
 	add_cable_functions()
+	AddComponent(/datum/component/dialogue_system/contractor_bomb)
 
 /obj/item/contractor_bomb/update_icon_state()
 	. = ..()
@@ -58,14 +68,14 @@
 	// 2 Explosive cables needed to detonate
 	for(var/loop in 1 to 2)
 		modified_cable = cable_list[pick_n_take(cable_assignment)]
-		modified_cable.explosive_cable = TRUE
+		modified_cable.wire_flags |= CONTRACTOR_WIRE_EXPLOSIVE
 
 		//XANTODO DEBUG
 		to_chat(world, "[modified_cable.name] explosive cable")
 
 	// 1 Cable to defuse the bomb
 	modified_cable = cable_list[pick_n_take(cable_assignment)]
-	modified_cable.defusal_cable = TRUE
+	modified_cable.wire_flags |= CONTRACTOR_WIRE_DEFUSIVE
 
 	//XANTODO DEBUG
 	to_chat(world, "[modified_cable.name] defusal cable")
@@ -73,14 +83,14 @@
 	// 2 Cables that add time to the countdown
 	for(var/loop in 1 to 2)
 		modified_cable = cable_list[pick_n_take(cable_assignment)]
-		modified_cable.time_adder = TRUE
+		modified_cable.wire_flags |= CONTRACTOR_WIRE_TIME_ADDER
 
 		//XANTODO DEBUG
 		to_chat(world, "[modified_cable.name] time adder cable")
 
 	// 1 Cable that removes time from the countdown
 	modified_cable = cable_list[pick_n_take(cable_assignment)]
-	modified_cable.time_remover = TRUE
+	modified_cable.wire_flags |= CONTRACTOR_WIRE_TIME_REDUCER
 
 	//XANTODO DEBUG
 	to_chat(world, "[modified_cable.name] time remover cable")
@@ -138,6 +148,12 @@
 		return
 
 	controlling_state.bomb_implants += src
+	addtimer(CALLBACK(src, PROC_REF(delayed_greeting), victim), 1 SECONDS)
+
+/// Plays a greeting line for our wonderful victim after they are sent back to the station
+/obj/item/contractor_bomb/proc/delayed_greeting(mob/living/victim)
+	// This will only be played once after the bomb is given to the victim so we don't add it to the dialogue component
+	playsound(victim, pick(greetings_sounds), 50)
 
 /// Lets you install a nuclear core if the victim is clicked on with the core/container while the bomb is glued on
 /obj/item/contractor_bomb/proc/on_item_interact(atom/source, mob/living/user, obj/item/tool, list/modifiers)
@@ -215,6 +231,7 @@
 	ex_light = 20
 	ex_flame = 20
 	detonation_timer = world.time + 30 SECONDS
+	SEND_SIGNAL(src, COMSIG_FORK_STUCK_IN_BOMB)
 
 /// Sticking a plutonium core will make the bomb end the round
 /obj/item/contractor_bomb/proc/transfer_core(obj/item/nuke_core/core)
@@ -250,13 +267,14 @@
 	var/datum/contractor_wire/chosen_wire = cable_list[selection]
 	if(chosen_wire.cut)
 		return
-	cut_wire(chosen_wire)
+	cut_wire(chosen_wire, defuser)
 
 /// Cuts the selected wire, will perform effects based on the wire (or be a dud)
 /obj/item/contractor_bomb/proc/cut_wire(datum/contractor_wire/chosen_wire, mob/defuser)
 	cable_icons -= chosen_wire.name
+	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_WIRE_CUT, chosen_wire.wire_flags)
 
-	if(chosen_wire.explosive_cable)
+	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_EXPLOSIVE)
 		//XANTODO DEBUG
 		to_chat(world, "explosive cable cut")
 
@@ -271,17 +289,17 @@
 			ex_flame = 20
 			detonation_timer = world.time + 30 SECONDS // No math here, you can either benefit or suffer from this
 
-	if(chosen_wire.defusal_cable)
+	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_DEFUSIVE)
 		//XANTODO DEBUG
 		to_chat(world, "defusal cable cut")
 		defuse()
 
-	if(chosen_wire.time_adder)
+	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_TIME_ADDER)
 		detonation_timer += 2 MINUTES
 		//XANTODO DEBUG
 		to_chat(world, "delay cable cut")
 
-	if(chosen_wire.time_remover)
+	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_TIME_REDUCER)
 		detonation_timer = max((world.time + 30 SECONDS), (detonation_timer - 2 MINUTES)) // Tries to reduce the timer by 2 minutes but minimum 30 second fuse remaining
 		//XANTODO DEBUG
 		to_chat(world, "speedup cable cut")
@@ -436,14 +454,8 @@
 	var/cable_icon_state = null
 	/// If the cable is cut, we give it the cut icon state
 	var/cut = FALSE
-	/// If the cable causes an explosion when cut
-	var/explosive_cable = FALSE
-	/// Cutting this cable will defuse the bomb
-	var/defusal_cable = FALSE
-	/// Cutting this cable will add time to the countdown
-	var/time_adder = FALSE
-	/// Cutting this cable will remove time from the countdown
-	var/time_remover = FALSE
+	/// determines wire behaviour
+	var/wire_flags = NONE
 
 /datum/contractor_wire/white
 	name = "white cable"
