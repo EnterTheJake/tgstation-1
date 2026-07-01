@@ -11,7 +11,7 @@
 	name = "Contractor Minimap Navigation Suite"
 	desc = "A miniaturised tactical map wired into your helmet's hud, \
 		letting you keep eyes on the mark you've flagged for tracking, \
-		Or any targets hit by a tracking dart and any of your allies.
+		Or any targets hit by a tracking dart and any of your allies."
 	complexity = 0
 	removable = FALSE
 	/// The minimap toggle action granted to the wearer while the suit is active.
