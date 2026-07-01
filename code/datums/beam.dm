@@ -561,12 +561,30 @@
 	beam_datum_type = /datum/beam,
 )
 	var/datum/beam/newbeam
-	var/list/arguments = list(src)
-	arguments += args
+	var/list/arguments = list(
+		src,
+		BeamTarget,
+		icon,
+		icon_state,
+		time,
+		maxdistance,
+		beam_type,
+		beam_color,
+		emissive,
+		animate,
+		override_origin_pixel_x,
+		override_origin_pixel_y,
+		override_target_pixel_x,
+		override_target_pixel_y,
+		layer,
+	)
 
 	if(icon_state_variants <= 0)
-		newbeam = new beam_datum_type(src,BeamTarget,icon,icon_state,time,maxdistance,beam_type, beam_color, emissive, override_origin_pixel_x, override_origin_pixel_y, override_target_pixel_x, override_target_pixel_y, layer)
+		newbeam = new beam_datum_type(arglist(arguments))
 	else
-		newbeam = new /datum/beam/varied(src,BeamTarget,icon,icon_state,time,maxdistance,beam_type, beam_color, emissive, override_origin_pixel_x, override_origin_pixel_y, override_target_pixel_x, override_target_pixel_y, layer, icon_state_variants)
+		// /datum/beam/varied/New() takes icon_state_variants and random_icon_state after beam_layer.
+		arguments += list(icon_state_variants, random_icon_state)
+		newbeam = new /datum/beam/varied(arglist(arguments))
 	INVOKE_ASYNC(newbeam, TYPE_PROC_REF(/datum/beam/, Start))
 	return newbeam
+
