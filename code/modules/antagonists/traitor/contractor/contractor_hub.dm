@@ -4,6 +4,8 @@
 
 	///List of all people currently used as targets, to not roll doubles.
 	var/list/assigned_targets = list()
+	///Minds of the contractors themselves - never valid contract targets (no self-contracts).
+	var/list/contractor_minds = list()
 	/// Time in seconds between contract refreshes.
 	var/refresh_time = 10 MINUTES
 	/// list of uplinks that need to be updated when contracts change, also used to decide if we want to refresh contracts
@@ -15,8 +17,10 @@
 	var/lowest_payout = 0
 	var/dangerous_extract_pop = 30
 
-/datum/contractor_hub/proc/add_uplink(datum/component/uplink/contractor/uplink)
+/datum/contractor_hub/proc/add_uplink(datum/component/uplink/contractor/uplink, mob/user)
 	linked_uplinks += WEAKREF(uplink)
+	if(!isnull(user?.mind) && !(user.mind in contractor_minds))
+		contractor_minds += user.mind
 	if(!length(assigned_contracts))
 		create_contracts()
 		get_highest_lowest()
@@ -81,9 +85,11 @@
 	if (assigned_contracts.len != 0)
 		start_index = assigned_contracts.len + 1
 
-	// Generate contracts, and find the lowest paying.
+	// Generate contracts, and find the lowest paying. Contractors are excluded so nobody
+	// gets a contract on themselves or another contractor sharing this hub.
+	var/list/target_blacklist = assigned_targets + contractor_minds
 	for(var/i in 1 to to_generate.len)
-		var/datum/syndicate_contract/contract_to_add = new(assigned_targets, to_generate[i])
+		var/datum/syndicate_contract/contract_to_add = new(target_blacklist, to_generate[i])
 		var/contract_payout_total = contract_to_add.contract.payout + contract_to_add.contract.payout_bonus
 
 		assigned_targets.Add(contract_to_add.contract.target)

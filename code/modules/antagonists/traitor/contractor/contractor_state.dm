@@ -15,3 +15,5 @@
 	var/tracked_contract_id
 	/// Weakref to the mob whose blip is on the minimap, used to clear it when switching or untracking.
 	var/datum/weakref/tracked_target_ref
+	/// Weakref to the tracked contract itself, so the minimap can outline its extraction areas.
+	var/datum/weakref/tracked_contract_ref

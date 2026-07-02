@@ -22,7 +22,7 @@
 	var/datum/antagonist/traitor/traitor_user = IS_TRAITOR(user)
 	// Set up the hub before ..() opens the UI, else the first static data has no contracts and payouts read 0.
 	if(!isnull(traitor_user) && isnull(traitor_user.uplink_handler.contractor_state))
-		handler.add_uplink(src)
+		handler.add_uplink(src, user)
 		traitor_user.uplink_handler.contractor_state = new()
 		user.playsound_local(user, 'sound/music/antag/contractstartup.ogg', 100, FALSE)
 	return ..()
@@ -168,16 +168,22 @@
 			// Pressing the already-tracked target untracks it.
 			if(contract_state.tracked_contract_id == contract_id)
 				contract_state.tracked_contract_id = null
+				contract_state.tracked_contract_ref = null
+				SEND_SIGNAL(user, COMSIG_CONTRACTOR_TRACK_CHANGED)
 				return TRUE
 			var/mob/target_mob = contract_holder.contract.target?.current
 			if(QDELETED(target_mob))
 				contract_state.tracked_contract_id = null
+				contract_state.tracked_contract_ref = null
+				SEND_SIGNAL(user, COMSIG_CONTRACTOR_TRACK_CHANGED)
 				user.playsound_local(user, 'sound/machines/uplink/uplinkerror.ogg', 50)
 				error = "Target signal lost - cannot acquire a lock."
 				return TRUE
 			add_contractor_track_blip(target_mob)
 			contract_state.tracked_target_ref = WEAKREF(target_mob)
 			contract_state.tracked_contract_id = contract_id
+			contract_state.tracked_contract_ref = WEAKREF(contract_holder)
+			SEND_SIGNAL(user, COMSIG_CONTRACTOR_TRACK_CHANGED)
 			return TRUE
 
 		if("redeem_tc")

@@ -264,13 +264,25 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
     },
   ];
 
-  const dropoffLocationText = (
+  const dropoffLocationFull = (
     target: BountyTargets,
     type: EXTRACTION_TYPE,
   ) => {
     const location = target[`dropoff_location_${type}`];
     if (!location) return 'Unknown';
     return Array.isArray(location) ? location.join(' · ') : location;
+  };
+
+  const SHOWN_AREAS = 2;
+  const dropoffLocationShort = (
+    target: BountyTargets,
+    type: EXTRACTION_TYPE,
+  ) => {
+    const location = target[`dropoff_location_${type}`];
+    if (!location) return 'Unknown';
+    if (!Array.isArray(location)) return location;
+    if (location.length <= SHOWN_AREAS) return location.join(' · ');
+    return `${location.slice(0, SHOWN_AREAS).join(' · ')} +${location.length - SHOWN_AREAS}`;
   };
 
   const targetsElements =
@@ -380,13 +392,13 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
                           target: target.name,
                         });
                       }}
-                      tooltip={info.description}
+                      tooltip={`${info.description}\n\nDropoff: ${dropoffLocationFull(target, info.type as EXTRACTION_TYPE)}`}
                     >
                       <Box>
                         {info.type.charAt(0).toUpperCase() + info.type.slice(1)}
                       </Box>
                       <Box className="BountyExtract__sub">
-                        {dropoffLocationText(
+                        {dropoffLocationShort(
                           target,
                           info.type as EXTRACTION_TYPE,
                         )}

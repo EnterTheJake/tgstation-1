@@ -22,6 +22,9 @@
 /// Fired on a contractor mob when they successfully kidnap a target. Passes (mob/living/victim).
 #define COMSIG_CONTRACTOR_KIDNAPPED "contractor_kidnapped"
 
+/// Fired on a contractor mob when their tracked contract changes, so an open minimap can refresh.
+#define COMSIG_CONTRACTOR_TRACK_CHANGED "contractor_track_changed"
+
 /// Called when a wire on the contractor bomb is cut
 #define COMSIG_CONTRACTOR_BOMB_WIRE_CUT "contractor_bomb_wire_cut"
 
