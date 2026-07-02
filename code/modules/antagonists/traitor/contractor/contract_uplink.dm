@@ -175,7 +175,7 @@
 				user.playsound_local(user, 'sound/machines/uplink/uplinkerror.ogg', 50)
 				error = "Target signal lost - cannot acquire a lock."
 				return TRUE
-			add_minimap_blip(target_mob, MINIMAP_CONTRACTOR_BLIP, "locator")
+			add_contractor_track_blip(target_mob)
 			contract_state.tracked_target_ref = WEAKREF(target_mob)
 			contract_state.tracked_contract_id = contract_id
 			return TRUE

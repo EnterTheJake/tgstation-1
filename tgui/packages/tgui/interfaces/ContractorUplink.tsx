@@ -63,6 +63,7 @@ type BountyTargets = {
   dropoff_location_unsafe?: string;
   dropoff_location_dangerous?: string;
   mugshot_icon?: string;
+  job_icon?: string;
   contract_id?: string;
 };
 
@@ -304,12 +305,20 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
               </Box>
               <Box className="BountyTarget__track">
                 <Box className="BountyTarget__track-icon">
-                  <DmIcon
-                    icon="icons/ui_icons/minimap/map_blips.dmi"
-                    icon_state="locator"
-                    width="32px"
-                    height="32px"
-                  />
+                  {target.job_icon ? (
+                    <Image
+                      src={`data:image/png;base64,${target.job_icon}`}
+                      width="32px"
+                      height="32px"
+                    />
+                  ) : (
+                    <DmIcon
+                      icon="icons/ui_icons/minimap/map_blips.dmi"
+                      icon_state="locator"
+                      width="32px"
+                      height="32px"
+                    />
+                  )}
                 </Box>
                 <Button
                   icon={isTracked ? undefined : 'location-crosshairs'}

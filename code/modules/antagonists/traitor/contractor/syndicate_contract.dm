@@ -30,6 +30,7 @@
 	var/area/normal_dropoff = contract.dropoffs[CONTRACTOR_DROPOFF_UNSAFE]
 	var/area/dangerous_dropoff = contract.dropoffs[CONTRACTOR_DROPOFF_DANGEROUS]
 	var/mob/target_mob = contract.target?.current
+	var/icon/job_icon = get_job_hud_icon(contract.target?.assigned_role)
 	return list(
 		"name" = contract.target?.name || "Unknown Target",
 		"is_head" = is_head,
@@ -44,6 +45,7 @@
 		"dropoff_location_unsafe" = normal_dropoff?.name,
 		"dropoff_location_dangerous" = dangerous_dropoff?.name,
 		"mugshot_icon" = cached_image,
+		"job_icon" = job_icon ? icon2base64(job_icon) : null,
 		"contract_id" = id,
 	)
 
