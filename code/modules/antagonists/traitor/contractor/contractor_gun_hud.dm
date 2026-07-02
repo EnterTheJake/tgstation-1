@@ -70,14 +70,7 @@
 	return "normal"
 
 /atom/movable/screen/fullscreen/cursor_catcher/scope/gauss
-	// Use OPAQUE mouse opacity so the catcher captures mouse events across its entire
-	// bounding box. Visuals are attached via vis_contents so they don't interfere with
-	// mouse hit-testing (which would cause ICON_X/ICON_Y in mouse params to be reported
-	// relative to whichever visual the cursor is hovering, making the scope spaz out).
 	mouse_opacity = MOUSE_OPACITY_OPAQUE
-	// Hide the catcher's own icon. MOUSE_OPACITY_OPAQUE uses the bounding box, not the
-	// rendered alpha, so clicks still work. Visuals override this via RESET_ALPHA so they
-	// remain visible despite the parent being alpha 0.
 	alpha = 0
 	/// Duration of the fade-out animation when the scope is closed.
 	var/visual_fade_time = 1 SECONDS
@@ -145,9 +138,6 @@
 	background_visual = new(null, null, "scope_background", stretch)
 	scope_visual = new(null, null, scope_state, stretch)
 
-	// Apply multi-z plane offset based on the owner's turf so the background actually
-	// renders on the same game plane as the mobs on that z level (otherwise it lands on
-	// z=1's game plane and won't layer correctly with mobs on higher z levels).
 	SET_PLANE_EXPLICIT(background_visual, initial(background_visual.plane), owner)
 	SET_PLANE_EXPLICIT(scope_visual, initial(scope_visual.plane), owner)
 
@@ -157,12 +147,9 @@
 /atom/movable/screen/gauss_scope_visual
 	name = "gauss scope"
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_gun_hud.dmi'
-	// TRANSPARENT so mouse events fall through to the cursor catcher behind us.
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 	plane = ABOVE_HUD_PLANE
 	layer = FULLSCREEN_LAYER
-	// Opt out of inheriting the catcher's alpha (so we stay visible despite alpha = 0),
-	// color matrix (in case one is ever applied), and stretch transform.
 	appearance_flags = RESET_ALPHA | RESET_COLOR | RESET_TRANSFORM
 
 /atom/movable/screen/gauss_scope_visual/Initialize(mapload, datum/hud/hud_owner, new_state, stretch_fullscreen = FALSE)
@@ -173,7 +160,6 @@
 		var/list/view_size = getviewsize(world.view)
 		transform = matrix(view_size[1]/FULLSCREEN_OVERLAY_RESOLUTION_X, 0, 0, 0, view_size[2]/FULLSCREEN_OVERLAY_RESOLUTION_Y, 0)
 	else
-		// Center the sprite within the fullscreen anchor area at native size.
 		var/icon/probe = icon(icon, icon_state)
 		var/icon_width = probe.Width()
 		var/icon_height = probe.Height()
