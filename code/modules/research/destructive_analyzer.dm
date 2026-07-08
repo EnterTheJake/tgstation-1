@@ -184,6 +184,7 @@
  * gain_research_points - Whether deconstructing this should give research points to the stored techweb, if applicable.
  */
 /obj/machinery/rnd/destructive_analyzer/proc/destroy_item_individual(obj/item/thing, gain_research_points = FALSE)
+	SEND_SIGNAL(thing, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY)
 	if(isliving(thing))
 		var/mob/living/mob_thing = thing
 		if(mob_thing.stat != DEAD)

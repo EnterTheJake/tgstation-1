@@ -6,3 +6,6 @@
 
 /// Called when an experiment is completed (datum/experiment/completed_experiment,)
 #define COMSIG_TECHWEB_EXPERIMENT_COMPLETED "techweb_experiment_completed"
+
+/// Called when a destructive analyzer destroys something
+#define COMSIG_DESTRUCTIVE_ANALYZER_DESTROY "destructive_analyzer_destroy"

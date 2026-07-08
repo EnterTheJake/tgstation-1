@@ -25,17 +25,8 @@
 	var/list/cable_list
 	/// Cable icons
 	var/list/cable_icons
-
-	//---- Explosion variables, can be changed by the defusal process
-	var/ex_dev = 1
-	var/ex_heavy = 2
-	var/ex_light = 4
-	var/ex_flame = 2
-	/// If true, the explosion is tripled in size and bypasses maxcap restriction
-	var/is_nuclear = FALSE
 	/// Cached base64 mugshot of the owner, generated for the detonation suite UI
 	var/cached_mugshot
-
 	/// List of greetings, we don't need to use the dialogue system here because it'll be played only once
 	var/static/list/greetings_sounds = list(
 		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting1_take1_variant.ogg',
@@ -44,6 +35,14 @@
 		'sound/items/weapons/contractor_bomb/bomb_greeting/greeting4_take3_variant1.ogg',
 		'sound/items/weapons/contractor_bomb/bomb_greeting/greeting5_take1.ogg',
 	)
+	/// Explosion flags for the bomb actually going off. Priority is nuclear -> Tesla -> Normal
+	var/explosion_flags = NONE
+
+	//---- Explosion variables, can be increased from a few things
+	var/ex_dev = 1
+	var/ex_heavy = 2
+	var/ex_light = 4
+	var/ex_flame = 2
 
 /obj/item/contractor_bomb/Initialize(mapload)
 	. = ..()
@@ -114,7 +113,8 @@
 
 	if(!isnull(next_beep) && (next_beep <= world.time))
 		var/volume
-		switch(seconds_remaining())
+		var/time_remaining = seconds_remaining()
+		switch(time_remaining)
 			if(0 to 5)
 				volume = 50
 			if(5 to 10)
@@ -127,13 +127,14 @@
 				volume = 10
 			else
 				volume = 5
+		SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, (time_remaining*10 / initial(det_time) * 100))
 		playsound(get_turf(src), beepsound, volume, FALSE)
 		next_beep = world.time + 1 SECONDS
 
 	if(active && ((detonation_timer <= world.time)))// || explode_now))
 		active = FALSE
 		update_appearance()
-		try_detonate(TRUE)
+		pre_explosion()
 
 /// Plants the bomb on our victim and adds it to the contractor's bomb UI
 /obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/controlling_state)
@@ -226,10 +227,10 @@
 /// Sticking a fork in the bomb has very interesting results
 /obj/item/contractor_bomb/proc/get_forked()
 	bad_defusal = TRUE
-	ex_dev = 5
-	ex_heavy = 10
-	ex_light = 20
-	ex_flame = 20
+	ex_dev = max(5, ex_dev)
+	ex_heavy = max(10, ex_heavy)
+	ex_light = max(20, ex_light)
+	ex_flame = max(20, ex_flame)
 	detonation_timer = world.time + 30 SECONDS
 	SEND_SIGNAL(src, COMSIG_FORK_STUCK_IN_BOMB)
 
@@ -237,8 +238,15 @@
 /obj/item/contractor_bomb/proc/transfer_core(obj/item/nuke_core/core)
 	if(core.type != /obj/item/nuke_core) // No subtypes here
 		return
-	is_nuclear = TRUE
+	// These values are hard set instead of being x3, because it is forced to be the maximum size variant.
+	// I don't want to see a contractor add a nuke core to the bomb just for it to be 1 deva *3
+	ex_dev = 20
+	ex_heavy = 40
+	ex_light = 60
+	ex_flame = 60
+	explosion_flags |= CONTRACTOR_EXPLOSION_NUCLEAR
 	qdel(core)
+	SEND_SIGNAL(src, COMSIG_PLUTONIUM_INSERTED)
 
 /// Begins defusing the bomb
 /obj/item/contractor_bomb/proc/perform_defusal(mob/defuser)
@@ -252,10 +260,10 @@
 	// Arms the bomb and gives you the negative effects of cutting a bomb wire. It effectively means you still have 2 explosive cables but only need to hit 1 to explode
 	arm()
 	bad_defusal = TRUE
-	ex_dev = 5
-	ex_heavy = 10
-	ex_light = 20
-	ex_flame = 20
+	ex_dev = max(5, ex_dev)
+	ex_heavy = max(10, ex_heavy)
+	ex_light = max(20, ex_light)
+	ex_flame = max(20, ex_flame)
 	detonation_timer = world.time + 30 SECONDS
 	defusal_loop(defuser)
 
@@ -279,14 +287,13 @@
 		to_chat(world, "explosive cable cut")
 
 		if(bad_defusal)
-			try_detonate()
-			return
+			return // The signal sent to the dialogue system handles the exploding
 		else
 			bad_defusal = TRUE
-			ex_dev = 5
-			ex_heavy = 10
-			ex_light = 20
-			ex_flame = 20
+			ex_dev = max(5, ex_dev)
+			ex_heavy = max(10, ex_heavy)
+			ex_light = max(20, ex_light)
+			ex_flame = max(20, ex_flame)
 			detonation_timer = world.time + 30 SECONDS // No math here, you can either benefit or suffer from this
 
 	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_DEFUSIVE)
@@ -311,6 +318,7 @@
 	if(active)
 		defusal_loop(defuser) // Loop until defusal, cancellation or explosion
 
+/// Called when the bomb is defused
 /obj/item/contractor_bomb/proc/defuse()
 	active = FALSE
 	detonation_timer = null
@@ -322,26 +330,44 @@
 	forceMove(get_turf(src))
 	update_appearance()
 
-/// Causes an explosion and eradicates our explodee from existence
-/obj/item/contractor_bomb/proc/try_detonate()
-	if(is_nuclear)
-		// These values are hard set instead of being x3, because it is forced to be the maximum size variant.
-		// I don't want to see a contractor add a nuke core to the bomb just for it to be 1 deva *3
-		ex_dev = 20
-		ex_heavy = 40
-		ex_light = 60
-		ex_flame = 60
+/// Checks if there are any special conditions, plays a voiceline if any match and then explode afterwards
+/obj/item/contractor_bomb/proc/pre_explosion()
+	var/obj/item/organ/heart/cybernetic/anomalock/funny_organ = locate(/obj/item/organ/heart/cybernetic/anomalock) in owner.organs
+	if(funny_organ?.core)
+		explosion_flags |= CONTRACTOR_EXPLOSION_ENERGYBALL
 
+	if(SEND_SIGNAL(src, COMSIG_CONTRACTOR_PRE_EXPLOSION, explosion_flags) & EXPLOSION_DIALOGUE_HANDLED)
+		return
+
+	// No custom line, just blow up regular
+	actually_explode()
+
+/// Primes the bomb to explode after a certain delay
+/obj/item/contractor_bomb/proc/delayed_explosion(delay_time)
+	SIGNAL_HANDLER
+	if(isnull(delay_time))
+		CRASH("Attempted to call a delayed explosion without passing a valid delay_time")
+	active = FALSE
+	detonation_timer = null
+	next_beep = null
+	STOP_PROCESSING(SSobj, src)
+	// We typically delay the bomb to play a voiceline. The 0.2 is just a small safety so the line isnt abruptly cut off
+	addtimer(CALLBACK(src, PROC_REF(actually_explode), TRUE), delay_time + 0.2 SECONDS)
+
+/// Does the kaboom, deletes what it has to, spawns the energy ball if needed
+/obj/item/contractor_bomb/proc/actually_explode()
+	// Voltaic organ makes an energy ball when it detonates
+	var/obj/item/organ/heart/cybernetic/anomalock/funny_organ = locate(/obj/item/organ/heart/cybernetic/anomalock) in owner.organs
+	if(funny_organ?.core)
+		new /obj/energy_ball(src)
+
+	// Delete our victim's brain, ensures they are gone for good
 	var/obj/item/organ/brain/to_delete = locate(/obj/item/organ/brain) in owner.organs
 	if(to_delete)
 		to_delete.Remove(owner)
 		qdel(to_delete)
 
-	var/obj/item/organ/heart/cybernetic/anomalock/funny_organ = locate(/obj/item/organ/heart/cybernetic/anomalock) in owner.organs
-	if(funny_organ?.core)
-		new /obj/energy_ball(src)
-
-	explosion(src, ex_dev, ex_heavy, ex_light, ex_flame, ignorecap = is_nuclear)
+	explosion(src, ex_dev, ex_heavy, ex_light, ex_flame, ignorecap = (explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR))
 	qdel(src)
 
 /obj/item/contractor_bomb/proc/seconds_remaining()
@@ -381,7 +407,7 @@
 	var/list/data = list(
 		"ref" = REF(src),
 		"armed" = active,
-		"nuclear" = is_nuclear,
+		"nuclear" = (explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR),
 		"time_left" = active ? max(0, detonation_timer - world.time) : 0,
 		"fuse_length" = det_time,
 		"mugshot" = get_mugshot(),

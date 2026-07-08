@@ -374,3 +374,9 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define CONTRACTOR_WIRE_TIME_ADDER (1<<2)
 /// Reduces time from the countdown when cut
 #define CONTRACTOR_WIRE_TIME_REDUCER (1<<3)
+
+// Flags for the contractor bomb's explosion (explosion_flags)
+/// Performs a nuclear level explosion
+#define CONTRACTOR_EXPLOSION_NUCLEAR (1<<0)
+/// Explosion releases an energy ball
+#define CONTRACTOR_EXPLOSION_ENERGYBALL (1<<1)

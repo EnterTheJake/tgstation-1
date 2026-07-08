@@ -36,3 +36,14 @@
 
 /// Called when a fork is stuck into the bomb
 #define COMSIG_FORK_STUCK_IN_BOMB "contractor_bomb_got_forked"
+
+/// Called when the plutonium core is added to the bomb
+#define COMSIG_PLUTONIUM_INSERTED "contractor_bomb_plutonium_added"
+
+/// Called when the bomb is ready to explode and ready to play a line
+#define COMSIG_CONTRACTOR_PRE_EXPLOSION "contractor_bomb_pre_explosion"
+	// Returned if the pre_explosion was handled by the dialogue component
+	#define EXPLOSION_DIALOGUE_HANDLED (1<<0)
+
+/// Sent whenever the timer goes down naturally
+#define COMSIG_CONTRACTOR_BOMB_TIME_LOWERED "contractor_bomb_time_lowered"

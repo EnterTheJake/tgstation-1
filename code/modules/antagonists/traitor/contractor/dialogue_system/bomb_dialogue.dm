@@ -1,0 +1,583 @@
+/// Contractor bomb dialogue component.
+/datum/component/dialogue_system/contractor_bomb
+	dupe_mode = COMPONENT_DUPE_UNIQUE
+	signals_to_unregister = list(
+		COMSIG_ITEM_PICKUP,
+		COMSIG_ITEM_DROPPED,
+		COMSIG_CONTRACTOR_BOMB_WIRE_CUT,
+		COMSIG_CONTRACTOR_UI_BOMB_ARMED,
+		COMSIG_CONTRACTOR_UI_BOMB_DEFUSED,
+		COMSIG_FORK_STUCK_IN_BOMB,
+		COMSIG_PLUTONIUM_INSERTED,
+		COMSIG_GLOB_NUKE_DEVICE_DETONATING,
+		COMSIG_DESTRUCTIVE_ANALYZER_DESTROY,
+		COMSIG_CONTRACTOR_PRE_EXPLOSION,
+		COMSIG_CONTRACTOR_BOMB_TIME_LOWERED,
+	)
+
+	/// Memory of the last threshold that was announced
+	var/previous_threshold = 100
+	/// Time since last idle chatter
+	var/last_idle
+	/// Time until next idle chatter is due
+	var/next_idle = 1 MINUTES
+
+	//---- Bomb has a lot of lines, means we got a lot of lists for different situations. Buncha snowflake
+	var/list/admin_abuse
+	var/list/bomb_activated
+	var/list/bomb_bad_wire_explosion
+	var/list/voltaic_explosion
+	var/list/bomb_bad_wire_reduce_time
+	var/list/bomb_bad_wire_upgrade
+	var/list/bomb_corporate
+	var/list/bomb_deactivated_contractor
+	var/list/bomb_deactivated_idle
+	var/list/bomb_deactivated_surgery
+	var/list/bomb_good_wire
+	var/list/bomb_maskless
+	var/list/changeling
+	var/list/clown_activated
+	var/list/clown_bad_wire_time
+	var/list/clown_bad_wire_upgrade
+	var/list/clown_deactivated_idle
+	var/list/clown_deconstructed
+	var/list/clown_detonation
+	var/list/clown_disarmed
+	var/list/clown_general
+	var/list/clown_good_wire_time
+	var/list/clown_greeting
+	var/list/clown_timer
+	var/list/deconstruction
+	var/list/explodes_cutely
+	var/list/explosion_successful
+	var/list/felinid_detonation
+	var/list/felinid_disarmed
+	var/list/felinid_general
+	var/list/felinid_idle_deactivated
+	var/list/felinid_nuke_felinid
+	var/list/mid_surgery
+	var/list/fork_surgery
+	var/list/bad_wire_time
+	var/list/bad_wire_upgrade
+	var/list/core_insertion
+	var/list/detonation
+	var/list/disarm
+	var/list/general
+	var/list/good_wire_time
+	var/list/try_deactivate
+	var/list/station_nuke_detonated
+	var/list/timer_lines
+	var/list/victim_crit
+
+/datum/component/dialogue_system/contractor_bomb/setup_sound_lists()
+	. = ..()
+
+	admin_abuse = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/admin_abuse/adminabuse1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/admin_abuse/adminabuse2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/admin_abuse/adminabuse3_take1.ogg'),
+	)
+
+	bomb_activated = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_activated/bomb_activated1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_activated/bomb_activated2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_activated/bomb_activated3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_activated/bomb_activated4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_activated/bomb_activated5_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_activated/bomb_activated6_take2.ogg'),
+	)
+
+	bomb_bad_wire_explosion = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_explosion/bad_wire_explosion2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_explosion/bad_wire_explosion3.ogg'),
+	)
+
+	voltaic_explosion = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_explosion/bad_wire_explosion4.ogg'),
+	)
+
+	bomb_bad_wire_reduce_time = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_reduce_time/bad_wire_explosion1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_reduce_time/bad_wire_reduce_time1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_reduce_time/bad_wire_reduce_time2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_reduce_time/bad_wire_reduce_time3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_reduce_time/bad_wire_reduce_time4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_reduce_time/bad_wire_reduce_time5_take2.ogg'),
+	)
+
+	bomb_bad_wire_upgrade = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_upgrade/bad_wire_upgrade1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_upgrade/bad_wire_upgrade2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_upgrade/bad_wire_upgrade3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_bad_wire_upgrade/bad_wire_upgrade4_take2.ogg'),
+	)
+
+	bomb_corporate = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate5_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate6_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_corporate/bomb_corporate7_take3.ogg'),
+	)
+
+	bomb_deactivated_contractor = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor3_take2.ogg'),
+	)
+
+	bomb_deactivated_idle = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_idle/bomb_deactivated1_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_idle/bomb_deactivated2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_idle/bomb_deactivated3_take1(needs to be chopped in different files).ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_idle/bomb_deactivated4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_idle/bomb_deactivated5_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_idle/bomb_deactivated6_take2.ogg'),
+	)
+
+	bomb_deactivated_surgery = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_deactivated_surgury1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_deactivated_surgury2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_deactivated_surgury3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_deactivated_surgury4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_deactivated_surgury5_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_deactivated_surgury6_take2_variant.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_goodwire1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_goodwire2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/bomb_goodwire4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_surgery/good_wire_disarmed3_take1.ogg'),
+	)
+
+	bomb_good_wire = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire4_take3.ogg'),
+	)
+
+	bomb_maskless = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless5_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless6_take2.ogg'),
+	)
+
+	changeling = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash3_take1.ogg'),
+	)
+
+	deconstruction = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/deconstruction/deconstruction1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/deconstruction/deconstruction2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/deconstruction/deconstruction3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/deconstruction/deconstruction4_take1.ogg'),
+	)
+
+	explodes_cutely = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute4.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute5.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute6.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explodes_cutely/explosion_cute7.ogg'),
+	)
+
+	explosion_successful = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful4.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful5.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful6.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/explosion_successful/explosion_successful7.ogg'),
+	)
+
+	mid_surgery = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury2_take4.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury4_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury5_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury6_take1.ogg'),
+	)
+
+	fork_surgery = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/fork_surgery/mid_surgury3_take3.ogg'),
+	)
+
+	station_nuke_detonated = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/station_nuke_detonated/nuke_detonated1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/station_nuke_detonated/nuke_detonated2_take2.ogg'),
+	)
+
+	timer_lines = list(
+		"seventy_five" = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer25_1_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer25_2_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer25_3_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer25_4_take5.ogg'),
+		),
+		"fifty" = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer50_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer50_2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer50_3_take2.ogg'),
+		),
+		"twenty_five" = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer75_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer75_2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/timer_lines/timer75_3_take2.ogg'),
+		)
+	)
+
+	victim_crit = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/victim_crit/victim_crit1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/victim_crit/victim_crit2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/victim_crit/victim_crit3_take1.ogg'),
+	)
+
+//clown
+	clown_activated = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_activated/clown_activated1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_activated/clown_activated2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_activated/clown_activated3_take2.ogg'),
+	)
+
+	clown_bad_wire_time = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_time/clown_bad_wire_reduce_time1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_time/clown_bad_wire_reduce_time2_take2.ogg'),
+	)
+
+	clown_bad_wire_upgrade = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_upgrade/clown_bad_wire_upgrade1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_upgrade/clown_bad_wire_upgrade2_take2.ogg'),
+	)
+
+	clown_deactivated_idle = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_deactivated_idle/clown_lost_will1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_deactivated_idle/clown_lost_will2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_deactivated_idle/clown_lost_will3_take1.ogg'),
+	)
+
+	clown_deconstructed = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_deconstructed/clown_deconstructed1_take2_Static.ogg'),
+	)
+
+	clown_detonation = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_detonation/clown_bad_wire_detonation1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_detonation/clown_bad_wire_detonation2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_detonation/clown_detonation_tesla.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_detonation/clown_detonation1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_detonation/clown_detonation2_take2.ogg'),
+	)
+
+	clown_disarmed = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_disarmed/clown_good_wire_deactivated_take1.ogg'),
+	)
+
+	clown_general = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_general/clown_general1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_general/clown_general2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_general/clown_general3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_general/clown_general4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_general/clown_general5_take2.ogg'),
+	)
+
+	clown_good_wire_time = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_good_wire_time/clown_good_wire_increase_time1_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_good_wire_time/clown_good_wire_increase_time2_take2.ogg'),
+	)
+
+	clown_greeting = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting3_take1.ogg'),
+	)
+
+	clown_timer = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_timer/clown_countdown_25_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_timer/clown_countdown_50_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_timer/clown_countdown_75_take1.ogg'),
+	)
+//clown end
+//felinid
+	felinid_detonation = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/felinid_detonation/victim_felinid10_take1.ogg'),
+	)
+
+	felinid_disarmed = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/felinid_disarmed/victim_felinid9_take1.ogg'),
+	)
+
+	felinid_general = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid3_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid5_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid6_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid7_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid8_take2.ogg'),
+	)
+
+	felinid_idle_deactivated = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/idle_deactivated/victim_felinid11_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/idle_deactivated/victim_felinid12_take2.ogg'),
+	)
+
+	felinid_nuke_felinid = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid4_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid5_take2.ogg'),
+	)
+//felinid end
+//nuclear
+	bad_wire_time = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time2_take2.ogg'),
+	)
+
+	bad_wire_upgrade = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_upgrade/nuke_bad_wire_upgrade1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_upgrade/nuke_bad_wire_upgrade2_take1.ogg'),
+	)
+
+	core_insertion = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/core_insertion/nuke_insertion_take4.ogg'),
+	)
+
+	detonation = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/detonation/nuke_detonation1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/detonation/nuke_detonation2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/detonation/nuke_detonation3_take1.ogg'),
+	)
+
+	disarm = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/disarm/nuke_disarmed_take1.ogg'),
+	)
+
+	general = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general2_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general4_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general5_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general6_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general7_take2.ogg'),
+	)
+
+	good_wire_time = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/good_wire_time/nuke_good_wire_increase_timer1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/good_wire_time/nuke_good_wire_increase_timer2_take1.ogg'),
+	)
+
+	try_deactivate = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate2_take2.ogg'),
+	)
+//nuclear end
+
+/datum/component/dialogue_system/contractor_bomb/apply_dialogue_channel()
+	. = ..()
+	apply_channel_to_sound_list(admin_abuse)
+	apply_channel_to_sound_list(bomb_activated)
+	apply_channel_to_sound_list(bomb_bad_wire_explosion)
+	apply_channel_to_sound_list(voltaic_explosion)
+	apply_channel_to_sound_list(bomb_bad_wire_reduce_time)
+	apply_channel_to_sound_list(bomb_bad_wire_upgrade)
+	apply_channel_to_sound_list(bomb_corporate)
+	apply_channel_to_sound_list(bomb_deactivated_contractor)
+	apply_channel_to_sound_list(bomb_deactivated_idle)
+	apply_channel_to_sound_list(bomb_deactivated_surgery)
+	apply_channel_to_sound_list(bomb_good_wire)
+	apply_channel_to_sound_list(bomb_maskless)
+	apply_channel_to_sound_list(changeling)
+	apply_channel_to_sound_list(clown_activated)
+	apply_channel_to_sound_list(clown_bad_wire_time)
+	apply_channel_to_sound_list(clown_bad_wire_upgrade)
+	apply_channel_to_sound_list(clown_deactivated_idle)
+	apply_channel_to_sound_list(clown_deconstructed)
+	apply_channel_to_sound_list(clown_detonation)
+	apply_channel_to_sound_list(clown_disarmed)
+	apply_channel_to_sound_list(clown_general)
+	apply_channel_to_sound_list(clown_good_wire_time)
+	apply_channel_to_sound_list(clown_greeting)
+	apply_channel_to_sound_list(clown_timer)
+	apply_channel_to_sound_list(deconstruction)
+	apply_channel_to_sound_list(explodes_cutely)
+	apply_channel_to_sound_list(explosion_successful)
+	apply_channel_to_sound_list(felinid_detonation)
+	apply_channel_to_sound_list(felinid_disarmed)
+	apply_channel_to_sound_list(felinid_general)
+	apply_channel_to_sound_list(felinid_idle_deactivated)
+	apply_channel_to_sound_list(felinid_nuke_felinid)
+	apply_channel_to_sound_list(mid_surgery)
+	apply_channel_to_sound_list(bad_wire_time)
+	apply_channel_to_sound_list(bad_wire_upgrade)
+	apply_channel_to_sound_list(core_insertion)
+	apply_channel_to_sound_list(detonation)
+	apply_channel_to_sound_list(disarm)
+	apply_channel_to_sound_list(general)
+	apply_channel_to_sound_list(good_wire_time)
+	apply_channel_to_sound_list(try_deactivate)
+	apply_channel_to_sound_list(station_nuke_detonated)
+	apply_channel_to_sound_pool_list(assoc_to_values(timer_lines))
+	apply_channel_to_sound_list(victim_crit)
+
+/datum/component/dialogue_system/contractor_bomb/RegisterWithParent()
+	. = ..()
+	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_WIRE_CUT, PROC_REF(on_wire_cut))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_UI_BOMB_ARMED, PROC_REF(on_bomb_ui_armed))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_UI_BOMB_DEFUSED, PROC_REF(on_bomb_ui_neutralized))
+	RegisterSignal(parent, COMSIG_FORK_STUCK_IN_BOMB, PROC_REF(on_getting_absolutely_forked))
+	RegisterSignal(parent, COMSIG_PLUTONIUM_INSERTED, PROC_REF(on_plutonium_added))
+	RegisterSignal(SSdcs, COMSIG_GLOB_NUKE_DEVICE_DETONATING, PROC_REF(on_nuke_detonate))
+	RegisterSignal(parent, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY, PROC_REF(on_destructive_analysis))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_PRE_EXPLOSION, PROC_REF(pre_explosion))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, PROC_REF(on_timer_threshold))
+
+// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
+/datum/component/dialogue_system/contractor_bomb/proc/emit_sound_from_list(list/sound_list, explodes = FALSE, obj/item/contractor_bomb/about_to_explode)
+	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
+	sound?.emit_sound(location = parent)
+	if(!explodes)
+		return
+	if(isnull(about_to_explode))
+		CRASH("Sound helper tried to explode but no bomb was passed to actually explode")
+	var/line_duration = rustg_sound_length(sound.sound_path)
+	about_to_explode.delayed_explosion(line_duration)
+
+/datum/component/dialogue_system/contractor_bomb/proc/on_wire_cut(obj/item/contractor_bomb/source, wire_flags)
+	SIGNAL_HANDLER
+	var/list/sound_pool
+	if(wire_flags & CONTRACTOR_WIRE_EXPLOSIVE)
+		if(source.bad_defusal) // Means the bomb is about to explode
+			emit_sound_from_list((source.explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR) ? detonation : bomb_bad_wire_explosion, TRUE, source)
+			return
+		else
+			sound_pool = bomb_bad_wire_upgrade
+	if(wire_flags & CONTRACTOR_WIRE_DEFUSIVE)
+		sound_pool = bomb_deactivated_surgery
+	if(wire_flags & CONTRACTOR_WIRE_TIME_ADDER)
+		sound_pool = bomb_good_wire
+	if(wire_flags & CONTRACTOR_WIRE_TIME_REDUCER)
+		sound_pool = bomb_bad_wire_reduce_time
+
+	var/datum/dialogue_sound/sound = pick_available_sound(sound_pool, parent, parent)
+	sound?.emit_sound(location = parent)
+
+/// Plays when the bomb is armed by the contractor via their UI
+/datum/component/dialogue_system/contractor_bomb/proc/on_bomb_ui_armed()
+	SIGNAL_HANDLER
+	emit_sound_from_list(bomb_activated)
+
+/// Plays when the bomb is disarmed by the contractor via their UI
+/datum/component/dialogue_system/contractor_bomb/proc/on_bomb_ui_neutralized()
+	SIGNAL_HANDLER
+	emit_sound_from_list(bomb_deactivated_contractor)
+
+/// Plays when a nuke core is added to the bomb
+/datum/component/dialogue_system/contractor_bomb/proc/on_plutonium_added(obj/item/contractor_bomb/source)
+	SIGNAL_HANDLER
+	emit_sound_from_list(core_insertion)
+
+/// Plays when the nuke detonates
+/datum/component/dialogue_system/contractor_bomb/proc/on_nuke_detonate()
+	SIGNAL_HANDLER
+	emit_sound_from_list(station_nuke_detonated)
+
+/// Plays when the bomb is killed by a deconstructive analyzer
+/datum/component/dialogue_system/contractor_bomb/proc/on_destructive_analysis()
+	SIGNAL_HANDLER
+	emit_sound_from_list(deconstruction)
+
+/// Plays when the bomb had a fork stuck in it...
+/datum/component/dialogue_system/contractor_bomb/proc/on_getting_absolutely_forked(obj/item/contractor_bomb/source)
+	SIGNAL_HANDLER
+	emit_sound_from_list(fork_surgery, TRUE, source)
+
+/// Plays before the bomb explodes, in this case it is already in the process of exploding and drops the line right before the boom
+/datum/component/dialogue_system/contractor_bomb/proc/pre_explosion(obj/item/contractor_bomb/source, explosion_flags)
+	SIGNAL_HANDLER
+	var/list/sound_pool = explosion_successful
+	if(prob(1))
+		sound_pool = explodes_cutely
+
+	if(explosion_flags & CONTRACTOR_EXPLOSION_ENERGYBALL)
+		sound_pool = voltaic_explosion
+	if(explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
+		sound_pool = detonation
+
+	emit_sound_from_list(sound_pool, TRUE, source)
+	return EXPLOSION_DIALOGUE_HANDLED
+
+/// Plays a line based on how much time is left on the bomb timer
+/datum/component/dialogue_system/contractor_bomb/proc/on_timer_threshold(obj/item/contractor_bomb/source, timeleft_percentage)
+	SIGNAL_HANDLER
+	switch(timeleft_percentage)
+		if(51 to 75)
+			if(previous_threshold <= 75)
+				return
+			previous_threshold = 75
+			emit_sound_from_list(timer_lines["seventy_five"])
+			return
+		if(26 to 50)
+			if(previous_threshold <= 50)
+				return
+			previous_threshold = 50
+			emit_sound_from_list(timer_lines["fifty"])
+			return
+		if(1 to 25)
+			if(previous_threshold <= 25)
+				return
+			previous_threshold = 25
+			emit_sound_from_list(timer_lines["twenty_five"])
+			return
+
+	// If no line is played, we can then see if they are due for some idle yap
+	if(last_idle <= world.time + next_idle)
+		return
+	next_idle = world.time + (rand(1.5 MINUTES, 3 MINUTES))
+	var/list/sound_pool = bomb_corporate
+	if(prob(25))
+		sound_pool = bomb_maskless
+	emit_sound_from_list(sound_pool)
+
+
+/* //
+sounds left to implement :
+admin_abuse
+bomb_deactivated_idle
+changeling
+clown_activated
+clown_bad_wire_time
+clown_bad_wire_upgrade
+clown_deactivated_idle
+clown_deconstructed
+clown_detonation
+clown_disarmed
+clown_general
+clown_good_wire_time
+clown_greeting
+clown_timer
+
+felinid_detonation
+felinid_disarmed
+felinid_general
+felinid_idle_deactivated
+felinid_nuke_felinid
+mid_surgery
+bad_wire_time
+bad_wire_upgrade
+disarm
+general
+good_wire_time
+try_deactivate
+victim_crit
+*/
