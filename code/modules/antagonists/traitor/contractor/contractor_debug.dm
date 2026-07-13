@@ -1,7 +1,7 @@
 
 /datum/outfit/contractor_debug
 	name = "Debug Contractor"
-	back = /obj/item/mod/control/pre_equipped/contractor
+	back = /obj/item/mod/control/pre_equipped/contractor/debugsuit
 	backpack_contents = list(
 		/obj/item/storage/box/syndicate/contract_kit,
 		/obj/item/storage/contractor_gun_case,

@@ -140,7 +140,7 @@
 	mid_icon_state = "antimatter-mid"
 	start_icon_state = "antimatter-start"
 	end_icon_state = "antimatter-end"
-	delete_in = 1.3 SECONDS
+	delete_in = 2.1 SECONDS
 
 // BEAM RIFLE
 /obj/effect/projectile/tracer/tracer/beam_rifle

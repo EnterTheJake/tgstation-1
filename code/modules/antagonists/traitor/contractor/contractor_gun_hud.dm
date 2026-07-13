@@ -87,13 +87,13 @@
 	if(isliving(new_owner))
 		RegisterSignal(new_owner, SIGNAL_REMOVETRAIT(TRAIT_USER_SCOPED), PROC_REF(on_scope_removed))
 	if(source_gun)
-		RegisterSignal(source_gun, COMSIG_GAUSS_RIFLE_MODE_CHANGED, PROC_REF(on_gun_mode_changed))
+		RegisterSignals(source_gun, list(COMSIG_GAUSS_RIFLE_MODE_CHANGED, COMSIG_GAUSS_RIFLE_SCOPE_REFRESH), PROC_REF(on_gun_mode_changed))
 
 /atom/movable/screen/fullscreen/cursor_catcher/scope/gauss/Destroy()
 	if(owner)
 		UnregisterSignal(owner, SIGNAL_REMOVETRAIT(TRAIT_USER_SCOPED))
 	if(source_gun)
-		UnregisterSignal(source_gun, COMSIG_GAUSS_RIFLE_MODE_CHANGED)
+		UnregisterSignal(source_gun, list(COMSIG_GAUSS_RIFLE_MODE_CHANGED, COMSIG_GAUSS_RIFLE_SCOPE_REFRESH))
 	clear_visuals(immediate = TRUE)
 	source_gun = null
 	return ..()
@@ -116,7 +116,6 @@
 			QDEL_NULL(background_visual)
 		return
 
-	// Fade out, then qdel after the animation finishes.
 	if(scope_visual)
 		animate(scope_visual, alpha = 0, time = visual_fade_time)
 		QDEL_IN(scope_visual, visual_fade_time)

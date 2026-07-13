@@ -19,6 +19,13 @@
 /// Called when the gauss rifle fire mode changes. Passes (mob/living/user, obj/item/ammo_casing/energy/new_mode).
 #define COMSIG_GAUSS_RIFLE_MODE_CHANGED "gauss_rifle_mode_changed"
 
+/// Called to refresh the gauss rifle scope overlay without triggering mode-change dialogue.
+#define COMSIG_GAUSS_RIFLE_SCOPE_REFRESH "gauss_rifle_scope_refresh"
+
+#define COMSIG_PARTICLE_DRIFT_WIND_DOWN "particle_drift_wind_down"
+#define COMSIG_PARTICLE_DRIFT_RESUME "particle_drift_resume"
+	#define PARTICLE_DRIFT_RESUMED (1<<0)
+
 /// Fired on a contractor mob when they successfully kidnap a target. Passes (mob/living/victim).
 #define COMSIG_CONTRACTOR_KIDNAPPED "contractor_kidnapped"
 
