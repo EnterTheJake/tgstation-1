@@ -47,3 +47,6 @@
 
 /// Sent whenever the timer goes down naturally
 #define COMSIG_CONTRACTOR_BOMB_TIME_LOWERED "contractor_bomb_time_lowered"
+
+/// Send whenever a sound is emitted from the diaolgue system
+#define COMSIG_DIALOGUE_SOUND_EMITTED "dialogue_sound_emitted"

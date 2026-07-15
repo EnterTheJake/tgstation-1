@@ -3,8 +3,14 @@
 	desc = "ANNETODO"
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_bomb.dmi'
 	icon_state = "bomb"
-	/// The icon state for the bomb that is planted on a mob
-	var/planted_icon_state = "mob_bomb"
+
+	/// Atom overlay for our bomb mob sprite
+	var/atom/movable/bomb_overlay_atom
+	/// The mutable that is actually overlayed on the mob
+	var/mutable_appearance/bomb_overlay_appearance
+	/// identifier for the overlay
+	var/static/overlay_id = 0
+
 	/// What the charge is stuck to
 	var/mob/living/carbon/human/owner = null
 	/// Is the bomb counting down?
@@ -19,22 +25,13 @@
 	var/next_beep
 	/// If true, will explode when the next boom cable is cut
 	var/bad_defusal = FALSE
-	/// C4 overlay to put on owner
-	var/mutable_appearance/plastic_overlay
+
 	/// List of cables belonging to the bomb, used for defusal
 	var/list/cable_list
 	/// Cable icons
 	var/list/cable_icons
 	/// Cached base64 mugshot of the owner, generated for the detonation suite UI
 	var/cached_mugshot
-	/// List of greetings, we don't need to use the dialogue system here because it'll be played only once
-	var/static/list/greetings_sounds = list(
-		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting1_take1_variant.ogg',
-		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting2_take4.ogg',
-		'sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting3_take3.ogg',
-		'sound/items/weapons/contractor_bomb/bomb_greeting/greeting4_take3_variant1.ogg',
-		'sound/items/weapons/contractor_bomb/bomb_greeting/greeting5_take1.ogg',
-	)
 	/// Explosion flags for the bomb actually going off. Priority is nuclear -> Tesla -> Normal
 	var/explosion_flags = NONE
 
@@ -46,18 +43,49 @@
 
 /obj/item/contractor_bomb/Initialize(mapload)
 	. = ..()
-	plastic_overlay = mutable_appearance(icon, planted_icon_state, HIGH_OBJ_LAYER)
+	overlay_id++
+	bomb_overlay_atom = new()
+	bomb_overlay_atom.icon = icon
+	bomb_overlay_atom.render_target = "*bomb_overlay_atom_[overlay_id]"
+	bomb_overlay_atom.vis_flags |= VIS_INHERIT_DIR | VIS_INHERIT_LAYER | VIS_INHERIT_ID
+	bomb_overlay_atom.icon_state = "mob_bomb"
+
+	bomb_overlay_appearance = new /mutable_appearance()
+	bomb_overlay_appearance.render_source = "*bomb_overlay_atom_[overlay_id]"
+
 	for(var/datum/contractor_wire/new_cable as anything in subtypesof(/datum/contractor_wire))
 		cable_icons += list(new_cable.name = image(icon = new_cable.cable_icon, icon_state = new_cable.cable_icon_state))
 		cable_list += list(new_cable.name = new new_cable(src))
 	add_cable_functions()
 	AddComponent(/datum/component/dialogue_system/contractor_bomb)
+	RegisterSignal(src, COMSIG_DIALOGUE_SOUND_EMITTED, PROC_REF(on_dialogue))
 
 /obj/item/contractor_bomb/update_icon_state()
 	. = ..()
+	if(explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
+		icon_state = "bomb_plutoniumcore"
+		bomb_overlay_atom.icon_state = "mob_" + icon_state
+		if(active)
+			icon_state = "bomb_plutoniumcore_active"
+			bomb_overlay_atom.icon_state = "mob_" + icon_state
+		return
 	if(active)
 		icon_state = "bomb_active"
-		planted_icon_state = "mob_" + icon_state
+		bomb_overlay_atom.icon_state = "mob_" + icon_state
+		return
+	icon_state = "bomb"
+	bomb_overlay_atom.icon_state = "mob_" + icon_state
+
+/// Flicks a talking icon anytime the bomb decides it wants to yap our ears off
+/obj/item/contractor_bomb/proc/on_dialogue(datum/source, duration)
+	SIGNAL_HANDLER
+	addtimer(CALLBACK(src, TYPE_PROC_REF(/atom, update_appearance)), duration)
+	if(explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
+		icon_state = "bomb_plutoniumcore_talk"
+		bomb_overlay_atom.icon_state = "mob_" + icon_state
+		return
+	icon_state = "bomb_talk"
+	bomb_overlay_atom.icon_state = "mob_" + icon_state
 
 /// Assign a function to several cables (Leaving the rest as empty duds)
 /obj/item/contractor_bomb/proc/add_cable_functions()
@@ -97,8 +125,9 @@
 /obj/item/contractor_bomb/Destroy()
 	cable_list = null
 	cable_icons = null
-	plastic_overlay = null
+	bomb_overlay_appearance = null
 	owner = null
+	QDEL_NULL(bomb_overlay_atom)
 	return ..()
 
 /obj/item/contractor_bomb/process(seconds_per_tick)
@@ -140,21 +169,16 @@
 /obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/controlling_state)
 	owner = victim
 	forceMove(victim.get_bodypart(BODY_ZONE_CHEST))
-	plastic_overlay.layer = FLOAT_LAYER
-	victim.add_overlay(plastic_overlay)
 	RegisterSignal(victim, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
+	// XANTODO: Make surgery lines actually run RegisterSignal(victim, COMSIG_ATOM_SURGERY_STARTED, PROC_REF(on_surgery_stated))
+	victim.vis_contents += bomb_overlay_atom
+	victim.add_overlay(bomb_overlay_appearance)
 
 	if(isnull(controlling_state))
 		arm()
 		return
 
 	controlling_state.bomb_implants += src
-	addtimer(CALLBACK(src, PROC_REF(delayed_greeting), victim), 1 SECONDS)
-
-/// Plays a greeting line for our wonderful victim after they are sent back to the station
-/obj/item/contractor_bomb/proc/delayed_greeting(mob/living/victim)
-	// This will only be played once after the bomb is given to the victim so we don't add it to the dialogue component
-	playsound(victim, pick(greetings_sounds), 50)
 
 /// Lets you install a nuclear core if the victim is clicked on with the core/container while the bomb is glued on
 /obj/item/contractor_bomb/proc/on_item_interact(atom/source, mob/living/user, obj/item/tool, list/modifiers)
@@ -213,8 +237,8 @@
 	)
 	user.temporarilyRemoveItemFromInventory(src, TRUE)
 	forceMove(bomb_target.get_bodypart(BODY_ZONE_CHEST))
-	plastic_overlay.layer = FLOAT_LAYER
-	owner.add_overlay(plastic_overlay)
+	bomb_target.vis_contents += bomb_overlay_atom
+	bomb_target.add_overlay(bomb_overlay_appearance)
 	to_chat(user, span_notice("You plant the bomb. Timer counting down from [det_time]."))
 	detonation_timer = world.time + det_time
 	next_beep = world.time
@@ -246,6 +270,7 @@
 	ex_flame = 60
 	explosion_flags |= CONTRACTOR_EXPLOSION_NUCLEAR
 	qdel(core)
+	update_appearance(UPDATE_ICON)
 	SEND_SIGNAL(src, COMSIG_PLUTONIUM_INSERTED)
 
 /// Begins defusing the bomb
@@ -324,7 +349,7 @@
 	detonation_timer = null
 	next_beep = null
 	STOP_PROCESSING(SSobj, src)
-	owner.cut_overlay(plastic_overlay)
+	owner.vis_contents -= bomb_overlay_atom
 	owner.updateappearance(UPDATE_OVERLAYS)
 	owner.temporarilyRemoveItemFromInventory(src, TRUE)
 	forceMove(get_turf(src))

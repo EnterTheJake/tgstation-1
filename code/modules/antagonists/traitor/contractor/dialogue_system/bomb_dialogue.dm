@@ -55,6 +55,7 @@
 	var/list/felinid_general
 	var/list/felinid_idle_deactivated
 	var/list/felinid_nuke_felinid
+	var/list/greeting
 	var/list/mid_surgery
 	var/list/fork_surgery
 	var/list/bad_wire_time
@@ -68,6 +69,10 @@
 	var/list/station_nuke_detonated
 	var/list/timer_lines
 	var/list/victim_crit
+
+/datum/component/dialogue_system/contractor_bomb/Initialize()
+	. = ..()
+	addtimer(CALLBACK(src, PROC_REF(emit_sound_from_list), greeting), 1 SECONDS)
 
 /datum/component/dialogue_system/contractor_bomb/setup_sound_lists()
 	. = ..()
@@ -210,6 +215,14 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/fork_surgery/mid_surgury3_take3.ogg'),
 	)
 
+	greeting = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting1_take1_variant.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting2_take4.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_greeting/bomb_greeting3_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_greeting/greeting4_take3_variant1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_greeting/greeting5_take1.ogg'),
+	)
+
 	station_nuke_detonated = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/station_nuke_detonated/nuke_detonated1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/station_nuke_detonated/nuke_detonated2_take2.ogg'),
@@ -240,7 +253,7 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/victim_crit/victim_crit3_take1.ogg'),
 	)
 
-//clown
+	//clown
 	clown_activated = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_activated/clown_activated1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_activated/clown_activated2_take2.ogg'),
@@ -303,8 +316,8 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_timer/clown_countdown_50_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_timer/clown_countdown_75_take1.ogg'),
 	)
-//clown end
-//felinid
+	//clown end
+	//felinid
 	felinid_detonation = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/felinid_detonation/victim_felinid10_take1.ogg'),
 	)
@@ -336,8 +349,8 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid4_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid5_take2.ogg'),
 	)
-//felinid end
-//nuclear
+	//felinid end
+	//nuclear
 	bad_wire_time = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time2_take2.ogg'),
@@ -381,7 +394,7 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate2_take2.ogg'),
 	)
-//nuclear end
+	//nuclear end
 
 /datum/component/dialogue_system/contractor_bomb/apply_dialogue_channel()
 	. = ..()
@@ -417,6 +430,7 @@
 	apply_channel_to_sound_list(felinid_general)
 	apply_channel_to_sound_list(felinid_idle_deactivated)
 	apply_channel_to_sound_list(felinid_nuke_felinid)
+	apply_channel_to_sound_list(greeting)
 	apply_channel_to_sound_list(mid_surgery)
 	apply_channel_to_sound_list(bad_wire_time)
 	apply_channel_to_sound_list(bad_wire_upgrade)
@@ -441,18 +455,22 @@
 	RegisterSignal(parent, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY, PROC_REF(on_destructive_analysis))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_PRE_EXPLOSION, PROC_REF(pre_explosion))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, PROC_REF(on_timer_threshold))
+	// XANTODO: Surgery lines RegisterSignal(parent, COMSIG_ATOM_SURGERY_STARTED, PROC_REF(on_surgery_stated))
+	// Can't register this to parent because the signal is sent to the patient
 
-// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
+/// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
 /datum/component/dialogue_system/contractor_bomb/proc/emit_sound_from_list(list/sound_list, explodes = FALSE, obj/item/contractor_bomb/about_to_explode)
 	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
 	sound?.emit_sound(location = parent)
+	var/line_duration = rustg_sound_length(sound.sound_path)
+	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
 	if(!explodes)
 		return
 	if(isnull(about_to_explode))
 		CRASH("Sound helper tried to explode but no bomb was passed to actually explode")
-	var/line_duration = rustg_sound_length(sound.sound_path)
 	about_to_explode.delayed_explosion(line_duration)
 
+/// Plays when any wire is cut during a defusal attempt
 /datum/component/dialogue_system/contractor_bomb/proc/on_wire_cut(obj/item/contractor_bomb/source, wire_flags)
 	SIGNAL_HANDLER
 	var/list/sound_pool
@@ -468,9 +486,7 @@
 		sound_pool = bomb_good_wire
 	if(wire_flags & CONTRACTOR_WIRE_TIME_REDUCER)
 		sound_pool = bomb_bad_wire_reduce_time
-
-	var/datum/dialogue_sound/sound = pick_available_sound(sound_pool, parent, parent)
-	sound?.emit_sound(location = parent)
+	emit_sound_from_list(sound_pool)
 
 /// Plays when the bomb is armed by the contractor via their UI
 /datum/component/dialogue_system/contractor_bomb/proc/on_bomb_ui_armed()
@@ -517,9 +533,19 @@
 	emit_sound_from_list(sound_pool, TRUE, source)
 	return EXPLOSION_DIALOGUE_HANDLED
 
+/// Plays a line when you start the channel bar to open the surgery
+/datum/component/dialogue_system/contractor_bomb/proc/on_surgery_stated()
+	SIGNAL_HANDLER
+	emit_sound_from_list(mid_surgery)
+
 /// Plays a line based on how much time is left on the bomb timer
 /datum/component/dialogue_system/contractor_bomb/proc/on_timer_threshold(obj/item/contractor_bomb/source, timeleft_percentage)
 	SIGNAL_HANDLER
+	if(source.explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
+		// Drop the timer lines if they ever get a nuclear core, instead we'll just play the nuclear-exclusive lines
+		play_nuclear_idle()
+		return
+
 	switch(timeleft_percentage)
 		if(51 to 75)
 			if(previous_threshold <= 75)
@@ -540,15 +566,28 @@
 			emit_sound_from_list(timer_lines["twenty_five"])
 			return
 
-	// If no line is played, we can then see if they are due for some idle yap
-	if(last_idle <= world.time + next_idle)
+	if(!check_idle_time())
 		return
-	next_idle = world.time + (rand(1.5 MINUTES, 3 MINUTES))
 	var/list/sound_pool = bomb_corporate
 	if(prob(25))
 		sound_pool = bomb_maskless
 	emit_sound_from_list(sound_pool)
 
+/// Change our pools to use the nuclear sound pools when a core is installed
+/datum/component/dialogue_system/contractor_bomb/proc/play_nuclear_idle()
+	if(!check_idle_time())
+		return
+	var/list/sound_pool = general
+	// XANTODO: Add a job check for clown, add a race check for felinid
+	emit_sound_from_list(sound_pool)
+
+/// Checks to see if they are due for an idle line, will return FALSE if it's too early
+/datum/component/dialogue_system/contractor_bomb/proc/check_idle_time()
+	// If no line is played, we can then see if they are due for some idle yap
+	if(last_idle <= world.time + next_idle)
+		return FALSE
+	next_idle = world.time + (rand(1.5 MINUTES, 3 MINUTES))
+	return TRUE
 
 /* //
 sounds left to implement :
@@ -572,11 +611,9 @@ felinid_disarmed
 felinid_general
 felinid_idle_deactivated
 felinid_nuke_felinid
-mid_surgery
 bad_wire_time
 bad_wire_upgrade
 disarm
-general
 good_wire_time
 try_deactivate
 victim_crit
