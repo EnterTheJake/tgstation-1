@@ -38,10 +38,15 @@
 /datum/contractor_hub/proc/refresh_needed()
 	if(length(linked_uplinks))
 		return
+	stop_timer()
+
+/datum/contractor_hub/proc/stop_timer()
 	deltimer(contract_refresh_timer)
 	contract_refresh_timer = null
 
 /datum/contractor_hub/proc/refresh_contracts()
+	stop_timer()
+	wait_for_refresh()
 	create_contracts()
 	get_highest_lowest()
 	wait_for_refresh()
