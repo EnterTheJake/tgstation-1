@@ -1063,7 +1063,8 @@ GLOBAL_LIST_INIT(unsafe_dropoff_areas, subtypesof(/area/station) - dangerous_dro
 	while (!dropoff_area && length(pickable_areas))
 		var/area/candidate_area = pick(pickable_areas)
 		pickable_areas -= candidate_area
-		if(is_type_in_list(candidate_area, GLOB.the_station_areas))
+		// Only pick area types that are actually instantiated on the current map.
+		if(!GLOB.areas_by_type[candidate_area])
 			continue
 		if((allow_outdoors || (is_path_in_list(candidate_area, GLOB.the_station_areas) && !candidate_area::outdoors)))
 			dropoff_area = candidate_area

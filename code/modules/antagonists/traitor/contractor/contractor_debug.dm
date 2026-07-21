@@ -5,7 +5,8 @@
 	backpack_contents = list(
 		/obj/item/storage/box/syndicate/contract_kit,
 		/obj/item/storage/contractor_gun_case,
-		/obj/item/uplink/contractor
+		/obj/item/uplink/contractor,
+		/obj/item/storage/box/XANDER
 	)
 
 ADMIN_VERB(make_me_a_contractor, R_DEBUG|R_SPAWN, "Make Me A Contractor", "Dresses your mob in a contractor modsuit (with built in uplink) holding a contract kit box and a contractor gun case, and grants the traitor antag datum.", ADMIN_CATEGORY_DEBUG)

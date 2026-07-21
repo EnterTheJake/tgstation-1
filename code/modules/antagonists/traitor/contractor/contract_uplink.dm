@@ -46,6 +46,13 @@
 
 	data["refresh_time"] = timeleft(handler.contract_refresh_timer)
 
+	var/list/bounty_locations = list()
+	for(var/datum/syndicate_contract/bounty in handler.assigned_contracts)
+		if(QDELETED(bounty.contract.target))
+			continue
+		bounty_locations["[bounty.id]"] = bounty.to_ui_data()["location"]
+	data["bounty_locations"] = bounty_locations
+
 	return data
 
 /datum/component/uplink/contractor/ui_static_data(mob/user)
@@ -55,7 +62,7 @@
 		var/mob/target = bounty.contract.target
 		if(QDELETED(target))
 			continue
-		bounty_data += list(bounty.to_ui_data())
+		bounty_data += list(bounty.to_ui_static_data())
 
 	data["bounty_targets"] = bounty_data
 	data["high_bounty"] = handler.highest_payout

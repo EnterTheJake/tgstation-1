@@ -26,17 +26,16 @@
 	/// Cached names of safe-dropoff areas that exist on this map. Static: areas don't change midround, so it's built once and shared.
 	var/static/list/valid_safe_dropoffs
 
-/datum/syndicate_contract/proc/to_ui_data()
+/// Fields that don't change midround, pushed as tgui static data.
+/datum/syndicate_contract/proc/to_ui_static_data()
 	var/area/normal_dropoff = contract.dropoffs[CONTRACTOR_DROPOFF_UNSAFE]
 	var/area/dangerous_dropoff = contract.dropoffs[CONTRACTOR_DROPOFF_DANGEROUS]
-	var/mob/target_mob = contract.target?.current
 	var/icon/job_icon = get_job_hud_icon(contract.target?.assigned_role)
 	return list(
 		"name" = contract.target?.name || "Unknown Target",
 		"is_head" = is_head,
 		"status" = status,
 		"target_rank" = target_rank,
-		"location" = target_mob ? (get_area_name(target_mob, format_text = TRUE) || "Unknown") : "Unknown",
 		"tc_reward" = contract.payout,
 		"credit_reward" = ransom,
 		"payout_bonus" = contract.payout_bonus,
@@ -47,6 +46,12 @@
 		"mugshot_icon" = cached_image,
 		"job_icon" = job_icon ? icon2base64(job_icon) : null,
 		"contract_id" = id,
+	)
+
+/datum/syndicate_contract/proc/to_ui_data()
+	var/mob/target_mob = contract.target?.current
+	return list(
+		"location" = target_mob ? (get_area_name(target_mob, format_text = TRUE) || "Unknown") : "Unknown",
 	)
 
 /datum/syndicate_contract/New(blacklist, type = CONTRACT_PAYOUT_SMALL)

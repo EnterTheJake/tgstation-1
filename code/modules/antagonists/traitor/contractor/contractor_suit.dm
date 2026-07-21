@@ -107,4 +107,5 @@
 		/obj/item/mod/module/energy_net/snatcher,
 		/obj/item/mod/module/energy_net/scorpion_hook,
 		/obj/item/mod/module/laughing_gas,
+		/obj/item/mod/module/contractor_uplink
 	)

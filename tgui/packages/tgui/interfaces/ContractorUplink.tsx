@@ -39,6 +39,10 @@ type ContractorUplinkData = UplinkData & {
   refresh_time?: number;
   /** contract_id of the target currently tracked on the minimap, if any. */
   tracked_contract_id?: number;
+  /** live target locations keyed by contract_id; updates as targets move. */
+  bounty_locations?: Record<string, string>;
+  /** user-facing error message; shown as a modal while set. */
+  error?: string;
 };
 
 type TabViewProps = ContractorUplinkData & {
@@ -54,7 +58,6 @@ type BountyTargets = {
   is_head?: boolean;
   status?: string;
   target_rank?: string;
-  location?: string;
   tc_reward?: number;
   credit_reward?: number;
   payout_bonus?: number;
@@ -87,8 +90,8 @@ export class ContractorUplink extends Uplink {
   }
 
   render() {
-    const { data } = useBackend<ContractorUplinkData & UplinkData>();
-    const { shop_locked } = data;
+    const { data, act } = useBackend<ContractorUplinkData & UplinkData>();
+    const { shop_locked, error } = data;
     const { allCategories, currentTab } = this.state as UplinkState;
     const setTab = (tab: number) => {
       this.setState({ currentTab: tab });
@@ -145,6 +148,7 @@ function TabView(props: TabViewProps) {
     low_bounty,
     refresh_time,
     tracked_contract_id,
+    bounty_locations,
   } = props;
 
   const tabs: Tab[] = [
@@ -162,6 +166,7 @@ function TabView(props: TabViewProps) {
           low_bounty={low_bounty}
           refresh_time={refresh_time}
           tracked_contract_id={tracked_contract_id}
+          bounty_locations={bounty_locations}
         />
       ),
       footer: 'Complete contracts alive for the full payout bonus',
@@ -243,6 +248,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
     high_bounty = 30,
     refresh_time = 0,
     tracked_contract_id,
+    bounty_locations,
   } = props;
   const { act } = useBackend();
 
@@ -313,7 +319,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
               <Box className="BountyTarget__rank">{target.target_rank}</Box>
               <Box className="BountyTarget__loc">
                 <Icon name="location-dot" mr={0.5} />
-                {target.location}
+                {bounty_locations?.[target.contract_id ?? ''] ?? 'Unknown'}
               </Box>
               <Box className="BountyTarget__track">
                 <Box className="BountyTarget__track-icon">

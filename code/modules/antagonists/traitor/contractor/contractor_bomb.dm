@@ -557,5 +557,8 @@
 	new /obj/item/storage/box/syndicate/contract_kit(src)
 	new /obj/item/wirecutters(src)
 	new /obj/item/kitchen/fork(src)
-	new /obj/item/nuke_core(src)
+	new /obj/item/nuke_core/sleepy(src)
 
+/obj/item/nuke_core/sleepy/Initialize(mapload)
+	. = ..()
+	STOP_PROCESSING(SSobj, src)
