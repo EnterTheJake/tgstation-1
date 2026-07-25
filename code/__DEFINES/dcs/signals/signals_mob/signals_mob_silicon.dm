@@ -1,4 +1,5 @@
-///sent from borg recharge stations: (amount, repairs)
+/// Sent from borg recharge stations.
+/// (datum/callback/charge_cell, seconds_per_tick, datum/callback/charge_mod_core, repairs, sendmats)
 #define COMSIG_PROCESS_BORGCHARGER_OCCUPANT "living_charge"
 ///sent from borg mobs to itself, for tools to catch an upcoming destroy() due to safe decon (rather than detonation)
 #define COMSIG_BORG_SAFE_DECONSTRUCT "borg_safe_decon"

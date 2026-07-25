@@ -15,6 +15,8 @@
 	var/repairs
 	///Callback for borgs & modsuits to provide their cell to us for charging
 	var/datum/callback/charge_cell
+	/// Callback for MOD cores without cells to receive charge directly.
+	var/datum/callback/charge_mod_core
 	///Whether we're sending iron and glass to a cyborg. Requires Silo connection.
 	var/sendmats = FALSE
 	var/datum/remote_materials/materials
@@ -29,6 +31,7 @@
 		mat_container_flags = MATCONTAINER_NO_INSERT, \
 	)
 	charge_cell = CALLBACK(src, PROC_REF(charge_target_cell))
+	charge_mod_core = CALLBACK(src, PROC_REF(charge_target_mod_core))
 
 	update_appearance()
 	if(is_operational)
@@ -49,6 +52,7 @@
 /obj/machinery/recharge_station/Destroy()
 	QDEL_NULL(materials)
 	charge_cell = null
+	charge_mod_core = null
 	return ..()
 
 /**
@@ -67,6 +71,29 @@
 		use_energy((charge_given + active_power_usage) * 0.01)
 
 	return charge_given
+
+/**
+ * Directly charges a MOD core without treating it as a power cell.
+ *
+ * Arguments:
+ * * target - the MOD core receiving charge.
+ * * seconds_per_tick - supplied from process().
+ */
+/obj/machinery/recharge_station/proc/charge_target_mod_core(obj/item/mod/core/target, seconds_per_tick)
+	PRIVATE_PROC(TRUE)
+
+	var/charge_missing = target.max_charge_amount() - target.charge_amount()
+	if(charge_missing <= 0)
+		return FALSE
+
+	var/charge_given = use_energy(min(recharge_speed * seconds_per_tick, charge_missing), ignore_apc = TRUE)
+	if(!charge_given)
+		return FALSE
+
+	var/charge_accepted = target.add_charge(charge_given)
+	if(charge_accepted)
+		use_energy((charge_accepted + active_power_usage) * 0.01)
+	return charge_accepted
 
 /obj/machinery/recharge_station/RefreshParts()
 	. = ..()
@@ -175,4 +202,4 @@
 	if(QDELETED(occupant) || !is_operational)
 		return
 
-	SEND_SIGNAL(occupant, COMSIG_PROCESS_BORGCHARGER_OCCUPANT, charge_cell, seconds_per_tick, repairs, sendmats)
+	SEND_SIGNAL(occupant, COMSIG_PROCESS_BORGCHARGER_OCCUPANT, charge_cell, seconds_per_tick, charge_mod_core, repairs, sendmats)

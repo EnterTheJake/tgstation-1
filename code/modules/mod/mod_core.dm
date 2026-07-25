@@ -9,6 +9,8 @@
 	custom_materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 1.05, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 1.05)
 	/// MOD unit we are powering.
 	var/obj/item/mod/control/mod
+	/// Whether this core can receive charge from a borg recharger.
+	var/borg_rechargeable = FALSE
 
 /obj/item/mod/core/Destroy()
 	if(mod)
@@ -20,11 +22,40 @@
 	mod.core = src
 	forceMove(mod)
 	mod.update_charge_alert()
+	if(!borg_rechargeable)
+		return
+	RegisterSignal(mod, COMSIG_MOD_WEARER_SET, PROC_REF(on_borg_recharge_wearer_set))
+	if(mod.wearer)
+		on_borg_recharge_wearer_set(mod, mod.wearer)
 
 /obj/item/mod/core/proc/uninstall()
+	if(borg_rechargeable)
+		UnregisterSignal(mod, COMSIG_MOD_WEARER_SET)
+		if(mod.wearer)
+			on_borg_recharge_wearer_unset(mod, mod.wearer)
 	mod.core = null
 	mod.update_charge_alert()
 	mod = null
+
+/obj/item/mod/core/proc/on_borg_recharge_wearer_set(datum/source, mob/user)
+	SIGNAL_HANDLER
+	PRIVATE_PROC(TRUE)
+
+	RegisterSignal(user, COMSIG_PROCESS_BORGCHARGER_OCCUPANT, PROC_REF(on_borg_charge))
+	RegisterSignal(mod, COMSIG_MOD_WEARER_UNSET, PROC_REF(on_borg_recharge_wearer_unset))
+
+/obj/item/mod/core/proc/on_borg_recharge_wearer_unset(datum/source, mob/user)
+	SIGNAL_HANDLER
+	PRIVATE_PROC(TRUE)
+
+	UnregisterSignal(user, COMSIG_PROCESS_BORGCHARGER_OCCUPANT)
+	UnregisterSignal(mod, COMSIG_MOD_WEARER_UNSET)
+
+/// Receives direct charge from a borg recharger. Cell-backed cores override this to use the cell callback instead.
+/obj/item/mod/core/proc/on_borg_charge(datum/source, datum/callback/charge_cell, seconds_per_tick, datum/callback/charge_mod_core)
+	SIGNAL_HANDLER
+
+	charge_mod_core?.Invoke(src, seconds_per_tick)
 
 /// Returns the item responsible for charging the suit, like a power cell, an ethereal's stomach, the core itself, etc.
 /obj/item/mod/core/proc/charge_source()
@@ -106,6 +137,7 @@
 		Ethereals, owing to their appearance; which is exactly similar to that of an Ethereal's heart.\n\
 		Which one you have in your suit is unclear, but either way, \
 		it's been repurposed to be an internal power source for a Modular Outerwear Device."
+	borg_rechargeable = TRUE
 	/// Installed cell.
 	var/obj/item/stock_parts/power_store/cell
 
@@ -120,9 +152,6 @@
 	RegisterSignal(mod, COMSIG_ATOM_EXAMINE, PROC_REF(on_examine))
 	RegisterSignal(mod, COMSIG_ATOM_ATTACK_HAND, PROC_REF(on_attack_hand))
 	RegisterSignal(mod, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_mod_interaction))
-	RegisterSignal(mod, COMSIG_MOD_WEARER_SET, PROC_REF(on_wearer_set))
-	if(mod.wearer)
-		on_wearer_set(mod, mod.wearer)
 
 /obj/item/mod/core/standard/uninstall()
 	if(!QDELETED(cell))
@@ -131,10 +160,7 @@
 		COMSIG_ATOM_EXAMINE,
 		COMSIG_ATOM_ATTACK_HAND,
 		COMSIG_ATOM_ITEM_INTERACTION,
-		COMSIG_MOD_WEARER_SET,
 	))
-	if(mod.wearer)
-		on_wearer_unset(mod, mod.wearer)
 	return ..()
 
 /obj/item/mod/core/standard/charge_source()
@@ -272,21 +298,7 @@
 	playsound(mod, 'sound/machines/click.ogg', 50, TRUE, SILENCED_SOUND_EXTRARANGE)
 	return TRUE
 
-/obj/item/mod/core/standard/proc/on_wearer_set(datum/source, mob/user)
-	SIGNAL_HANDLER
-
-	RegisterSignal(mod.wearer, COMSIG_PROCESS_BORGCHARGER_OCCUPANT, PROC_REF(on_borg_charge))
-	RegisterSignal(mod, COMSIG_MOD_WEARER_UNSET, PROC_REF(on_wearer_unset))
-
-/obj/item/mod/core/standard/proc/on_wearer_unset(datum/source, mob/user)
-	SIGNAL_HANDLER
-
-	UnregisterSignal(mod.wearer, COMSIG_PROCESS_BORGCHARGER_OCCUPANT)
-	UnregisterSignal(mod, COMSIG_MOD_WEARER_UNSET)
-
-/obj/item/mod/core/standard/proc/on_borg_charge(datum/source, datum/callback/charge_cell, seconds_per_tick)
-	SIGNAL_HANDLER
-
+/obj/item/mod/core/standard/on_borg_charge(datum/source, datum/callback/charge_cell, seconds_per_tick, datum/callback/charge_mod_core)
 	var/obj/item/stock_parts/power_store/target_cell = charge_source()
 	if(isnull(target_cell))
 		return
@@ -387,9 +399,12 @@
 	return maxcharge
 
 /obj/item/mod/core/refillable/add_charge(amount)
-	charge = min(maxcharge, charge + amount)
+	var/charge_added = min(amount, maxcharge - charge)
+	if(charge_added <= 0)
+		return FALSE
+	charge += charge_added
 	mod.update_charge_alert()
-	return TRUE
+	return charge_added
 
 /obj/item/mod/core/refillable/subtract_charge(amount)
 	amount = min(amount, charge)
@@ -510,6 +525,7 @@
 	maxcharge = 40 * STANDARD_CELL_CHARGE
 	charge = 40 * STANDARD_CELL_CHARGE
 	charger_list = list(/obj/item/stack/ore/gold = 4 * STANDARD_CELL_CHARGE, /obj/item/stack/sheet/mineral/gold = 8 * STANDARD_CELL_CHARGE)
+	borg_rechargeable = TRUE
 
 /obj/item/mod/core/refillable/gold/get_chargebar_color()
 	switch(round(charge_amount() / max_charge_amount(), 0.01))
