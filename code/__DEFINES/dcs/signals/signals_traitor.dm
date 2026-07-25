@@ -22,6 +22,9 @@
 /// Called to refresh the gauss rifle scope overlay without triggering mode-change dialogue.
 #define COMSIG_GAUSS_RIFLE_SCOPE_REFRESH "gauss_rifle_scope_refresh"
 
+/// Called when the gauss rifle discharges a live shot. Passes (mob/living/user).
+#define COMSIG_GAUSS_RIFLE_SCOPE_KICK "gauss_rifle_scope_kick"
+
 #define COMSIG_PARTICLE_DRIFT_WIND_DOWN "particle_drift_wind_down"
 #define COMSIG_PARTICLE_DRIFT_RESUME "particle_drift_resume"
 	#define PARTICLE_DRIFT_RESUMED (1<<0)

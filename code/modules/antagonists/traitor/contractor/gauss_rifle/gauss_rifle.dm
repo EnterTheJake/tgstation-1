@@ -66,6 +66,10 @@
 		return FALSE
 	return ..()
 
+/obj/item/gun/energy/gauss_rifle/shoot_live_shot(mob/living/user, pointblank = FALSE, atom/pbtarget = null, message = TRUE)
+	. = ..()
+	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_SCOPE_KICK, user)
+
 /obj/item/gun/energy/gauss_rifle/shoot_with_empty_chamber(mob/living/user)
 	if(overheated)
 		balloon_alert(user, "overheated!")
@@ -105,7 +109,7 @@
 
 /obj/item/gun/energy/gauss_rifle/proc/get_scope_icon_state(mode_prefix)
 	if(mode_prefix == "antimatter")
-		return antimatter_charging ? "antimatter_scope_shooting" : "antimatter_scope"
+		return antimatter_charging ? "antimatter_scope_hollow_shooting" : "antimatter_scope_hollow"
 	return "[mode_prefix]_scope_hollow"
 
 /obj/item/gun/energy/gauss_rifle/proc/set_antimatter_charging(charging)
