@@ -147,7 +147,7 @@
 		. += mutable_appearance(icon, current_state())
 	. += emissive_appearance(icon, current_state(), src)
 
-/obj/item/gun/energy/gauss_rifle/worn_overlays(mutable_appearance/standing, isinhands, icon_file)
+/obj/item/gun/energy/gauss_rifle/worn_overlays(mutable_appearance/standing, isinhands, icon_file, bodyshape = NONE)
 	. = ..()
 	if(!isinhands)
 		return

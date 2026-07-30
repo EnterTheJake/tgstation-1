@@ -49,7 +49,7 @@
 	return ..()
 
 /mob/living/silicon/robot/model/contractor/proc/eyes_lit()
-	return stat < UNCONSCIOUS && !HAS_TRAIT(src, TRAIT_KNOCKEDOUT) && !IsStun() && !IsParalyzed() && !low_power_mode
+	return !IS_UNCONSCIOUS(src) && !IsStun() && !IsParalyzed() && !low_power_mode
 
 /mob/living/silicon/robot/model/contractor/proc/get_eye_suffix()
 	return (lamp_enabled || lamp_doom) ? "_e_y" : "_e"
@@ -203,7 +203,7 @@
 	. = TRUE
 	while(world.time < endtime)
 		stoplag(1)
-		if(QDELETED(src) || QDELETED(user) || user.loc != src || user.stat != CONSCIOUS)
+		if(QDELETED(src) || QDELETED(user) || user.loc != src || IS_UNCONSCIOUS_OR_CRIT(user))
 			. = FALSE
 			break
 		trapped_bar.update(world.time - starttime)
@@ -287,7 +287,7 @@
 	borg.balloon_alert(borg, "cloaking...")
 	playsound(borg, 'sound/effects/seedling_chargeup.ogg', 100, TRUE, -6)
 	apply_wibbly_filters(borg)
-	if(!do_after(borg, 1.5 SECONDS, target = borg, hidden = TRUE) || (borg.cell && !borg.cell.use(CLOAK_ACTIVATION_COST)))
+	if(!do_after(borg, 1.5 SECONDS, target = borg, cog_icon = null) || (borg.cell && !borg.cell.use(CLOAK_ACTIVATION_COST)))
 		remove_wibbly_filters(borg)
 		deploying = FALSE
 		do_sparks(2, FALSE, borg)

@@ -24,17 +24,19 @@
 
 /obj/item/restraints/handcuffs/contractor/equipped(mob/living/user, slot)
 	. = ..()
-	UnregisterSignal(user, list(SIGNAL_ADDTRAIT(TRAIT_CRITICAL_CONDITION), COMSIG_LIVING_TRY_SUCCUMB))
+	UnregisterSignal(user, list(COMSIG_MOB_STATCHANGE, COMSIG_LIVING_TRY_SUCCUMB))
 	if(slot == ITEM_SLOT_HANDCUFFED)
-		RegisterSignal(user, SIGNAL_ADDTRAIT(TRAIT_CRITICAL_CONDITION), PROC_REF(on_enter_crit))
+		RegisterSignal(user, COMSIG_MOB_STATCHANGE, PROC_REF(on_enter_crit))
 		RegisterSignal(user, COMSIG_LIVING_TRY_SUCCUMB, PROC_REF(on_succumb_attempt))
 
 /obj/item/restraints/handcuffs/contractor/on_uncuffed(datum/source, mob/living/wearer)
 	. = ..()
-	UnregisterSignal(wearer, list(SIGNAL_ADDTRAIT(TRAIT_CRITICAL_CONDITION), COMSIG_LIVING_TRY_SUCCUMB))
+	UnregisterSignal(wearer, list(COMSIG_MOB_STATCHANGE, COMSIG_LIVING_TRY_SUCCUMB))
 
-/obj/item/restraints/handcuffs/contractor/proc/on_enter_crit(mob/owner)
+/obj/item/restraints/handcuffs/contractor/proc/on_enter_crit(mob/owner, new_stat, old_stat)
 	SIGNAL_HANDLER
+	if(new_stat != SOFT_CRIT && new_stat != HARD_CRIT)
+		return
 	if(!owner?.reagents.has_reagent(/datum/reagent/medicine/epinephrine) && !owner?.reagents.has_reagent(/datum/reagent/medicine/c2/penthrite))
 		to_chat(owner, "[src]'s heart monitor starts beeping, trying to keep [owner.p_them()] alive.") // ANNETODO
 		owner.reagents.add_reagent(/datum/reagent/medicine/epinephrine, 10)

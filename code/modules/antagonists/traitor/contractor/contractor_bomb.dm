@@ -471,17 +471,21 @@
 	data["oxy"] = oxy
 	data["max_health"] = victim.maxHealth
 
-	switch(victim.stat)
-		if(CONSCIOUS)
-			data["stat_text"] = "CONSCIOUS"
-		if(SOFT_CRIT)
-			data["stat_text"] = "PAIN CRIT"
-		if(UNCONSCIOUS, HARD_CRIT)
-			data["stat_text"] = "CRITICAL"
-		if(DEAD)
-			data["stat_text"] = "FLATLINE"
-		else
-			data["stat_text"] = "UNKNOWN"
+	// knocked out isn't a stat anymore, so it has to be checked before we look at one
+	if(IS_UNCONSCIOUS_AND_ALIVE(victim))
+		data["stat_text"] = "CRITICAL"
+	else
+		switch(victim.stat)
+			if(STABLE)
+				data["stat_text"] = "CONSCIOUS"
+			if(SOFT_CRIT)
+				data["stat_text"] = "PAIN CRIT"
+			if(HARD_CRIT)
+				data["stat_text"] = "CRITICAL"
+			if(DEAD)
+				data["stat_text"] = "FLATLINE"
+			else
+				data["stat_text"] = "UNKNOWN"
 
 	if(is_dead)
 		data["blood_pressure"] = "0/0"
