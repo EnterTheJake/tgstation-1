@@ -278,9 +278,7 @@
 
 	if(!isturf(atom_parent.loc))
 		return
-	if(drop_line_timerid)
-		deltimer(drop_line_timerid)
-	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_dropped_line), user), 5 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE)
+	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_dropped_line), user), 5 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
 
 /datum/component/dialogue_system/proc/try_play_dropped_line(mob/user)
 	drop_line_timerid = null
