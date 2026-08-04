@@ -192,10 +192,6 @@
 	dupe_mode = COMPONENT_DUPE_UNIQUE
 	/// List of signals to unregister from parent
 	var/list/signals_to_unregister = list(COMSIG_ITEM_PICKUP, COMSIG_ITEM_DROPPED)
-	/// Last channel candidate used when allocating dialogue channels.
-	var/static/next_dialogue_channel = CHANNEL_HIGHEST_AVAILABLE
-	/// Tracks channels currently allocated by active dialogue systems.
-	var/static/list/allocated_dialogue_channels = list()
 	/// Unique channel for this dialogue system instance.
 	var/dialogue_channel
 	/// Sounds played when the parent is picked up.
@@ -209,40 +205,18 @@
 	if(!isitem(parent))
 		return COMPONENT_INCOMPATIBLE
 	setup_sound_lists()
-	dialogue_channel = allocate_dialogue_channel()
+	dialogue_channel = SSsounds.reserve_sound_channel_for_datum(src)
 	apply_dialogue_channel()
 
 /datum/component/dialogue_system/Destroy(force)
 	if(drop_line_timerid)
 		deltimer(drop_line_timerid)
 		drop_line_timerid = null
-	release_dialogue_channel()
 	return ..()
 
 /datum/component/dialogue_system/proc/setup_sound_lists()
 	pickup_sounds = list()
 	dropped_sounds = list()
-
-/datum/component/dialogue_system/proc/allocate_dialogue_channel()
-	var/start_channel = next_dialogue_channel
-	while(next_dialogue_channel in allocated_dialogue_channels)
-		next_dialogue_channel--
-		if(next_dialogue_channel < 1)
-			next_dialogue_channel = CHANNEL_HIGHEST_AVAILABLE
-		if(next_dialogue_channel == start_channel)
-			CRASH("No free sound channels available for dialogue_system.")
-
-	var/chosen_channel = next_dialogue_channel
-	allocated_dialogue_channels += chosen_channel
-	next_dialogue_channel--
-	if(next_dialogue_channel < 1)
-		next_dialogue_channel = CHANNEL_HIGHEST_AVAILABLE
-	return chosen_channel
-
-/datum/component/dialogue_system/proc/release_dialogue_channel()
-	if(dialogue_channel)
-		allocated_dialogue_channels -= dialogue_channel
-	dialogue_channel = null
 
 /datum/component/dialogue_system/proc/apply_channel_to_sound_list(list/sounds)
 	for(var/datum/dialogue_sound/sound as anything in sounds)
