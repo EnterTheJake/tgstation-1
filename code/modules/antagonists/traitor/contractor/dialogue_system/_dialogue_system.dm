@@ -261,10 +261,7 @@
 	var/atom/atom_parent = parent
 	if(!isturf(atom_parent.loc))
 		return
-	if(drop_line_timerid)
-		deltimer(drop_line_timerid)
-		drop_line_timerid = null
-	addtimer(CALLBACK(src, PROC_REF(try_play_pickup_line), taker), 1)
+	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_pickup_line), taker), 0.1 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
 
 /datum/component/dialogue_system/proc/try_play_pickup_line(mob/taker)
 	if(!taker?.is_holding(parent))
