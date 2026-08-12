@@ -222,7 +222,8 @@
 /obj/item/mod/module/energy_net/scorpion_hook
 	name = "Scorpion Hook module"
 	desc = "A module that launches a hook that allows the user to launch a hardlight hook towards a target and reel them in. \n\
-		If you have a weapon or baton in your other hand, you'll use it on them."
+		If you have a weapon or baton in your other hand, you'll use it on them. \n\
+		Hooking anything solid, or any loose object on the floor, reels you to it instead."
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_modules.dmi'
 	icon_state = "harpoon"
 	incompatible_modules = list(/obj/item/mod/module/energy_net/scorpion_hook)
@@ -287,18 +288,30 @@
 	range = 10
 
 /obj/projectile/hook/scorpion/on_hit(atom/target, blocked, pierce_hit)
+	var/mob/living/hook_firer = firer
+	// A dropped item covers the tile it sits on, so a cluttered floor is nearly impossible to click
+	// cleanly. Ride the line to the tile instead of reeling the item in or wasting the shot. This skips
+	// the parent, because the parent treats any loose movable as something to drag back.
 	if(isitem(target))
+		if(istype(hook_firer))
+			start_zipline(hook_firer, get_turf(target))
 		return
+	. = ..()
+	if(!istype(hook_firer))
+		return
+	// The parent already reeled in anything loose. Only a solid anchor is worth ziplining to.
 	var/atom/movable/movable = astype(target, /atom/movable)
 	if((!isnull(movable) && !movable.anchored) || !target.density)
-		return ..()
-	. = ..()
-	var/mob/living/hook_firer = firer
-	if(!istype(hook_firer))
-		return ..()
+		return
+	start_zipline(hook_firer, target)
+
+/// Frees the firer from the hook's own immobilization, then rides the line to the anchor point.
+/obj/projectile/hook/scorpion/proc/start_zipline(mob/living/hook_firer, atom/anchor)
+	if(isnull(anchor))
+		return
 	REMOVE_TRAIT(hook_firer, TRAIT_IMMOBILIZED, REF(src))
 	var/datum/zipline_and_move/zipline = new(launch_delay = 0, throw_speed = 2, range = 10)
-	zipline.begin_zipline(hook_firer, target)
+	zipline.begin_zipline(hook_firer, anchor)
 
 /datum/movespeed_modifier/net_slowdown
 	multiplicative_slowdown = 4

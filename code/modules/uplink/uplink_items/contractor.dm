@@ -55,6 +55,50 @@
 	limited_stock = 1
 	cost = 2
 
+/datum/uplink_item/contractor/gauss_rifle
+	name = "Raijin Horizon Gauss Rifle"
+	desc = "A scoped, suppressed gauss weapon built for utility and subterfuge rather than protracted \
+		firefights. Ships in a maintenance case alongside a spare nanite cell, chambered in 2mm FM and \
+		loaded with the standard and gyre patterns. Scoping in and holding the shot empowers whatever \
+		round is selected, at a steeper nanite cost."
+	item = /obj/item/storage/contractor_gun_case
+	limited_stock = 1
+	cost = 8
+
+/datum/uplink_item/contractor/gauss_nanites
+	name = "Raijin Horizon Nanite Cell"
+	desc = "A spare twenty-five nanite power store for the Raijin Horizon. Applying it to the rifle tops \
+		the magazine straight back up, no recharger or case required."
+	item = /obj/item/stock_parts/power_store/gauss_nanites
+	cost = 2
+
+/datum/uplink_item/contractor/gauss_emp
+	name = "Raijin Horizon Smart EMP Magazine"
+	desc = "Teaches the Raijin's fabricator the smart EMP pattern. Harmless to flesh, but the ionized \
+		burst walks all over electronics, and it is specifically resonated to keep Area Power Controllers \
+		down for minutes at a time. Empowered shots trade a light pulse for a heavy one."
+	item = /obj/item/ammo_box/magazine/gauss/emp
+	limited_stock = 1
+	cost = 1
+
+/datum/uplink_item/contractor/gauss_red_sun
+	name = "Raijin Horizon Red Sun Magazine"
+	desc = "Teaches the Raijin's fabricator the red sun pattern. A microfusion cascade that sets its \
+		target alight and lays thermite over whatever it lands on. Hold the scope longer and the round \
+		flies faster, burns hotter, and is likelier to stay lodged in the wound."
+	item = /obj/item/ammo_box/magazine/gauss/thermite
+	limited_stock = 1
+	cost = 2
+
+/datum/uplink_item/contractor/gauss_antimatter
+	name = "Raijin Horizon Dark Matter Magazine"
+	desc = "Teaches the Raijin's fabricator the antimatter pattern. A long channel roots you in place \
+		before a translocated sliver destabilises along the whole firing line, dragging everything in it \
+		together and tearing through walls, armour and bystanders alike. Empties the magazine per shot."
+	item = /obj/item/ammo_box/magazine/gauss/antimatter
+	limited_stock = 1
+	cost = 5
+
 
 // The whole fucking category is TODO | XANTODO | JAKETODO | ANNETODO zzzzzzzzzzzz
 

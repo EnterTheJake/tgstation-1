@@ -347,7 +347,7 @@
 
 /datum/action/cooldown/contractor_cloak/proc/on_bump(datum/source, atom/bumped_atom)
 	SIGNAL_HANDLER
-	if(isliving(bumped_atom) || istype(bumped_atom, /obj/machinery/door))
+	if(isliving(bumped_atom))
 		flare_cloak()
 
 /datum/action/cooldown/contractor_cloak/proc/on_bumped(datum/source, atom/movable/bumper)
@@ -419,7 +419,7 @@
 	duration = CONTRACTOR_DISRUPT_TIME
 	randomdir = FALSE
 	layer = ABOVE_MOB_LAYER
-	SET_BASE_PIXEL((ICON_SIZE_X - CONTRACTOR_BORG_ICON_SIZE) * 0.5, 0)
+	SET_BASE_PIXEL((ICON_SIZE_X - CONTRACTOR_BORG_ICON_SIZE) * 0.5, -8)
 
 /atom/movable/screen/fullscreen/contractor_chassis
 	screen_loc = "WEST,SOUTH to EAST,NORTH"

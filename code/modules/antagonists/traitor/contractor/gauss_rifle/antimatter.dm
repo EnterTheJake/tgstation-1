@@ -1,53 +1,43 @@
 /obj/item/ammo_casing/energy/gauss/antimatter
 	name = "antimatter gauss round"
-	desc = "This magazine flash-fabricates microcartridge assemblies through self-replicating nanites. \n\
-		These assemblies self-destructively supercharge the rail capacitors used in gauss weaponry. \n\
-		This causes the contained ferromagnetic payload to launch itself along the rail system, out towards a target at extreme velocities. \n\
-		The projectile contains a translocated microscopic antimatter sliver into which the additional kinetic energy is diverted into upon impact with a surface. \n\
-		This destabilization creates what is effectively a localized eruption of energy, blossoming outwards in a flash of light. \n\
-		Against flesh or steel, the effect is often devastating and gruesome, leading this round to be viewed less as a weapon of war and more as a weapon of terror. \n\
-		Cybersun is not above using this round when the situation calls for either need."
 	icon_state = "antimatter"
 	projectile_type = /obj/projectile/bullet/gauss/antimatter
 	select_name = "antimatter"
-	var/currently_charging = FALSE
-	var/charge_time = 4 SECONDS
+	e_cost = GAUSS_NANITES(15)
+	// The channel stays long at any range. This round has no hip fired version.
+	charge_time = 4 SECONDS
+	seconds_per_distance = 0
+	max_charge_time = 4 SECONDS
+	scope_only = TRUE
+	charged_cooldown_time = 5 MINUTES
+	charge_alert = "charging..."
+	charge_sound = 'sound/effects/magic/lightning_chargeup.ogg'
+	/// How long the rifle stays overheated after it translocates a sliver of antimatter.
+	var/antimatter_overheat = 15 SECONDS
+	/// Purple recolor of the voltaic heart lightning overlay. The shooter wears it while charging.
+	var/mutable_appearance/charge_overlay
 
-/obj/item/ammo_casing/energy/gauss/antimatter/fire_casing(atom/target, mob/living/user, params, distro, quiet, zone_override, spread, atom/fired_from)
-	if(!loaded_projectile)
-		return
-	if(!check_charge(user))
-		return
-	. = ..()
-	var/obj/item/gun/energy/gauss_rifle/gun = astype(loc)
-	gun?.overheat()
-
-/obj/item/ammo_casing/energy/gauss/antimatter/proc/check_charge(mob/living/user)
-	var/obj/item/gun/energy/gauss_rifle/gun = loc
-	if(!isliving(user) || !istype(gun))
-		return TRUE
-	if(currently_charging)
-		user.balloon_alert(user, "already charging!")
-		return FALSE
-
-	// Purple recolour of the voltaic heart's lightning overlay, worn by the shooter while charging.
-	var/mutable_appearance/charge_overlay = mutable_appearance('icons/effects/effects.dmi', "lightning")
+/obj/item/ammo_casing/energy/gauss/antimatter/on_charge_started(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
+	charge_overlay = mutable_appearance('icons/effects/effects.dmi', "lightning")
 	charge_overlay.color = COLOR_PURPLE
 	user.add_overlay(charge_overlay)
-	gun.set_antimatter_charging(TRUE)
-	user.balloon_alert(user, "charging...")
-	user.playsound_local(get_turf(user), 'sound/effects/magic/lightning_chargeup.ogg', 70, TRUE)
-	currently_charging = TRUE
-	. = do_after(user, charge_time, user, IGNORE_USER_LOC_CHANGE)
-	currently_charging = FALSE
+	rifle.set_antimatter_charging(TRUE)
+
+/obj/item/ammo_casing/energy/gauss/antimatter/on_charge_ended(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
 	if(!QDELETED(user))
 		user.cut_overlay(charge_overlay)
-	if(!QDELETED(gun))
-		gun.set_antimatter_charging(FALSE)
+	charge_overlay = null
+	if(!QDELETED(rifle))
+		rifle.set_antimatter_charging(FALSE)
 
-	if(!.)
-		user.balloon_alert(user, "interrupted!")
-	return .
+/obj/item/ammo_casing/energy/gauss/antimatter/on_empowered_fire(mob/living/user)
+	. = ..()
+	var/obj/item/gun/energy/gauss_rifle/rifle = astype(loc)
+	if(isnull(rifle))
+		return
+	rifle.overheat(antimatter_overheat)
+	// The translocation scavenges every nanite left in the magazine. It always leaves the magazine dry.
+	rifle.cell?.use(rifle.cell.charge, force = TRUE)
 
 /obj/projectile/bullet/gauss/antimatter
 	name = "antimatter gauss round"
@@ -64,7 +54,10 @@
 	projectile_phasing = PASSTABLE | PASSGLASS | PASSGRILLE | PASSCLOSEDTURF | PASSMACHINE | PASSSTRUCTURE | PASSDOORS
 	projectile_piercing = PASSMOB
 	phasing_ignore_direct_target = TRUE
-	var/recoil_distance = 6
+
+/// The channel is the only firing mode of this round. Empowerment adds nothing.
+/obj/projectile/bullet/gauss/antimatter/empower(charge_ratio, atom/target)
+	return
 
 /obj/projectile/bullet/gauss/antimatter/fire(fire_angle, atom/direct_target)
 	var/turf/starting = get_turf(src)
@@ -80,9 +73,7 @@
 	var/end_x = clamp(round(starting.x + sin(angle) * range), 1, world.maxx)
 	var/end_y = clamp(round(starting.y + cos(angle) * range), 1, world.maxy)
 	var/turf/end_turf = locate(end_x, end_y, starting.z)
-	// Unscoped fire recoils the shooter, but like every other effect it waits for the discharge.
-	var/effective_recoil = (isliving(firer) && !HAS_TRAIT(firer, TRAIT_USER_SCOPED)) ? recoil_distance : 0
-	new /datum/antimatter_discharge(get_line(starting, end_turf), firer, angle2dir_cardinal(angle), effective_recoil)
+	new /datum/antimatter_discharge(get_line(starting, end_turf), firer, angle2dir_cardinal(angle))
 
 	return ..()
 
@@ -90,8 +81,14 @@
 	var/list/turf/beam_turfs
 	var/datum/weakref/firer_ref
 	var/beam_dir
-	var/damage = 70
+	var/damage = 30
+	/// Damage multiplier for non-carbon targets.
+	var/inorganic_damage_mult = 4
 	var/wound_bonus = 40
+	/// How long the detonation deafens a victim.
+	var/deafening_duration = 1 MINUTES
+	/// How long the narrowed vision lasts after the beam catches a victim.
+	var/vision_narrow_duration = 15 SECONDS
 	var/pull_radius = 1
 	/// Delay from firing to discharge, synced to the frame the gauss_antimatter tracer's effect lands.
 	var/discharge_delay = 0.8 SECONDS
@@ -100,17 +97,14 @@
 	var/knockback_cooldown = 0.5 SECONDS
 	var/discharging = FALSE
 	var/turf/end_turf
-	/// Distance the shooter is recoiled at discharge (0 = braced/scoped, no recoil).
-	var/recoil_distance = 0
 	var/list/struck_victims
 	var/list/knockback_cooldowns
 
-/datum/antimatter_discharge/New(list/turf/path, mob/firer, dir, recoil_distance = 0)
+/datum/antimatter_discharge/New(list/turf/path, mob/firer, dir)
 	beam_turfs = path
 	firer_ref = WEAKREF(firer)
 	beam_dir = dir
 	end_turf = length(path) ? path[length(path)] : null
-	src.recoil_distance = recoil_distance
 	struck_victims = list()
 	knockback_cooldowns = list()
 	addtimer(CALLBACK(src, PROC_REF(discharge)), discharge_delay, TIMER_CLIENT_TIME)
@@ -121,11 +115,6 @@
 	var/turf/endpoint = length(beam_turfs) ? beam_turfs[length(beam_turfs)] : null
 	if(origin)
 		playsound(origin, 'sound/effects/magic/lightningbolt.ogg', 80, TRUE)
-	if(recoil_distance > 0)
-		var/mob/living/shooter = firer_ref?.resolve()
-		if(isliving(shooter))
-			shooter.balloon_alert(shooter, "recoil!")
-			shooter.safe_throw_at(get_edge_target_turf(shooter, REVERSE_DIR(beam_dir)), recoil_distance, 3, shooter, force = MOVE_FORCE_STRONG)
 	spawn_pull_field()
 	for(var/turf/beam_turf as anything in beam_turfs)
 		for(var/mob/living/bystander in view(1, beam_turf))
@@ -208,15 +197,27 @@
 		victim.investigate_log("was gibbed by an antimatter gauss round while Super Frail.", INVESTIGATE_DEATHS)
 		victim.gib()
 		return
-	var/dealt_damage = iscarbon(victim) ? damage : damage * 2
+	var/dealt_damage = iscarbon(victim) ? damage : damage * inorganic_damage_mult
 	victim.apply_damage(dealt_damage, BRUTE, blocked = 0, forced = TRUE, spread_damage = TRUE, wound_bonus = wound_bonus)
-	victim.soundbang_act(1 SECONDS)
+	// The blast beats standard ear protection. It also narrows the vision of the survivor.
+	victim.soundbang_act(SOUNDBANG_STRONG, stun_pwr = 0, damage_pwr = 5, deafen_pwr = deafening_duration)
+	narrow_vision(victim)
 	// Only frail-quirk holders escalate (to Super Frail, then a gib on the next hit). Everyone else stays
 	// plain Frail forever - the Frail status never counts toward escalation, so it can't stack up to a gib.
 	if(victim.has_quirk(/datum/quirk/frail))
 		victim.apply_status_effect(/datum/status_effect/frail/super)
 	else
 		victim.apply_status_effect(/datum/status_effect/frail)
+
+/**
+ * Narrows the field of vision of the victim for a short time after the flash.
+ *
+ * Glasses cannot correct it, because the flash damages the eyes directly. The effect uses a grouped
+ * status rather than a timed one, so a timer must remove it.
+ */
+/datum/antimatter_discharge/proc/narrow_vision(mob/living/victim)
+	victim.assign_nearsightedness(GAUSS_ANTIMATTER_TRAIT, 2, FALSE)
+	addtimer(CALLBACK(victim, TYPE_PROC_REF(/mob/living, remove_status_effect), /datum/status_effect/grouped/nearsighted, GAUSS_ANTIMATTER_TRAIT), vision_narrow_duration)
 
 /datum/antimatter_discharge/proc/end_discharge()
 	discharging = FALSE

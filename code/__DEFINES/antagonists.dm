@@ -518,3 +518,15 @@ GLOBAL_LIST_INIT(human_invader_antagonists, list(
 #define CONTRACTOR_BATON_STUN 0
 #define CONTRACTOR_BATON_CUFF 1
 #define CONTRACTOR_BATON_MODES 2
+
+//Gauss rifle magazines count nanites rather than raw cell charge
+#define GAUSS_MAGAZINE_NANITES 25
+#define GAUSS_NANITES(amount) (STANDARD_CELL_CHARGE * (amount) / GAUSS_MAGAZINE_NANITES)
+
+//Return values of /obj/item/ammo_casing/energy/gauss/proc/charge_shot()
+/// Do not fire at all.
+#define GAUSS_CHARGE_ABORT 0
+/// Fire the round unempowered.
+#define GAUSS_CHARGE_HIP 1
+/// The scoped spin-up finished, so fire the round empowered.
+#define GAUSS_CHARGE_EMPOWERED 2

@@ -155,6 +155,7 @@
 #define NO_GRAVITY_TRAIT "no-gravity"
 #define NEGATIVE_GRAVITY_TRAIT "negative-gravity"
 #define CONTRACTOR_BATON_TRAIT "contractor_baton"
+#define GAUSS_ANTIMATTER_TRAIT "gauss_antimatter"
 
 /// A trait gained from a mob's leap action, like the leaper
 #define LEAPING_TRAIT "leaping"

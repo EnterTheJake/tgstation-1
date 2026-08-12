@@ -1,7 +1,31 @@
 
+
+/obj/item/gun/energy/gauss_rifle/debug
+	name = "debug Raijin Horizon Gauss Rifle"
+	desc = "A test bench Raijin with every pattern loaded and a magazine that refills itself."
+	slot_flags = ITEM_SLOT_BACK|ITEM_SLOT_OCLOTHING
+	ammo_type = list(
+		/obj/item/ammo_casing/energy/gauss,
+		/obj/item/ammo_casing/energy/gauss/gyro,
+		/obj/item/ammo_casing/energy/gauss/emp,
+		/obj/item/ammo_casing/energy/gauss/thermite,
+		/obj/item/ammo_casing/energy/gauss/antimatter,
+	)
+
+/// Refills the magazine after every shot, including the antimatter round that drains it.
+/obj/item/gun/energy/gauss_rifle/debug/handle_chamber()
+	. = ..()
+	if(isnull(cell))
+		return
+	cell.give(cell.maxcharge)
+	recharge_newshot(TRUE)
+	update_appearance()
+	emit_ammo_signal()
+
 /datum/outfit/contractor_debug
 	name = "Debug Contractor"
 	back = /obj/item/mod/control/pre_equipped/contractor/debugsuit
+	suit_store = /obj/item/gun/energy/gauss_rifle/debug
 	backpack_contents = list(
 		/obj/item/storage/box/syndicate/contract_kit,
 		/obj/item/storage/contractor_gun_case,

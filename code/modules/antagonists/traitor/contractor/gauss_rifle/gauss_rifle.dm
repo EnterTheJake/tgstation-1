@@ -19,12 +19,11 @@
 	cell_type = /obj/item/stock_parts/power_store/gauss_nanites
 	ammo_type = list(
 		/obj/item/ammo_casing/energy/gauss,
-		/obj/item/ammo_casing/energy/gauss/emp,
 		/obj/item/ammo_casing/energy/gauss/gyro,
-		/obj/item/ammo_casing/energy/gauss/antimatter,
-		/obj/item/ammo_casing/energy/gauss/thermite,
 	)
 	force = 11
+	fire_delay = 4
+	fire_sound = 'sound/items/weapons/thermalpistol.ogg'
 	/// If TRUE, scope art stretches fullscreen. If FALSE, it renders centered.
 	var/scope_overlay_stretches = FALSE
 	var/atom/movable/screen/gauss_ammo_display/ammo_display
@@ -44,7 +43,6 @@
 	transform = offset
 
 /obj/item/gun/energy/gauss_rifle/Destroy()
-	// ammo_display?.hide_from_owner()
 	QDEL_NULL(ammo_display)
 	return ..()
 
@@ -58,7 +56,12 @@
 	return ..()
 
 /obj/item/gun/energy/gauss_rifle/handle_chamber()
+	var/obj/item/ammo_casing/energy/gauss/spent_round = astype(chambered)
+	var/surcharge = spent_round?.loaded_projectile ? 0 : spent_round?.get_charge_surcharge()
+	if(surcharge)
+		cell?.use(surcharge, force = TRUE)
 	. = ..()
+	spent_round?.reset_charge()
 	emit_ammo_signal()
 
 /obj/item/gun/energy/gauss_rifle/can_shoot()
@@ -77,7 +80,7 @@
 		return
 	return ..()
 
-/obj/item/gun/energy/gauss_rifle/proc/overheat()
+/obj/item/gun/energy/gauss_rifle/proc/overheat(duration = overheat_duration)
 	if(overheated)
 		return
 	overheated = TRUE
@@ -87,7 +90,7 @@
 		AddComponent(/datum/component/particle_drift_on_move, /particles/smoke/gauss_overheat)
 	if(isliving(loc))
 		balloon_alert(loc, "gun overheating!")
-	addtimer(CALLBACK(src, PROC_REF(end_overheat)), overheat_duration)
+	addtimer(CALLBACK(src, PROC_REF(end_overheat)), duration)
 
 /obj/item/gun/energy/gauss_rifle/proc/end_overheat()
 	overheated = FALSE
@@ -123,17 +126,30 @@
 		SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_AMMO_CHANGED, 0, 0, mode_prefix)
 		return
 	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_AMMO_CHANGED, \
-		clamp(FLOOR(cell.charge / current_ammo.e_cost, 1), 0, 10), \
-		clamp(FLOOR(cell.maxcharge / current_ammo.e_cost, 1), 0, 10), \
+		clamp(FLOOR(cell.charge / current_ammo.e_cost, 1), 0, GAUSS_MAGAZINE_NANITES), \
+		clamp(FLOOR(cell.maxcharge / current_ammo.e_cost, 1), 0, GAUSS_MAGAZINE_NANITES), \
 		mode_prefix)
+
+/// Adds a purchased round to the fire selector. Returns FALSE if the rifle already has that round.
+/obj/item/gun/energy/gauss_rifle/proc/unlock_ammo_type(obj/item/ammo_casing/energy/casing_path, mob/user)
+	for(var/obj/item/ammo_casing/energy/installed as anything in ammo_type)
+		if(installed.type == casing_path)
+			balloon_alert(user, "already installed!")
+			return FALSE
+	var/obj/item/ammo_casing/energy/new_casing = new casing_path(src)
+	ammo_type += new_casing
+	balloon_alert(user, "[new_casing.select_name] installed")
+	playsound(src, 'sound/items/weapons/kinetic_reload.ogg', 60, TRUE)
+	return TRUE
 
 /obj/item/gun/energy/gauss_rifle/examine_more(mob/user)
 	. = ..()
 	. += "The Raijin Horizon Gauss Rifle is slow to fire but fires a high velocity, high impact, high penetration round."
 	. += "Has an implant restricted firing pin similar to nuclear operatives, and can only be fired by users with the Cybersun authorization implant. "
 	. += "This implant is injected upon picking up the gun for the first time."
-	. += "The case contains the gun, and comes with a number of customizable magazines."
-	. += "A magazine can be swapped to a different ammunition type before being inserted into the gun."
+	. += "The case contains the gun and a spare nanite cell, and ships loaded with the standard and gyre patterns."
+	. += "Applying a purchased magazine to the gun teaches its fabricator that pattern, adding the round to the fire selector."
+	. += "Scoping in and holding the shot spins the selected round up into an empowered version of itself."
 	. += "Each projectile type expends more 'ammunition' from the magazine, which acts more like a battery than a traditional magazine."
 	. += "Recharging these magazines requires either using a recharger, or the weapon case that came with the gun."
 
@@ -155,7 +171,6 @@
 	. += emissive_appearance(icon_file, emissive_icon, src)
 
 /obj/item/gun/energy/gauss_rifle/proc/current_state()
-	// Charge-based rather than get_charge_ratio(), so overheating (can_shoot() == FALSE) doesn't read as empty.
 	var/obj/item/ammo_casing/energy/gauss/gauss_chamber = astype(chambered)
 	if(isnull(gauss_chamber) || !cell || cell.charge < gauss_chamber.e_cost)
 		return "empty"
@@ -166,7 +181,7 @@
 	desc = "A power storage unit containing self-replicating nanites that flash-fabricate microcartridge assemblies for gauss weaponry."
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_hud.dmi'
 	icon_state = "ammo_hud"
-	maxcharge = STANDARD_CELL_CHARGE
+	maxcharge = GAUSS_NANITES(GAUSS_MAGAZINE_NANITES)
 	w_class = WEIGHT_CLASS_NORMAL
 
 /obj/item/stock_parts/power_store/gauss_nanites/Initialize(mapload, override_maxcharge)
@@ -207,31 +222,67 @@
 /obj/item/ammo_box/magazine/gauss
 	name = "Raijin Horizon Gauss Magazine"
 	desc = "This magazine flash-fabricates microcartridge assemblies through self-replicating nanites. \n\
-		These assemblies self-destructively supercharge the rail capacitors used in gauss weaponry. This causes the contained ferromagnetic payload to launch itself along the rail system, out towards a target at extreme velocities."
+		These assemblies self-destructively supercharge the rail capacitors used in gauss weaponry. This causes the contained ferromagnetic payload to launch itself along the rail system, out towards a target at extreme velocities. \n\
+		Applying it to a Raijin Horizon teaches the rifle's fabricator the pattern, adding the round to its selection."
 	caliber = CALIBER_GAUSS
 	max_ammo = 5
+	// The rifle fabricates its own rounds from nanites, so the magazine only carries the pattern.
+	start_empty = TRUE
 	icon_state = ".50mag"
 	ammo_type = /obj/item/ammo_casing/energy/gauss
+	/// What the pattern does once the rifle knows it. Examine prints this under the shared blurb.
+	var/pattern_desc = "The projectile delivers enough kinetic energy into an impacted surface to liquify surrounding organic matter it passes through or render vehicles inoperable if aimed towards an engine block or battery pack."
+
+/obj/item/ammo_box/magazine/gauss/examine(mob/user)
+	. = ..()
+	if(pattern_desc)
+		. += span_notice(pattern_desc)
+
+/obj/item/ammo_box/magazine/gauss/pre_attack(atom/target, mob/living/user, list/modifiers, list/attack_modifiers)
+	if(!istype(target, /obj/item/gun/energy/gauss_rifle))
+		return ..()
+	var/obj/item/gun/energy/gauss_rifle/rifle = target
+	if(!rifle.unlock_ammo_type(ammo_type, user))
+		return TRUE
+	qdel(src)
+	return TRUE
 
 /obj/item/ammo_box/magazine/gauss/emp
 	name = "Raijin Horizon Smart EMP Gauss Magazine"
 	color = COLOR_BLUE
 	ammo_type = /obj/item/ammo_casing/energy/gauss/emp
+	pattern_desc = "The projectile unleashes its energy payload as ionized radiation bursts upon impact with a solid surface, disrupting electronic devices and synthetic lifeforms. \n\
+		While the impact shatters the otherwise frail containment shell for the internal catalystic discharge array, causing no real harm to organic flesh, the resulting ionized particles fry machinery with ease. \n\
+		The specialized resonation of these particles is particularly suited to shutting down Area Power Controller modules, rendering them completely inoperable for large periods of time. \n\
+		It also has a tendency to prime electronic munitions and transfer valves, resulting in what Cybersun agents call a 'spontaneous clusterfuck' scenario. Use with care."
 
 /obj/item/ammo_box/magazine/gauss/gyro
 	name = "Raijin Horizon Gyre Gauss Magazine"
 	color = COLOR_YELLOW
 	ammo_type = /obj/item/ammo_casing/energy/gauss/gyro
+	pattern_desc = "The projectile deliberately slows itself down to generate power through internal gyroscopes to charge a secondary power capacitor payload. \n\
+		Upon impact, this triggers the transformer system to direct the stored charge into the impacted surface. \n\
+		Used against organic targets, this induces cardiac and synaptic disruption. \n\
+		In other words, it switches people off like a light switch for a moment, possibly rendering them completely helpless with enough generated power or repeat exposure. \n\
+		Do not overuse on targets intended to be taken in alive."
 
 /obj/item/ammo_box/magazine/gauss/antimatter
 	name = "Raijin Horizon Antimatter Gauss Magazine"
 	color = COLOR_PURPLE
 	ammo_type = /obj/item/ammo_casing/energy/gauss/antimatter
+	pattern_desc = "The projectile contains a translocated microscopic antimatter sliver into which the additional kinetic energy is diverted into upon impact with a surface. \n\
+		This destabilization creates what is effectively a localized eruption of energy, blossoming outwards in a flash of light. \n\
+		Against flesh or steel, the effect is often devastating and gruesome, leading this round to be viewed less as a weapon of war and more as a weapon of terror. \n\
+		Cybersun is not above using this round when the situation calls for either need."
 
 /obj/item/ammo_box/magazine/gauss/thermite
 	name = "Raijin Horizon Red Sun Gauss Magazine"
 	color = COLOR_RED
 	ammo_type = /obj/item/ammo_casing/energy/gauss/thermite
+	pattern_desc = "The projectile embeds itself into a surface before unleashing a rapid buildup of thermal energy through a microfusion cascade. \n\
+		In organics, this causes massive atrophic mutilation through rapid carbonization. \n\
+		In inorganics, this often is capable of eventually eating through the thickest of hulls. \n\
+		When salvage, or body recovery, is a luxury able to be afforded, Cybersun arms their shocktroopers with this round."
 
 /particles/smoke/gauss_overheat
 	count = 200
