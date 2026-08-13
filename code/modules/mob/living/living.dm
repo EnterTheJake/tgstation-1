@@ -556,7 +556,7 @@ GAME_VERB_CONTEXT(/mob/living, pulled, "Pull", "", null, /atom/movable)
 GAME_VERB_HIDDEN(/mob/living, succumb, "succumb")
 	VERB_ARG(whispered, VERB_ARG_TYPE_NUM, VERB_ARG_SOURCE_INPUT)
 	if(SEND_SIGNAL(src, COMSIG_LIVING_TRY_SUCCUMB) & SUCCUMB_PREVENTED)
-		to_chat(src, span_warning("You don't feel like giving up!")) // ANNETODO
+		to_chat(src, "You don't feel like giving up!") // ANNETODO
 		return
 	if (!CAN_SUCCUMB(src))
 		if(HAS_TRAIT(src, TRAIT_SUCCUMB_OVERRIDE))
