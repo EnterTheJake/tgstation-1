@@ -23,8 +23,8 @@
 	var/beepsound = 'sound/items/timer.ogg'
 	/// When do we beep next?
 	var/next_beep
-	/// If true, will explode when the next boom cable is cut
-	var/bad_defusal = FALSE
+	/// If true, will explode when the next boom cable is cut, has a bigger bomb radius as well
+	var/upgraded_explosion = FALSE
 
 	/// List of cables belonging to the bomb, used for defusal
 	var/list/cable_list
@@ -170,7 +170,7 @@
 	owner = victim
 	forceMove(victim.get_bodypart(BODY_ZONE_CHEST))
 	RegisterSignal(victim, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
-	// XANTODO: Make surgery lines actually run RegisterSignal(victim, COMSIG_ATOM_SURGERY_STARTED, PROC_REF(on_surgery_stated))
+	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_ATTACHED_TO, victim)
 	victim.vis_contents += bomb_overlay_atom
 	victim.add_overlay(bomb_overlay_appearance)
 
@@ -250,7 +250,7 @@
 
 /// Sticking a fork in the bomb has very interesting results
 /obj/item/contractor_bomb/proc/get_forked()
-	bad_defusal = TRUE
+	upgraded_explosion = TRUE
 	ex_dev = max(5, ex_dev)
 	ex_heavy = max(10, ex_heavy)
 	ex_light = max(20, ex_light)
@@ -284,7 +284,7 @@
 		return
 	// Arms the bomb and gives you the negative effects of cutting a bomb wire. It effectively means you still have 2 explosive cables but only need to hit 1 to explode
 	arm()
-	bad_defusal = TRUE
+	upgraded_explosion = TRUE
 	ex_dev = max(5, ex_dev)
 	ex_heavy = max(10, ex_heavy)
 	ex_light = max(20, ex_light)
@@ -311,10 +311,10 @@
 		//XANTODO DEBUG
 		to_chat(world, "explosive cable cut")
 
-		if(bad_defusal)
+		if(upgraded_explosion)
 			return // The signal sent to the dialogue system handles the exploding
 		else
-			bad_defusal = TRUE
+			upgraded_explosion = TRUE
 			ex_dev = max(5, ex_dev)
 			ex_heavy = max(10, ex_heavy)
 			ex_light = max(20, ex_light)

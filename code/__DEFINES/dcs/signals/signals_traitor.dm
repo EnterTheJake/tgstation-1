@@ -44,6 +44,9 @@
 /// Called when the contractor disarms the bomb via the UI
 #define COMSIG_CONTRACTOR_UI_BOMB_DEFUSED "contractor_bomb_ui_defused"
 
+/// Called when the contractor bomb is attached to a mob
+#define COMSIG_CONTRACTOR_BOMB_ATTACHED_TO "contractor_bomb_attached_to"
+
 /// Called when a fork is stuck into the bomb
 #define COMSIG_FORK_STUCK_IN_BOMB "contractor_bomb_got_forked"
 
