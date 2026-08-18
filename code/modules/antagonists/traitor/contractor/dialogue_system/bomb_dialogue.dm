@@ -31,8 +31,6 @@
 	var/previous_threshold = 100
 	/// Time since last idle chatter
 	COOLDOWN_DECLARE(last_idle)
-	/// Time until next idle chatter is due
-	var/next_idle = 1 MINUTES
 
 	//---- Bomb has a lot of lines, means we got a lot of lists for different situations. Buncha snowflake
 	var/list/admin_abuse
@@ -641,7 +639,7 @@
 	// If no line is played, we can then see if they are due for some idle yap
 	if(!COOLDOWN_FINISHED(src, last_idle))
 		return
-	COOLDOWN_START(src, next_idle, rand(1.5 MINUTES, 3 MINUTES))
+	COOLDOWN_START(src, last_idle, rand(1.5 MINUTES, 3 MINUTES))
 	return TRUE
 
 /// Checks to see if our victim has gone into crit/died with the bomb not-yet-exploded

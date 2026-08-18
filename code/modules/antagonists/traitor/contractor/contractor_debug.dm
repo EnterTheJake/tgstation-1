@@ -78,6 +78,17 @@ ADMIN_VERB(spawn_contractor_bomb_victim, R_DEBUG|R_SPAWN, "Spawn Contractor Bomb
 		detonator_implant.implant(contractor)
 
 	var/mob/living/carbon/human/victim = new(get_turf(contractor))
+	var/choices = tgui_input_checkboxes(user, "What kind of victim?", "Victim spawner", list("Changeling", "Clown", "Felinid"), min_checked = 0)
+	for(var/list/selected_option as anything in choices)
+		if(selected_option[1] == "Changeling")
+			victim.mind_initialize()
+			victim.mind.add_antag_datum(/datum/antagonist/changeling)
+		if(selected_option[1] == "Clown")
+			victim.job = JOB_CLOWN
+			victim.dress_up_as_job(SSjob.get_job_type(/datum/job/clown))
+		if(selected_option[1] == "Felinid")
+			victim.set_species(/datum/species/human/felinid)
+
 	var/obj/item/contractor_bomb/bomb = new(victim)
 	bomb.attach_to(victim, contractor_state)
 
