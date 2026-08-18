@@ -58,6 +58,8 @@
 	// Returned if the pre_explosion was handled by the dialogue component
 	#define EXPLOSION_DIALOGUE_HANDLED (1<<0)
 
+/// Sent on process when the bomb is disarmed
+#define COMSIG_CONTRACTOR_DISARMED_PROCESS "contractor_bomb_disarmed_process"
 /// Sent whenever the timer goes down naturally
 #define COMSIG_CONTRACTOR_BOMB_TIME_LOWERED "contractor_bomb_time_lowered"
 

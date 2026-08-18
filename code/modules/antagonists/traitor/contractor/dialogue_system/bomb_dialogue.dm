@@ -1,4 +1,5 @@
 #define DEFAULT_BOMB_SOUND "default_sounds"
+#define NUCLEAR_BOMB_SOUND "nuclear_sounds"
 
 /// Contractor bomb dialogue component.
 /datum/component/dialogue_system/contractor_bomb
@@ -20,6 +21,12 @@
 	/// Reference to the mob that the bomb is attached to
 	var/datum/weakref/bomb_wearer
 
+	/// Boolean if the bomb was attached to a clown
+	var/clown_bomb = FALSE
+	/// Boolean if the bomb was attached to a felinid
+	var/felinid_bomb = FALSE
+	/// Boolean if the bomb is nuclear
+	var/is_nuclear = FALSE
 	/// Memory of the last threshold that was announced
 	var/previous_threshold = 100
 	/// Time since last idle chatter
@@ -39,7 +46,7 @@
 	var/list/bomb_deactivated_surgery
 	var/list/bomb_good_wire
 	var/list/bomb_maskless
-	var/list/changeling
+	var/list/greeting_changeling
 	var/list/deconstruction
 	var/list/explodes_cutely
 	var/list/explosion_successful
@@ -47,21 +54,16 @@
 	var/list/greeting
 	var/list/mid_surgery
 	var/list/fork_surgery
-	var/list/bad_wire_time
-	var/list/bad_wire_upgrade
 	var/list/core_insertion
 	var/list/explosion_successful_nuclear
-	var/list/disarm
 	var/list/nuclear_idle
-	var/list/good_wire_time
-	var/list/try_deactivate
 	var/list/station_nuke_detonated
 	var/list/timer_lines
 	var/list/victim_crit
 
 /datum/component/dialogue_system/contractor_bomb/Initialize()
 	. = ..()
-	addtimer(CALLBACK(src, PROC_REF(emit_sound_from_list), has_special_line(greeting)), 1 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(play_greeting)), 1 SECONDS)
 
 /datum/component/dialogue_system/contractor_bomb/setup_sound_lists()
 	. = ..()
@@ -157,6 +159,10 @@
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_time/clown_bad_wire_reduce_time1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_time/clown_bad_wire_reduce_time2_take2.ogg'),
 		),
+		NUCLEAR_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time2_take2.ogg'),
+		),
 	)
 
 	bomb_bad_wire_upgrade = list(
@@ -169,6 +175,27 @@
 		JOB_CLOWN = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_upgrade/clown_bad_wire_upgrade1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_bad_wire_upgrade/clown_bad_wire_upgrade2_take2.ogg'),
+		),
+		NUCLEAR_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_upgrade/nuke_bad_wire_upgrade1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_upgrade/nuke_bad_wire_upgrade2_take1.ogg'),
+		),
+	)
+
+	bomb_good_wire = list(
+		DEFAULT_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire3_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire4_take3.ogg'),
+		),
+		JOB_CLOWN = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_good_wire_time/clown_good_wire_increase_time1_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_good_wire_time/clown_good_wire_increase_time2_take2.ogg'),
+		),
+		NUCLEAR_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/good_wire_time/nuke_good_wire_increase_timer1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/good_wire_time/nuke_good_wire_increase_timer2_take1.ogg'),
 		),
 	)
 
@@ -201,9 +228,15 @@
 	)
 
 	bomb_deactivated_contractor = list(
+		DEFAULT_BOMB_SOUND = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor3_take2.ogg'),
+		),
+		NUCLEAR_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate2_take2.ogg'),
+		),
 	)
 
 	bomb_deactivated_idle = list(
@@ -245,18 +278,8 @@
 		/datum/species/human/felinid = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/felinid_disarmed/victim_felinid9_take1.ogg'),
 		),
-	)
-
-	bomb_good_wire = list(
-		DEFAULT_BOMB_SOUND = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_good_wire/good_wire4_take3.ogg'),
-		),
-		JOB_CLOWN = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_good_wire_time/clown_good_wire_increase_time1_take3.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_good_wire_time/clown_good_wire_increase_time2_take2.ogg'),
+		NUCLEAR_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/disarm/nuke_disarmed_take1.ogg'),
 		),
 	)
 
@@ -266,12 +289,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless4_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless5_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_maskless/bomb_maskless6_take2.ogg'),
-	)
-
-	changeling = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash3_take1.ogg'),
 	)
 
 	deconstruction = list(
@@ -326,6 +343,12 @@
 		),
 	)
 
+	greeting_changeling = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/changeling/changeling_power_backlash3_take1.ogg'),
+	)
+
 	station_nuke_detonated = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/station_nuke_detonated/nuke_detonated1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/station_nuke_detonated/nuke_detonated2_take2.ogg'),
@@ -370,22 +393,8 @@
 	)
 
 	//nuclear
-	bad_wire_time = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_time/nuke_bad_wire_reduce_time2_take2.ogg'),
-	)
-
-	bad_wire_upgrade = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_upgrade/nuke_bad_wire_upgrade1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/bad_wire_upgrade/nuke_bad_wire_upgrade2_take1.ogg'),
-	)
-
 	core_insertion = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/core_insertion/nuke_insertion_take4.ogg'),
-	)
-
-	disarm = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/disarm/nuke_disarmed_take1.ogg'),
 	)
 
 	nuclear_idle = list(
@@ -406,16 +415,6 @@
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/nuke_felinid/nuke_felinid5_take2.ogg'),
 		),
 	)
-
-	good_wire_time = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/good_wire_time/nuke_good_wire_increase_timer1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/good_wire_time/nuke_good_wire_increase_timer2_take1.ogg'),
-	)
-
-	try_deactivate = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate2_take2.ogg'),
-	)
 	//nuclear end
 
 /datum/component/dialogue_system/contractor_bomb/apply_dialogue_channel()
@@ -424,6 +423,7 @@
 	apply_channel_to_sound_pool_list(assoc_to_values(bomb_corporate))
 	apply_channel_to_sound_pool_list(assoc_to_values(bomb_deactivated_idle))
 	apply_channel_to_sound_pool_list(assoc_to_values(bomb_deactivated_surgery))
+	apply_channel_to_sound_pool_list(assoc_to_values(bomb_deactivated_contractor))
 	apply_channel_to_sound_pool_list(assoc_to_values(bomb_bad_wire_upgrade))
 	apply_channel_to_sound_pool_list(assoc_to_values(bomb_good_wire))
 	apply_channel_to_sound_pool_list(assoc_to_values(bomb_bad_wire_reduce_time))
@@ -433,21 +433,15 @@
 	apply_channel_to_sound_pool_list(assoc_to_values(explosion_successful_voltaic))
 	apply_channel_to_sound_list(explosion_successful_nuclear)
 	apply_channel_to_sound_pool_list(assoc_to_values(greeting))
-	apply_channel_to_sound_pool_list(assoc_to_values(timer_lines))
+	apply_channel_to_sound_list(greeting_changeling)
+	apply_channel_to_sound_pool_list(assoc_to_values(assoc_to_values(timer_lines)))
 
 	apply_channel_to_sound_list(admin_abuse)
-	apply_channel_to_sound_list(bomb_deactivated_contractor)
 	apply_channel_to_sound_list(bomb_maskless)
-	apply_channel_to_sound_list(changeling)
 	apply_channel_to_sound_list(explodes_cutely)
 	apply_channel_to_sound_list(mid_surgery)
-	apply_channel_to_sound_list(bad_wire_time)
-	apply_channel_to_sound_list(bad_wire_upgrade)
 	apply_channel_to_sound_list(core_insertion)
-	apply_channel_to_sound_list(disarm)
-	apply_channel_to_sound_list(nuclear_idle)
-	apply_channel_to_sound_list(good_wire_time)
-	apply_channel_to_sound_list(try_deactivate)
+	apply_channel_to_sound_pool_list(assoc_to_values(nuclear_idle))
 	apply_channel_to_sound_list(station_nuke_detonated)
 	apply_channel_to_sound_list(victim_crit)
 
@@ -463,15 +457,23 @@
 	RegisterSignal(parent, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY, PROC_REF(on_destructive_analysis))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_PRE_EXPLOSION, PROC_REF(pre_explosion))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, PROC_REF(on_timer_threshold))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_DISARMED_PROCESS, PROC_REF(on_disarmed_process))
 
 /// Saves a ref to the victim when the bomb is attached to a mob
-/datum/component/dialogue_system/contractor_bomb/proc/on_bomb_attached(mob/living/carbon/human/victim)
+/datum/component/dialogue_system/contractor_bomb/proc/on_bomb_attached(datum/source, mob/living/carbon/human/victim)
 	SIGNAL_HANDLER
+	clown_bomb = FALSE // In case they were attached to something before
+	felinid_bomb = FALSE // In case they were attached to something before
 	if(!istype(victim))
 		return
+	if(victim.job == JOB_CLOWN)
+		clown_bomb = TRUE
+	if(victim.dna.species == /datum/species/human/felinid)
+		felinid_bomb = TRUE
 	bomb_wearer = WEAKREF(victim)
 	// Slap on the signals that need to come from the mob as well
 	RegisterSignal(victim, COMSIG_ATOM_SURGERY_STARTED, PROC_REF(on_surgery_started))
+	RegisterSignal(victim, COMSIG_MOB_STATCHANGE, PROC_REF(on_victim_stat_change))
 
 /// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
 /datum/component/dialogue_system/contractor_bomb/proc/emit_sound_from_list(list/sound_list, explodes = FALSE, obj/item/contractor_bomb/about_to_explode)
@@ -488,13 +490,23 @@
 /// Helper proc, checks if the victim is a clown or a felinid for the special voice lines
 /datum/component/dialogue_system/contractor_bomb/proc/has_special_line(sound_pool)
 	. = sound_pool[DEFAULT_BOMB_SOUND]
-	var/mob/living/carbon/human/victim = bomb_wearer.resolve()
-	if(!istype(victim))
-		return
-	if(victim.job == JOB_CLOWN && !isnull(sound_pool[JOB_CLOWN]))
+	// Priority is: Clown lines -> Nuclear lines -> Felinid lines -> Default lines
+	if(clown_bomb && !isnull(sound_pool[JOB_CLOWN]))
 		return sound_pool[JOB_CLOWN]
-	else if(victim.dna.species == /datum/species/human/felinid && !isnull(sound_pool[/datum/species/human/felinid]))
-		return sound_pool[victim.dna.species]
+	else if(is_nuclear == TRUE && !isnull(sound_pool[NUCLEAR_BOMB_SOUND]))
+		return sound_pool[NUCLEAR_BOMB_SOUND]
+	else if(felinid_bomb && !isnull(sound_pool[/datum/species/human/felinid]))
+		return sound_pool[/datum/species/human/felinid]
+
+/// Plays a welcome message to our new victim
+/datum/component/dialogue_system/contractor_bomb/proc/play_greeting()
+	var/mob/living/carbon/wearer = bomb_wearer?.resolve()
+	if(isnull(wearer))
+		return
+	if(IS_CHANGELING(wearer))
+		emit_sound_from_list(greeting_changeling)
+		return
+	emit_sound_from_list(has_special_line(greeting))
 
 /// Plays when any wire is cut during a defusal attempt
 /datum/component/dialogue_system/contractor_bomb/proc/on_wire_cut(obj/item/contractor_bomb/source, wire_flags)
@@ -512,6 +524,8 @@
 		sound_pool = has_special_line(bomb_good_wire)
 	if(wire_flags & CONTRACTOR_WIRE_TIME_REDUCER)
 		sound_pool = has_special_line(bomb_bad_wire_reduce_time)
+	if(isnull(sound_pool))
+		return // Dummy wires have no voicelines
 	emit_sound_from_list(sound_pool)
 
 /// Plays when the bomb is armed by the contractor via their UI
@@ -522,11 +536,12 @@
 /// Plays when the bomb is disarmed by the contractor via their UI
 /datum/component/dialogue_system/contractor_bomb/proc/on_bomb_ui_neutralized()
 	SIGNAL_HANDLER
-	emit_sound_from_list(bomb_deactivated_contractor)
+	emit_sound_from_list(has_special_line(bomb_deactivated_contractor))
 
 /// Plays when a nuke core is added to the bomb
 /datum/component/dialogue_system/contractor_bomb/proc/on_plutonium_added(obj/item/contractor_bomb/source)
 	SIGNAL_HANDLER
+	is_nuclear = TRUE
 	emit_sound_from_list(core_insertion)
 
 /// Plays when the nuke detonates
@@ -555,21 +570,27 @@
 
 	if(explosion_flags & CONTRACTOR_EXPLOSION_ENERGYBALL)
 		sound_pool = has_special_line(explosion_successful_voltaic)
-	if(explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
+	if(is_nuclear)
 		sound_pool = explosion_successful_nuclear
+	if(explosion_flags & ADMIN_SHENANIGANS)
+		sound_pool = admin_abuse
 
 	emit_sound_from_list(sound_pool, TRUE, source)
 	return EXPLOSION_DIALOGUE_HANDLED
 
 /// Plays a line when you start the channel bar to open the surgery
-/datum/component/dialogue_system/contractor_bomb/proc/on_surgery_started()
+/datum/component/dialogue_system/contractor_bomb/proc/on_surgery_started(datum/source, datum/surgery_operation/specific_surgery, obj/item/bodypart/limb, obj/item/tool)
 	SIGNAL_HANDLER
+	if(specific_surgery.type != /datum/surgery_operation/limb/contractor_bomb_defusal)
+		return
+	if(istype(tool, /obj/item/kitchen/fork))
+		return
 	emit_sound_from_list(mid_surgery)
 
 /// Plays a line based on how much time is left on the bomb timer
 /datum/component/dialogue_system/contractor_bomb/proc/on_timer_threshold(obj/item/contractor_bomb/source, timeleft_percentage)
 	SIGNAL_HANDLER
-	if(source.explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
+	if(is_nuclear)
 		// Drop the timer lines if they ever get a nuclear core, instead we'll just play the nuclear-exclusive lines
 		play_nuclear_idle()
 		return
@@ -597,17 +618,22 @@
 	if(!check_idle_time())
 		return
 	var/list/sound_pool = has_special_line(bomb_corporate)
-	var/mob/living/carbon/human/victim = bomb_wearer.resolve()
-	if(prob(25) && victim?.job != JOB_CLOWN && victim?.dna?.species != /datum/species/human/felinid)
+	if(prob(25) && !clown_bomb && !felinid_bomb) // Clowns/Felinids can never roll for maskless lines
 		sound_pool = bomb_maskless
 	emit_sound_from_list(sound_pool)
+
+/// Plays a line when the bomb is disarmed
+/datum/component/dialogue_system/contractor_bomb/proc/on_disarmed_process()
+	SIGNAL_HANDLER
+	if(!check_idle_time())
+		return
+	emit_sound_from_list(has_special_line(bomb_deactivated_idle))
 
 /// Change our pools to use the nuclear sound pools when a core is installed
 /datum/component/dialogue_system/contractor_bomb/proc/play_nuclear_idle()
 	if(!check_idle_time())
 		return
-	var/list/sound_pool = nuclear_idle
-	// XANTODO: Add a job check for clown, add a race check for felinid
+	var/list/sound_pool = has_special_line(nuclear_idle)
 	emit_sound_from_list(sound_pool)
 
 /// Checks to see if they are due for an idle line, will return FALSE if it's too early
@@ -618,18 +644,13 @@
 	COOLDOWN_START(src, next_idle, rand(1.5 MINUTES, 3 MINUTES))
 	return TRUE
 
-/* //
-sounds left to implement :
-admin_abuse
-bomb_deactivated_idle
-changeling
-
-bad_wire_time
-bad_wire_upgrade
-disarm
-good_wire_time
-try_deactivate
-victim_crit
-*/
+/// Checks to see if our victim has gone into crit/died with the bomb not-yet-exploded
+/datum/component/dialogue_system/contractor_bomb/proc/on_victim_stat_change(datum/source, new_stat, old_stat)
+	SIGNAL_HANDLER
+	if(is_nuclear)
+		return
+	if(new_stat == SOFT_CRIT || new_stat == HARD_CRIT)
+		emit_sound_from_list(victim_crit)
 
 #undef DEFAULT_BOMB_SOUND
+#undef NUCLEAR_BOMB_SOUND

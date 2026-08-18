@@ -13,16 +13,20 @@
 
 	/// What the charge is stuck to
 	var/mob/living/carbon/human/owner = null
+	/// If the bomb has been attached to a clown, it gains permanent trauma
+	var/clown_bomb = FALSE
 	/// Is the bomb counting down?
 	var/active = FALSE
+	/// If the bomb has been attached and got disarmed
+	var/disarmed = FALSE
 	///How long it takes for a grenade to explode after being armed
-	var/det_time = 2 MINUTES // XANTODO Should be like 10 minutes
+	var/det_time = 10 MINUTES
 	/// The timer for the bomb.
 	var/detonation_timer
 	/// What sound do we make as we beep down the timer?
 	var/beepsound = 'sound/items/timer.ogg'
 	/// When do we beep next?
-	var/next_beep
+	COOLDOWN_DECLARE(next_beep)
 	/// If true, will explode when the next boom cable is cut, has a bigger bomb radius as well
 	var/upgraded_explosion = FALSE
 
@@ -132,6 +136,8 @@
 
 /obj/item/contractor_bomb/process(seconds_per_tick)
 	if(!active)
+		if(disarmed)
+			SEND_SIGNAL(src, COMSIG_CONTRACTOR_DISARMED_PROCESS)
 		return
 
 	for(var/obj/effect/forcefield/cosmic_field/potential_field as anything in GLOB.active_cosmic_fields)
@@ -140,7 +146,7 @@
 			defuse()
 			return
 
-	if(!isnull(next_beep) && (next_beep <= world.time))
+	if(COOLDOWN_STARTED(src, next_beep) && COOLDOWN_FINISHED(src, next_beep))
 		var/volume
 		var/time_remaining = seconds_remaining()
 		switch(time_remaining)
@@ -158,9 +164,9 @@
 				volume = 5
 		SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, (time_remaining*10 / initial(det_time) * 100))
 		playsound(get_turf(src), beepsound, volume, FALSE)
-		next_beep = world.time + 1 SECONDS
+		COOLDOWN_START(src, next_beep, 1 SECONDS)
 
-	if(active && ((detonation_timer <= world.time)))// || explode_now))
+	if(active && ((detonation_timer <= world.time)))
 		active = FALSE
 		update_appearance()
 		pre_explosion()
@@ -168,11 +174,14 @@
 /// Plants the bomb on our victim and adds it to the contractor's bomb UI
 /obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/controlling_state)
 	owner = victim
+	if(owner.job == JOB_CLOWN)
+		clown_bomb = TRUE
 	forceMove(victim.get_bodypart(BODY_ZONE_CHEST))
 	RegisterSignal(victim, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
 	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_ATTACHED_TO, victim)
 	victim.vis_contents += bomb_overlay_atom
 	victim.add_overlay(bomb_overlay_appearance)
+	START_PROCESSING(SSobj, src) // Just because it processes doesn't strictly mean it's armed. Our bomb has idle voice lines
 
 	if(isnull(controlling_state))
 		arm()
@@ -241,7 +250,7 @@
 	bomb_target.add_overlay(bomb_overlay_appearance)
 	to_chat(user, span_notice("You plant the bomb. Timer counting down from [det_time]."))
 	detonation_timer = world.time + det_time
-	next_beep = world.time
+	COOLDOWN_START(src, next_beep, 0.1 SECONDS)
 	START_PROCESSING(SSobj, src)
 	RegisterSignal(bomb_target, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
 	return TRUE
@@ -272,6 +281,7 @@
 	qdel(core)
 	update_appearance(UPDATE_ICON)
 	SEND_SIGNAL(src, COMSIG_PLUTONIUM_INSERTED)
+	arm()
 
 /// Begins defusing the bomb
 /obj/item/contractor_bomb/proc/perform_defusal(mob/defuser)
@@ -347,13 +357,14 @@
 /obj/item/contractor_bomb/proc/defuse()
 	active = FALSE
 	detonation_timer = null
-	next_beep = null
-	STOP_PROCESSING(SSobj, src)
+	COOLDOWN_RESET(src, next_beep)
 	owner.vis_contents -= bomb_overlay_atom
 	owner.updateappearance(UPDATE_OVERLAYS)
 	owner.temporarilyRemoveItemFromInventory(src, TRUE)
+	owner = null
 	forceMove(get_turf(src))
 	update_appearance()
+	disarmed = TRUE
 
 /// Checks if there are any special conditions, plays a voiceline if any match and then explode afterwards
 /obj/item/contractor_bomb/proc/pre_explosion()
@@ -374,7 +385,7 @@
 		CRASH("Attempted to call a delayed explosion without passing a valid delay_time")
 	active = FALSE
 	detonation_timer = null
-	next_beep = null
+	COOLDOWN_RESET(src, next_beep)
 	STOP_PROCESSING(SSobj, src)
 	// We typically delay the bomb to play a voiceline. The 0.2 is just a small safety so the line isnt abruptly cut off
 	addtimer(CALLBACK(src, PROC_REF(actually_explode), TRUE), delay_time + 0.2 SECONDS)
@@ -407,8 +418,7 @@
 		return FALSE
 	active = TRUE
 	detonation_timer = world.time + det_time
-	next_beep = world.time
-	START_PROCESSING(SSobj, src)
+	COOLDOWN_START(src, next_beep, 0.1 SECONDS)
 	if(!isnull(owner))
 		owner.investigate_log("had their contractor bomb implant remotely armed.", INVESTIGATE_DEATHS)
 		message_admins("[ADMIN_LOOKUPFLW(owner)]'s contractor bomb implant was remotely armed at [ADMIN_VERBOSEJMP(owner)].")
@@ -561,8 +571,3 @@
 	new /obj/item/storage/box/syndicate/contract_kit(src)
 	new /obj/item/wirecutters(src)
 	new /obj/item/kitchen/fork(src)
-	new /obj/item/nuke_core/sleepy(src)
-
-/obj/item/nuke_core/sleepy/Initialize(mapload)
-	. = ..()
-	STOP_PROCESSING(SSobj, src)
