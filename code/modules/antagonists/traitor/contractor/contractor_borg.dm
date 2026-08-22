@@ -9,27 +9,35 @@
 #define CLOAK_FADE_TIME (0.5 SECONDS)
 #define CONTRACTOR_DISRUPT_TIME (0.6 SECONDS)
 #define CONTRACTOR_INGEST_TIME (0.6 SECONDS)
+/// How long it takes to wrestle someone into the chassis if they are awake enough to fight back.
+#define CONTRACTOR_STRUGGLE_TIME (4 SECONDS)
 #define CONTRACTOR_RESIST_TIME (30 SECONDS)
 #define CHASSIS_BOOT_FLASH_TIME (0.3 SECONDS)
 #define CHASSIS_BOOT_FADE_TIME 4
 #define CHASSIS_GRID_ALPHA_LOW 35
 #define CHASSIS_GRID_ALPHA_HIGH 80
+/// How long after the last step the walk cycle keeps playing before dropping back to the idle pose.
+#define CONTRACTOR_WALK_LINGER 3
 
 /mob/living/silicon/robot/model/contractor
 	name = "contractor cyborg"
 	set_model = /obj/item/robot_model/contractor
 	icon = CONTRACTOR_BORG_ICON
-	icon_state = "contractor"
-	SET_BASE_PIXEL((ICON_SIZE_X - CONTRACTOR_BORG_ICON_SIZE) * 0.5, -8)
+	icon_state = "contractor_idle"
 	bubble_icon = "syndibot"
 	faction = list(ROLE_SYNDICATE)
 	lawupdate = FALSE
 	scrambledcodes = TRUE
+	SET_BASE_PIXEL((ICON_SIZE_X - CONTRACTOR_BORG_ICON_SIZE) * 0.5, -8)
 	var/hovering = FALSE
 	var/chassis_open = FALSE
 	var/ingesting = FALSE
 	var/resisting = FALSE
+	/// Whether we are mid-stride. Drives the walk cycle vs. the static idle pose.
+	var/walking = FALSE
 	var/obj/effect/contractor_eyes/eyes
+	var/obj/effect/contractor_panel/panel
+	var/obj/effect/contractor_disrupt/disrupt
 
 /mob/living/silicon/robot/model/contractor/Initialize(mapload)
 	. = ..()
@@ -37,15 +45,29 @@
 	add_to_upgrades(thrusters)
 	ionpulse = TRUE
 
+	// panel first so the eye glow still draws over the open cover
+	panel = new(null)
+	vis_contents += panel
+	SET_PLANE_EXPLICIT(panel, ABOVE_GAME_PLANE, src)
+
 	eyes = new(null)
 	vis_contents += eyes
 	SET_PLANE_EXPLICIT(eyes, ABOVE_GAME_PLANE, src)
+
+	// added last so the disruption crackle draws over both the chassis and the eyes
+	disrupt = new(null)
+	vis_contents += disrupt
+	SET_PLANE_EXPLICIT(disrupt, ABOVE_GAME_PLANE, src)
 
 /mob/living/silicon/robot/model/contractor/Destroy()
 	for(var/mob/living/trapped in contents)
 		expel(trapped)
 	vis_contents -= eyes
+	vis_contents -= panel
+	vis_contents -= disrupt
 	QDEL_NULL(eyes)
+	QDEL_NULL(panel)
+	QDEL_NULL(disrupt)
 	return ..()
 
 /mob/living/silicon/robot/model/contractor/proc/eyes_lit()
@@ -63,15 +85,60 @@
 	eyes.alpha = 255
 	eyes.icon_state = "[get_current_pose()][get_eye_suffix()]"
 
+/mob/living/silicon/robot/model/contractor/proc/get_panel_suffix()
+	if(wiresexposed)
+		return "+w"
+	return cell ? "+c" : "-c"
+
+/mob/living/silicon/robot/model/contractor/proc/refresh_panel()
+	if(QDELETED(panel))
+		return
+	if(!opened)
+		panel.alpha = 0
+		return
+	panel.alpha = 255
+	panel.icon_state = "ov-opencover_[get_current_pose()] [get_panel_suffix()]"
+
+/// Crackles the cloak-disruption animation over the chassis, wherever the chassis happens to be.
+/mob/living/silicon/robot/model/contractor/proc/play_disrupt()
+	if(QDELETED(disrupt))
+		return
+	disrupt.alpha = 255
+	flick("contractor_disrupt", disrupt)
+	addtimer(CALLBACK(src, PROC_REF(clear_disrupt)), CONTRACTOR_DISRUPT_TIME, TIMER_UNIQUE | TIMER_OVERRIDE)
+
+/mob/living/silicon/robot/model/contractor/proc/clear_disrupt()
+	if(!QDELETED(disrupt))
+		disrupt.alpha = 0
+
 /mob/living/silicon/robot/model/contractor/proc/flick_transition(state)
 	flick(state, src)
 	if(!QDELETED(eyes) && eyes_lit())
 		flick("[state][get_eye_suffix()]", eyes)
+	if(!QDELETED(panel) && opened)
+		flick("ov-opencover_[state] [get_panel_suffix()]", panel)
 
 /mob/living/silicon/robot/model/contractor/proc/get_current_pose()
 	if(hovering)
 		return chassis_open ? "contractor_hover_open" : "contractor_hover"
-	return chassis_open ? "contractor_open" : "contractor"
+	if(chassis_open)
+		return "contractor_open"
+	return walking ? "contractor" : "contractor_idle"
+
+/mob/living/silicon/robot/model/contractor/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change)
+	. = ..()
+	if(hovering) // the hover cycle already loops, there is no idle pose to fall back to
+		return
+	if(!walking)
+		walking = TRUE
+		update_icons()
+	addtimer(CALLBACK(src, PROC_REF(stop_walking)), CONTRACTOR_WALK_LINGER, TIMER_UNIQUE | TIMER_OVERRIDE)
+
+/mob/living/silicon/robot/model/contractor/proc/stop_walking()
+	if(!walking)
+		return
+	walking = FALSE
+	update_icons()
 
 /mob/living/silicon/robot/model/contractor/update_icons()
 	if(model)
@@ -79,7 +146,10 @@
 	. = ..()
 	if(eye_lights)
 		cut_overlay(eye_lights)
+	if(opened) // the parent's flat panel overlay can't follow our poses, ours can
+		cut_overlay("ov-opencover [get_panel_suffix()]")
 	refresh_eyes()
+	refresh_panel()
 
 /mob/living/silicon/robot/model/contractor/proc/set_hovering(new_hovering)
 	if(hovering == new_hovering)
@@ -110,6 +180,9 @@
 /mob/living/silicon/robot/model/contractor/proc/set_open(new_open)
 	if(chassis_open == new_open)
 		return
+	if(new_open && opened)
+		balloon_alert(src, "maintenance cover open!")
+		return
 	chassis_open = new_open
 	update_icons()
 	if(chassis_open)
@@ -129,14 +202,38 @@
 		return ..()
 	try_ingest(dropped, user)
 
+/// Anyone who can't fight back gets folded in immediately. Everyone else has to be wrestled in.
+/mob/living/silicon/robot/model/contractor/proc/ingest_is_unopposed(mob/living/victim)
+	if(HAS_TRAIT(victim, TRAIT_CONTRACTOR_IMPLANT))
+		return TRUE
+	// incapacitated already folds in cuffs, stuns, aggressive grabs and stasis
+	return IS_UNCONSCIOUS_OR_CRIT(victim) || victim.incapacitated
+
+/mob/living/silicon/robot/model/contractor/proc/can_ingest(mob/living/victim, mob/user)
+	if(QDELETED(victim))
+		return FALSE
+	if(opened)
+		balloon_alert(user, "maintenance cover open!")
+		return FALSE
+	if(locate(/mob/living) in contents)
+		balloon_alert(user, "chassis occupied!")
+		return FALSE
+	return isturf(victim.loc) && Adjacent(victim) && !victim.anchored && !victim.buckled
+
 /mob/living/silicon/robot/model/contractor/proc/try_ingest(mob/living/victim, mob/user)
 	if(ingesting || QDELETED(victim))
 		return
-	if(locate(/mob/living) in contents)
-		balloon_alert(user, "chassis occupied!")
+	if(!can_ingest(victim, user))
 		return
-	if(!isturf(victim.loc) || !Adjacent(victim) || victim.anchored || victim.buckled)
-		return
+
+	if(!ingest_is_unopposed(victim))
+		balloon_alert(user, "forcing them in...")
+		to_chat(victim, span_userdanger("[src] is trying to force you into its chassis!"))
+		ingesting = TRUE // also locks out a second attempt while we wrestle
+		var/won = do_after(user || src, CONTRACTOR_STRUGGLE_TIME, target = victim)
+		ingesting = FALSE
+		if(!won || !can_ingest(victim, user))
+			return
 
 	ingesting = TRUE
 	flick_transition("contractor_open")
@@ -221,7 +318,7 @@
 	emag_modules = list(
 		/obj/item/borg/stun,
 	)
-	cyborg_base_icon = "contractor"
+	cyborg_base_icon = "contractor_idle"
 	model_select_icon = "malf"
 	model_traits = list(TRAIT_PUSHIMMUNE)
 	var/datum/weakref/cloak_action_ref
@@ -306,6 +403,7 @@
 	RegisterSignals(borg, disrupt_signals, PROC_REF(on_disrupt))
 	RegisterSignal(borg, COMSIG_MOVABLE_BUMP, PROC_REF(on_bump))
 	RegisterSignal(borg, COMSIG_ATOM_BUMPED, PROC_REF(on_bumped))
+	RegisterSignal(borg, COMSIG_ATOM_HITBY, PROC_REF(on_hitby))
 	build_all_button_icons()
 
 /datum/action/cooldown/contractor_cloak/proc/reveal(silent = TRUE, disrupted = FALSE)
@@ -314,10 +412,10 @@
 		return
 	active = FALSE
 	UnregisterSignal(borg, disrupt_signals)
-	UnregisterSignal(borg, list(COMSIG_MOVABLE_BUMP, COMSIG_ATOM_BUMPED))
+	UnregisterSignal(borg, list(COMSIG_MOVABLE_BUMP, COMSIG_ATOM_BUMPED, COMSIG_ATOM_HITBY))
 	animate(borg, alpha = initial(borg.alpha), time = disrupted ? 0 : 0.5 SECONDS)
 	if(disrupted)
-		new /obj/effect/temp_visual/contractor_disrupt(get_turf(borg))
+		play_disrupt(borg)
 		playsound(borg, 'sound/effects/empulse.ogg', 60, TRUE, -4)
 		do_sparks(3, FALSE, borg)
 		borg.balloon_alert(borg, "cloak disrupted!")
@@ -325,6 +423,10 @@
 		playsound(borg, 'sound/effects/pop.ogg', 60, TRUE, -6)
 		borg.balloon_alert(borg, "decloaked")
 	build_all_button_icons()
+
+/datum/action/cooldown/contractor_cloak/proc/play_disrupt(mob/living/silicon/robot/model/contractor/borg)
+	if(istype(borg))
+		borg.play_disrupt()
 
 /datum/action/cooldown/contractor_cloak/proc/disrupt_cloak()
 	reveal(silent = FALSE, disrupted = TRUE)
@@ -335,7 +437,7 @@
 	if(!active || !COOLDOWN_FINISHED(src, glitch_cooldown))
 		return
 	COOLDOWN_START(src, glitch_cooldown, CONTRACTOR_DISRUPT_TIME)
-	new /obj/effect/temp_visual/contractor_disrupt(get_turf(borg))
+	play_disrupt(borg)
 	do_sparks(2, FALSE, borg)
 	animate(borg, alpha = CLOAK_BUMP_ALPHA, time = 1)
 	animate(alpha = CLOAK_BUMP_ALPHA, time = CLOAK_FLARE_TIME)
@@ -354,6 +456,10 @@
 	SIGNAL_HANDLER
 	if(isliving(bumper))
 		flare_cloak()
+
+/datum/action/cooldown/contractor_cloak/proc/on_hitby(datum/source, atom/movable/hitting_atom, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
+	SIGNAL_HANDLER
+	flare_cloak()
 
 /datum/action/cooldown/contractor_cloak/Remove(mob/removed_from)
 	if(active)
@@ -407,19 +513,32 @@
 
 /obj/effect/contractor_eyes
 	icon = CONTRACTOR_BORG_ICON
-	icon_state = "contractor_e"
+	icon_state = "contractor_idle_e"
 	anchored = TRUE
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 	vis_flags = VIS_INHERIT_DIR
 	appearance_flags = KEEP_APART
 
-/obj/effect/temp_visual/contractor_disrupt
+/obj/effect/contractor_panel
+	icon = CONTRACTOR_BORG_ICON
+	icon_state = "ov-opencover_contractor_idle -c"
+	alpha = 0
+	anchored = TRUE
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	vis_flags = VIS_INHERIT_DIR
+	appearance_flags = KEEP_APART
+
+// Rides in the borg's vis_contents rather than sitting on a turf, so it tracks the chassis
+// while it moves. That also means no pixel offset of its own - it inherits the borg's.
+/obj/effect/contractor_disrupt
 	icon = CONTRACTOR_BORG_ICON
 	icon_state = "contractor_disrupt"
-	duration = CONTRACTOR_DISRUPT_TIME
-	randomdir = FALSE
-	layer = ABOVE_MOB_LAYER
-	SET_BASE_PIXEL((ICON_SIZE_X - CONTRACTOR_BORG_ICON_SIZE) * 0.5, -8)
+	alpha = 0
+	anchored = TRUE
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	// RESET_ALPHA so the crackle reads at full strength over a chassis sitting at CLOAK_ALPHA;
+	// the eyes and panel deliberately do fade with the cloak, this must not.
+	appearance_flags = KEEP_APART|RESET_ALPHA
 
 /atom/movable/screen/fullscreen/contractor_chassis
 	screen_loc = "WEST,SOUTH to EAST,NORTH"
@@ -456,8 +575,10 @@
 #undef CLOAK_BUMP_ALPHA
 #undef CLOAK_FLARE_TIME
 #undef CONTRACTOR_INGEST_TIME
+#undef CONTRACTOR_STRUGGLE_TIME
 #undef CONTRACTOR_RESIST_TIME
 #undef CHASSIS_BOOT_FLASH_TIME
 #undef CHASSIS_BOOT_FADE_TIME
 #undef CHASSIS_GRID_ALPHA_LOW
 #undef CHASSIS_GRID_ALPHA_HIGH
+#undef CONTRACTOR_WALK_LINGER

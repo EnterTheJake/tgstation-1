@@ -533,6 +533,8 @@ Remember to update _globalvars/traits.dm if you're adding/removing/renaming trai
 #define TRAIT_CAN_SIGN_ON_COMMS "can_sign_on_comms"
 /// nobody can use martial arts on this mob
 #define TRAIT_MARTIAL_ARTS_IMMUNE "martial_arts_immune"
+/// Carries a contractor detonator implant, marking them as a contractor to syndicate hardware.
+#define TRAIT_CONTRACTOR_IMPLANT "contractor_implant"
 /// Immune to being afflicted by time stop (spell)
 #define TRAIT_TIME_STOP_IMMUNE "time_stop_immune"
 /// Revenants draining you only get a very small benefit.

@@ -76,6 +76,16 @@
 	actions_types = list(/datum/action/item_action/contractor_detonator)
 	hidden_implant = TRUE
 
+/obj/item/implant/explosive/contractor/implant(mob/living/target, mob/user, silent = FALSE, force = FALSE)
+	. = ..()
+	if(!.)
+		return
+	ADD_TRAIT(target, TRAIT_CONTRACTOR_IMPLANT, IMPLANT_TRAIT)
+
+/obj/item/implant/explosive/contractor/removed(mob/living/source, silent, special)
+	REMOVE_TRAIT(source, TRAIT_CONTRACTOR_IMPLANT, IMPLANT_TRAIT)
+	return ..()
+
 /// Opens the remote detonation suite instead of self-detonating like a normal explosive implant.
 /obj/item/implant/explosive/contractor/ui_action_click(mob/user, actiontype)
 	if(istype(actiontype, /datum/action/item_action/contractor_detonator))
