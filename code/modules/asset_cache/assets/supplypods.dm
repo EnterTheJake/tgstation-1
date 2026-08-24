@@ -10,16 +10,19 @@
 		if (!base)
 			insert_icon("pod_asset[style::id]", uni_icon('icons/obj/supplypods.dmi', "invisible-icon"))
 			continue
-		var/datum/universal_icon/pod_icon = uni_icon('icons/obj/supplypods.dmi', base, SOUTH)
+		var/pod_file = style::icon || 'icons/obj/supplypods.dmi'
+		var/datum/universal_icon/pod_icon = uni_icon(pod_file, base, SOUTH)
 		var/door = style::has_door
 		if (door)
 			door = "[base]_door"
-			pod_icon.blend_icon(uni_icon('icons/obj/supplypods.dmi', door), ICON_OVERLAY)
+			pod_icon.blend_icon(uni_icon(pod_file, door), ICON_OVERLAY)
+		if (style::has_emissive)
+			pod_icon.blend_icon(uni_icon(pod_file, "[base]_emissive"), ICON_OVERLAY)
 		var/shape = style::shape
 		if (shape == POD_SHAPE_NORMAL)
 			var/decal = style::decal_icon
 			if (decal)
-				pod_icon.blend_icon(uni_icon('icons/obj/supplypods.dmi', decal), ICON_OVERLAY)
+				pod_icon.blend_icon(uni_icon(pod_file, decal), ICON_OVERLAY)
 			var/glow = style::glow_color
 			if (glow)
 				glow = "pod_glow_[glow]"

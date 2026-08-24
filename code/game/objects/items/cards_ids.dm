@@ -2022,6 +2022,7 @@
 
 /obj/item/card/id/advanced/chameleon/elite/contractor
 	icon_state = "card_contractor" // XANTODO: Default card should give digital camo
+	trim = /datum/id_trim/syndicom/contractor
 
 /obj/item/card/id/advanced/chameleon/elite/contractor/interact_with_atom_secondary(atom/interacting_with, mob/living/user, list/modifiers)
 	. = ..()

@@ -9,8 +9,12 @@
 	var/desc = "A Nanotrasen supply drop pod."
 	/// Determines if this pod can use animations/masking/overlays
 	var/shape = POD_SHAPE_NORMAL
+	/// Icon file this pod draws from. Null keeps the supplypod default.
+	var/icon = null
 	/// Base icon state assigned to this pod
 	var/icon_state = "pod"
+	/// Whether this pod has an emissive layer. Uses [icon_state]_emissive, so it follows the reverse swap
+	var/has_emissive = FALSE
 	/// Whenever this pod should have a door overlay added to it. Uses [icon_state]_door sprite
 	var/has_door = TRUE
 	/// Decals added to this pod, if any
@@ -46,6 +50,18 @@
 	decal_icon = "syndicate"
 	glow_color = "red"
 	id = "syndicate"
+
+/datum/pod_style/contractor
+	name = "contractor pod"
+	ui_name = "Contractor"
+	desc = "A Syndicate contractor retrieval pod. Reinforced, quiet, and not remotely interested in paperwork."
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_pod.dmi'
+	icon_state = "contractorpod"
+	has_emissive = TRUE
+	decal_icon = null
+	glow_color = "red"
+	rubble_type = RUBBLE_NONE
+	id = "contractor"
 
 /datum/pod_style/deathsquad
 	name = "\improper Deathsquad drop pod"

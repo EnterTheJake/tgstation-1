@@ -159,6 +159,7 @@
 	if(isnull(minimap_action))
 		minimap_action = new(src)
 	minimap_action.Grant(mod.wearer)
+	add_minimap_blip(mod.wearer, MINIMAP_CONTRACTOR_BLIP, "contractor")
 
 /obj/item/mod/module/contractor_minimap/on_part_deactivation(deleting = FALSE)
 	. = ..()
@@ -175,6 +176,7 @@
 	var/mob/owner = minimap_action.owner
 	if(isnull(owner))
 		return
+	remove_minimap_blip(MINIMAP_CONTRACTOR_BLIP, owner)
 	var/datum/hud/hud = owner.hud_used
 	if(!isnull(hud) && minimap_action.has_minimap_huds(hud))
 		minimap_action.remove_huds(hud)

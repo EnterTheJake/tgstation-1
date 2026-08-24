@@ -125,7 +125,7 @@
 
 // Launch the pod to collect our victim.
 /datum/syndicate_contract/proc/launch_extraction_pod(mob/living/user, turf/empty_pod_turf)
-	var/obj/structure/closet/supplypod/extractionpod/empty_pod = new()
+	var/obj/structure/closet/supplypod/extractionpod/empty_pod = new(null, /datum/pod_style/contractor)
 
 	RegisterSignal(empty_pod, COMSIG_ATOM_ENTERED, PROC_REF(enter_check))
 

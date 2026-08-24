@@ -12,7 +12,7 @@
 	item = /obj/item/storage/box/syndicate/contract_kit
 	category = /datum/uplink_category/contractor
 	cost = 20
-	purchasable_from = UPLINK_CONTRACTOR
+	purchasable_from = UPLINK_TRAITORS
 	population_minimum = TRAITOR_POPULATION_LOWPOP
 
 /datum/uplink_item/bundles_tc/contract_kit/purchase(mob/user, datum/uplink_handler/uplink_handler, atom/movable/source)
@@ -24,8 +24,7 @@
 /datum/uplink_item/contractor
 	restricted = TRUE
 	category = /datum/uplink_category/contractor
-	purchasable_from = NONE //they will be added to extra_purchasable
-	uplink_item_flags = UPLINK_CONTRACTOR
+	purchasable_from = UPLINK_CONTRACTOR //they will be added to extra_purchasable
 
 /datum/uplink_item/contractor/pinpointer
 	name = "Contractor Pinpointer"
@@ -54,6 +53,14 @@
 	item = /obj/item/antag_spawner/loadout/contractor
 	limited_stock = 1
 	cost = 2
+
+// TODO make this go down by 2 per succesfull abduction with a minimum of 6
+/datum/uplink_item/contractor/drone
+	name = "Contractor Retrieval Drone"
+	desc = "A cyborg chassis built for pickups rather than fights. It cloaks, hovers on ion thrusters, and can 		swallow a target whole to carry them to the dropoff. Arrives by pod, crewed by a fellow agent who 		answers to you."
+	item = /obj/item/antag_spawner/loadout/contractor/borg
+	limited_stock = 1
+	cost = 12
 
 /datum/uplink_item/contractor/gauss_rifle
 	name = "Raijin Horizon Gauss Rifle"

@@ -202,10 +202,12 @@
 	pending_animate_time = 0
 	if(!animate)
 		animate_time = 0
-	var/origin_px = (isnull(override_origin_pixel_x) ? origin.pixel_x : override_origin_pixel_x) + origin.pixel_w
-	var/origin_py = (isnull(override_origin_pixel_y) ? origin.pixel_y : override_origin_pixel_y) + origin.pixel_z
-	var/target_px = (isnull(override_target_pixel_x) ? target.pixel_x : override_target_pixel_x) + target.pixel_w
-	var/target_py = (isnull(override_target_pixel_y) ? target.pixel_y : override_target_pixel_y) + target.pixel_z
+	var/list/origin_centering = get_icon_centering_offset(origin)
+	var/list/target_centering = get_icon_centering_offset(target)
+	var/origin_px = (isnull(override_origin_pixel_x) ? origin.pixel_x + origin_centering[1] : override_origin_pixel_x) + origin.pixel_w
+	var/origin_py = (isnull(override_origin_pixel_y) ? origin.pixel_y + origin_centering[2] : override_origin_pixel_y) + origin.pixel_z
+	var/target_px = (isnull(override_target_pixel_x) ? target.pixel_x + target_centering[1] : override_target_pixel_x) + target.pixel_w
+	var/target_py = (isnull(override_target_pixel_y) ? target.pixel_y + target_centering[2] : override_target_pixel_y) + target.pixel_z
 
 	// Seed from where segments visually are *now*, not where the last Draw asked them to end up.
 	// If the previous animation is still in flight (e.g. consecutive-tick or mid-diagonal moves),

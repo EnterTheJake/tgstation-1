@@ -413,6 +413,34 @@
 	to_chat(contractor_support, "\n[span_alertwarning("[user.real_name] is your superior. Follow any, and all orders given by them. You're here to support their mission only.")]")
 	to_chat(contractor_support, "[span_alertwarning("Should they perish, or be otherwise unavailable, you're to assist other active agents in this mission area to the best of your ability.")]")
 
+/obj/item/antag_spawner/loadout/contractor/borg
+	name = "contractor drone beacon"
+	desc = "A single-use beacon that drops a contractor retrieval drone into the field, chassis and all."
+	spawn_type = /mob/living/silicon/robot/model/contractor
+	outfit = null
+	pod_style = /datum/pod_style/contractor
+
+/obj/item/antag_spawner/loadout/contractor/borg/spawn_antag(client/our_client, turf/spawn_turf, mob/user)
+	var/obj/structure/closet/supplypod/pod = setup_pod()
+	var/mob/living/silicon/robot/model/contractor/drone = new(spawn_turf)
+	var/drone_name = "[pick(GLOB.last_names)] Retrieval Unit"
+	drone.mmi?.name = "[initial(drone.mmi.name)]: [drone_name]"
+	drone.mmi?.brain?.name = "[drone_name]'s brain"
+	drone.real_name = drone.name
+	drone.PossessByPlayer(our_client.key)
+	var/datum/mind/drone_mind = drone.mind
+	if(drone_mind)
+		drone_mind.add_antag_datum(antag_datum)
+		LAZYADD(drone_mind.special_roles, role_to_play)
+	do_special_things(drone, user)
+	drone.forceMove(pod)
+	new /obj/effect/pod_landingzone(spawn_turf, pod)
+
+/obj/item/antag_spawner/loadout/contractor/borg/do_special_things(mob/living/silicon/robot/model/contractor/drone, mob/user)
+	drone.contractor_ref = WEAKREF(user)
+	to_chat(drone, span_alertwarning("[user.real_name] is your superior. Follow any, and all orders given by them. You're here to support their mission only."))
+	to_chat(drone, span_alertwarning("Your chassis is built to carry a body. Retrieve who they tell you to, and get them to the dropoff."))
+
 /obj/item/antag_spawner/loadout/monkey_man
 	name = "monkey agent beacon"
 	desc = "Call up some backup from ARC for monkey mayhem."

@@ -103,6 +103,7 @@
 
 ///Emagged/Syndicate NtOS (SyndiOS) PDA theme
 #define PDA_THEME_SYNDICATE "syndicate"
+#define PDA_THEME_CONTRACTOR "contractor"
 
 //Maintenance-loot themes: you only need to get them once for them to be available on future rounds
 #define PDA_THEME_CAT "ntos_cat"

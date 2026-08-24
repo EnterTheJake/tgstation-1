@@ -170,6 +170,8 @@
 
 /obj/structure/closet/supplypod/proc/set_style(datum/pod_style/chosen_style) //Used to give the sprite an icon state, name, and description.
 	style = chosen_style
+	if(chosen_style::icon)
+		icon = chosen_style::icon
 	icon_state = chosen_style::icon_state
 	decal = chosen_style::decal_icon
 	rubble_type = chosen_style::rubble_type
@@ -237,22 +239,23 @@
 		return
 
 	//If we're closed
-	if(!door) //We have no door, lets see if we have a decal. If not, theres nothing we need to do
-		if(decal)
-			. += decal
-		return
-	else if (style::shape != POD_SHAPE_NORMAL) //If we're not a normal pod shape (aka, if we don't have fins), just add the door without masking
-		. += door
-	else
-		var/icon/masked_door = new(icon, door) //The door we want to apply
-		var/icon/fin_masker = new(icon, "mask_[fin_mask]") //The fin shape we want to 'cut out' of the door
-		fin_masker.MapColors(0,0,0,1, 0,0,0,1, 0,0,0,1, 1,1,1,0, 0,0,0,1)
-		fin_masker.SwapColor("#ffffffff", null)
-		fin_masker.Blend(COLOR_BLACK, ICON_SUBTRACT)
-		masked_door.Blend(fin_masker, ICON_ADD)
-		. += masked_door
+	if(door)
+		if (style::shape != POD_SHAPE_NORMAL) //If we're not a normal pod shape (aka, if we don't have fins), just add the door without masking
+			. += door
+		else
+			var/icon/masked_door = new(icon, door) //The door we want to apply
+			var/icon/fin_masker = new(icon, "mask_[fin_mask]") //The fin shape we want to 'cut out' of the door
+			fin_masker.MapColors(0,0,0,1, 0,0,0,1, 0,0,0,1, 1,1,1,0, 0,0,0,1)
+			fin_masker.SwapColor("#ffffffff", null)
+			fin_masker.Blend(COLOR_BLACK, ICON_SUBTRACT)
+			masked_door.Blend(fin_masker, ICON_ADD)
+			. += masked_door
 	if(decal)
 		. += decal
+	if(style::has_emissive)
+		var/glow_state = "[icon_state]_emissive"
+		. += glow_state
+		. += emissive_appearance(icon, glow_state, src)
 
 /obj/structure/closet/supplypod/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(bluespace) //We dont want to worry about interacting with bluespace pods, as they are due to delete themselves soon anyways.

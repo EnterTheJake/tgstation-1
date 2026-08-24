@@ -222,6 +222,20 @@ Turf and target are separate in case you want to teleport some distance from a t
 	return pixel_offset_turf(atom_turf, offsets)
 
 /**
+ * Returns the x, y pixel shift an atom's icon gets purely from being larger than one tile.
+ * Oversized icons are drawn from the tile's corner, so anything anchored to the atom's
+ * draw origin (light masks, beam ends) needs this added to sit on the sprite's centre.
+**/
+/proc/get_icon_centering_offset(atom/checked_atom)
+	if(isnull(checked_atom.icon))
+		return list(0, 0)
+	var/list/icon_dimensions = get_icon_dimensions_pure(checked_atom.icon)
+	return list(
+		((icon_dimensions["width"] / ICON_SIZE_X) - 1) * (ICON_SIZE_X * 0.5),
+		((icon_dimensions["height"] / ICON_SIZE_Y) - 1) * (ICON_SIZE_Y * 0.5),
+	)
+
+/**
  * Returns how visually "off" the atom is from its source turf as a list of x, y (in pixel steps)
  * it takes into account:
  * Pixel_x/y

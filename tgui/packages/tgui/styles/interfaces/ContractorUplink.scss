@@ -22,7 +22,7 @@
   --color-orange: hsl(25, 90%, 50%);
   --color-yellow: hsl(50, 97.5%, 50%);
   --color-olive: hsl(70, 75%, 45%);
-  --color-green: hsl(140, 70%, 40%);
+  --color-green: hsl(168, 65%, 42%);
   --color-teal: hsl(180, 100%, 35%);
   --color-blue: hsl(210, 65%, 47.5%);
   --color-violet: hsl(260, 60%, 50%);
@@ -46,9 +46,9 @@
   --primary-saturation: 37.5%;
   --primary-lightness: 45%;
   --color-primary: #ff6600;
-  --color-good: hsl(95, 62.5%, 40%);
-  --color-average: hsl(32.5, 90%, 50%);
-  --color-bad: hsl(0, 72.5%, 50%);
+  --color-good: hsl(168, 65%, 42%);
+  --color-average: hsl(272, 68%, 58%);
+  --color-bad: hsl(345, 75%, 55%);
   --color-label: hsl(from var(--color-primary) h 17.5 57.5);
 
   --color-text: #ffd000;
@@ -73,7 +73,7 @@
   );
   --color-border-secondary: hsl(from var(--color-border-primary) h s l / 1);
 
-  --tab-color: #2af6bc;
+  --tab-color: #2ad4f6;
   --tab-color-selected: #cd0606;
   --tab-background-selected: #3b3a3a63;
   --tabs-container-background: #0e0a0a;
@@ -141,7 +141,7 @@
   }
 
   .TitleBar__title {
-    color: #2af6bc;
+    color: #2ad4f6;
   }
 
   .Layout__content {
@@ -223,7 +223,7 @@
       color: var(--color-text);
 
       .Icon {
-        color: #2af6bc;
+        color: #2ad4f6;
       }
     }
 
@@ -264,9 +264,9 @@
       }
 
       &.Button--selected {
-        border-color: #2af6bc !important;
+        border-color: #2ad4f6 !important;
         background-color: rgba(42, 246, 188, 0.15) !important;
-        color: #2af6bc !important;
+        color: #2ad4f6 !important;
       }
     }
 
@@ -278,13 +278,13 @@
       margin-right: 6px;
       border-radius: 50%;
       vertical-align: middle;
-      background: #2af6bc;
-      box-shadow: 0 0 6px #2af6bc;
+      background: #2ad4f6;
+      box-shadow: 0 0 6px #2ad4f6;
       animation: contractor-track-blink 3s ease-in-out infinite;
     }
 
     &--tracked {
-      border-color: #2af6bc;
+      border-color: #2ad4f6;
       box-shadow: inset 0 0 12px rgba(42, 246, 188, 0.18);
     }
 
@@ -487,10 +487,10 @@
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 6px #2af6bc;
+    box-shadow: 0 0 6px #2ad4f6;
   }
   50% {
     opacity: 0.15;
-    box-shadow: 0 0 1px #2af6bc2c;
+    box-shadow: 0 0 1px #2ad4f62c;
   }
 }

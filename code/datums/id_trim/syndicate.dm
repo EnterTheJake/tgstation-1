@@ -10,6 +10,11 @@
 	big_pointer = TRUE
 	pointer_color = COLOR_SYNDIE_RED
 
+/// Trim for the contractor's agent card. Syndicate hardware, including their drone's cover lock, answers to it.
+/datum/id_trim/syndicom/contractor
+	assignment = "Syndicate Contractor"
+	big_pointer = FALSE
+
 /// Trim for Syndicate mobs, outfits and corpses.
 /datum/id_trim/syndicom/crew
 	assignment = "Syndicate Operative"
