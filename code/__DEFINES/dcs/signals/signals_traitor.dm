@@ -60,6 +60,8 @@
 
 /// Sent on process when the bomb is disarmed
 #define COMSIG_CONTRACTOR_DISARMED_PROCESS "contractor_bomb_disarmed_process"
+/// Sent on process when the bomb is attached but not primed nor disarmed
+#define COMSIG_CONTRACTOR_NOT_YET_ARMED_PROCESS "contractor_bomb_not_yet_armed_process"
 /// Sent whenever the timer goes down naturally
 #define COMSIG_CONTRACTOR_BOMB_TIME_LOWERED "contractor_bomb_time_lowered"
 

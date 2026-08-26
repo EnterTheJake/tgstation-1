@@ -138,6 +138,8 @@
 	if(!active)
 		if(disarmed)
 			SEND_SIGNAL(src, COMSIG_CONTRACTOR_DISARMED_PROCESS)
+		else
+			SEND_SIGNAL(src, COMSIG_CONTRACTOR_NOT_YET_ARMED_PROCESS)
 		return
 
 	for(var/obj/effect/forcefield/cosmic_field/potential_field as anything in GLOB.active_cosmic_fields)
@@ -365,6 +367,7 @@
 	forceMove(get_turf(src))
 	update_appearance()
 	disarmed = TRUE
+	icon_state = "bomb_hatch_open"
 
 /// Checks if there are any special conditions, plays a voiceline if any match and then explode afterwards
 /obj/item/contractor_bomb/proc/pre_explosion()

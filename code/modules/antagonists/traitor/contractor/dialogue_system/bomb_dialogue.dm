@@ -27,6 +27,8 @@
 	var/felinid_bomb = FALSE
 	/// Boolean if the bomb is nuclear
 	var/is_nuclear = FALSE
+	/// Boolean if the patient is in surgery
+	var/active_surgery = FALSE
 	/// Memory of the last threshold that was announced
 	var/previous_threshold = 100
 	/// Time since last idle chatter
@@ -61,6 +63,7 @@
 
 /datum/component/dialogue_system/contractor_bomb/Initialize()
 	. = ..()
+	COOLDOWN_START(src, last_idle, rand(30 SECONDS, 1 MINUTES)) // Grace period so that we have some time before the bomb starts yapping
 	addtimer(CALLBACK(src, PROC_REF(play_greeting)), 1 SECONDS)
 
 /datum/component/dialogue_system/contractor_bomb/setup_sound_lists()
@@ -312,11 +315,16 @@
 	)
 
 	mid_surgery = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury2_take4.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury4_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury5_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury6_take1.ogg'),
+		DEFAULT_BOMB_SOUND = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury2_take4.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury5_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury6_take1.ogg'),
+		),
+		JOB_CLOWN = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/mid_surgery/mid_surgury2_take4.ogg'),
+		)
 	)
 
 	fork_surgery = list(
@@ -334,7 +342,7 @@
 		JOB_CLOWN = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting2_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting3_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/clown/clown_greeting/clown_greeting3_take2.ogg'),
 		),
 		/datum/species/human/felinid = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/felinid/general/victim_felinid1_take1.ogg'),
@@ -400,7 +408,7 @@
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general2_take3.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general4_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general5_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general6_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/general/nuke_general7_take2.ogg'),
@@ -437,7 +445,7 @@
 	apply_channel_to_sound_list(admin_abuse)
 	apply_channel_to_sound_list(bomb_maskless)
 	apply_channel_to_sound_list(explodes_cutely)
-	apply_channel_to_sound_list(mid_surgery)
+	apply_channel_to_sound_pool_list(assoc_to_values(mid_surgery))
 	apply_channel_to_sound_list(core_insertion)
 	apply_channel_to_sound_pool_list(assoc_to_values(nuclear_idle))
 	apply_channel_to_sound_list(station_nuke_detonated)
@@ -454,7 +462,7 @@
 	RegisterSignal(SSdcs, COMSIG_GLOB_NUKE_DEVICE_DETONATING, PROC_REF(on_nuke_detonate))
 	RegisterSignal(parent, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY, PROC_REF(on_destructive_analysis))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_PRE_EXPLOSION, PROC_REF(pre_explosion))
-	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, PROC_REF(on_timer_threshold))
+	RegisterSignals(parent, list(COMSIG_CONTRACTOR_BOMB_TIME_LOWERED, COMSIG_CONTRACTOR_NOT_YET_ARMED_PROCESS), PROC_REF(on_bomb_process))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_DISARMED_PROCESS, PROC_REF(on_disarmed_process))
 
 /// Saves a ref to the victim when the bomb is attached to a mob
@@ -466,7 +474,7 @@
 		return
 	if(victim.job == JOB_CLOWN)
 		clown_bomb = TRUE
-	if(victim.dna.species == /datum/species/human/felinid)
+	if(victim.dna.species.type == /datum/species/human/felinid)
 		felinid_bomb = TRUE
 	bomb_wearer = WEAKREF(victim)
 	// Slap on the signals that need to come from the mob as well
@@ -529,6 +537,7 @@
 /// Plays when the bomb is armed by the contractor via their UI
 /datum/component/dialogue_system/contractor_bomb/proc/on_bomb_ui_armed()
 	SIGNAL_HANDLER
+	COOLDOWN_START(src, last_idle, rand(30 SECONDS, 1 MINUTES))
 	emit_sound_from_list(has_special_line(bomb_activated))
 
 /// Plays when the bomb is disarmed by the contractor via their UI
@@ -583,11 +592,15 @@
 		return
 	if(istype(tool, /obj/item/kitchen/fork))
 		return
-	emit_sound_from_list(mid_surgery)
+	emit_sound_from_list(has_special_line(mid_surgery))
+	active_surgery = TRUE
 
-/// Plays a line based on how much time is left on the bomb timer
-/datum/component/dialogue_system/contractor_bomb/proc/on_timer_threshold(obj/item/contractor_bomb/source, timeleft_percentage)
+/// Plays a line on process according to some conditions
+/datum/component/dialogue_system/contractor_bomb/proc/on_bomb_process(obj/item/contractor_bomb/source, timeleft_percentage)
 	SIGNAL_HANDLER
+	if(active_surgery)
+		return // Once our bomb carrier is being operated on, we will just assume they are soon going to be defused or eradicated
+
 	if(is_nuclear)
 		// Drop the timer lines if they ever get a nuclear core, instead we'll just play the nuclear-exclusive lines
 		play_nuclear_idle()
