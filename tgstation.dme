@@ -3796,6 +3796,7 @@
 #include "code\modules\antagonists\traitor\contractor\contractor_snatcher.dm"
 #include "code\modules\antagonists\traitor\contractor\contractor_state.dm"
 #include "code\modules\antagonists\traitor\contractor\contractor_suit.dm"
+#include "code\modules\antagonists\traitor\contractor\contractor_taser.dm"
 #include "code\modules\antagonists\traitor\contractor\syndicate_contract.dm"
 #include "code\modules\antagonists\traitor\contractor\dialogue_system\_dialogue_system.dm"
 #include "code\modules\antagonists\traitor\contractor\dialogue_system\bomb_dialogue.dm"

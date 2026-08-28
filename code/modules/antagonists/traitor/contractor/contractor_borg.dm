@@ -6,7 +6,8 @@
 #define CLOAK_ACTIVATION_COST (0.3 * STANDARD_CELL_CHARGE)
 #define HOVER_ACTIVATION_COST (0.2 * STANDARD_CELL_CHARGE)
 #define HOVER_UPKEEP_COST (0.02 * STANDARD_CELL_CHARGE)
-#define CLOAK_ALPHA 15
+#define CLOAK_ALPHA 0
+#define CLOAK_ALLY_ALPHA 50
 #define CLOAK_BUMP_ALPHA 40
 #define CLOAK_FLARE_TIME (2 SECONDS)
 #define CLOAK_FADE_TIME (0.5 SECONDS)
@@ -15,7 +16,6 @@
 #define CONTRACTOR_INGEST_TIME (0.6 SECONDS)
 #define CONTRACTOR_STRUGGLE_TIME (4 SECONDS)
 #define CONTRACTOR_RESIST_TIME (30 SECONDS)
-#define CONTRACTOR_TASER_TETHER_RANGE 5
 #define CHASSIS_BOOT_FLASH_TIME (0.3 SECONDS)
 #define CHASSIS_BOOT_FADE_TIME 4
 #define CHASSIS_GRID_ALPHA_LOW 35
@@ -42,13 +42,14 @@
 	var/walking = FALSE
 	/// Whether the cloak is up. Suppresses the eye and thruster emissives so we don't glow through it.
 	var/cloaked = FALSE
+	/// While cloaked, our appearance as shown only to authorized viewers.
+	var/image/cloak_image
 	var/obj/effect/contractor_eyes/eyes
 	var/obj/effect/contractor_panel/panel
 	var/obj/effect/contractor_disrupt/disrupt
 	var/obj/effect/contractor_eyes_emissive/eyes_emissive
 	var/obj/effect/contractor_disrupt_emissive/disrupt_emissive
 	var/obj/effect/contractor_thrusters_emissive/thrusters_emissive
-	var/datum/looping_sound/burning_jet/thruster_audio
 	/// The contractor who deployed us. Their bounty board is what the registry program mirrors.
 	var/datum/weakref/contractor_ref
 	var/static/list/thruster_glow_states = list(
@@ -59,7 +60,8 @@
 		"contractor_landing",
 	)
 
-/mob/living/silicon/robot/model/contractor/Initialize(mapload)
+/mob/living/silicon/robot/model/contractor/Initialize(mapload, datum/ai_laws/innate_laws, mob/living/silicon/master_ai, aisync, lawsync)
+	aisync = FALSE
 	. = ..()
 	var/obj/item/borg/upgrade/thrusters/thrusters = new(src)
 	add_to_upgrades(thrusters)
@@ -87,7 +89,9 @@
 	disrupt_emissive.color = GLOB.emissive_color
 
 	refresh_overlay_planes()
-	thruster_audio = new(src)
+
+/mob/living/silicon/robot/model/contractor/make_laws()
+	laws = new /datum/ai_laws/cybersun_override()
 
 /mob/living/silicon/robot/model/contractor/set_modularInterface_theme()
 	if(QDELETED(modularInterface))
@@ -125,7 +129,6 @@
 	QDEL_NULL(eyes_emissive)
 	QDEL_NULL(disrupt_emissive)
 	QDEL_NULL(thrusters_emissive)
-	QDEL_NULL(thruster_audio)
 	return ..()
 
 /mob/living/silicon/robot/model/contractor/proc/eyes_lit()
@@ -150,8 +153,57 @@
 	if(cloaked == new_cloaked)
 		return
 	cloaked = new_cloaked
+	if(cloaked)
+		cloak_image = image(null, src)
+		sync_cloak_image()
+		add_alt_appearance(/datum/atom_hud/alternate_appearance/basic/contractor_cloak, "contractor_cloak", cloak_image)
+		RegisterSignal(src, COMSIG_ATOM_DIR_CHANGE, PROC_REF(on_cloaked_dir_change))
+	else
+		UnregisterSignal(src, COMSIG_ATOM_DIR_CHANGE)
+		remove_alt_appearance("contractor_cloak")
+		cloak_image = null
 	refresh_eyes()
 	refresh_thrusters()
+
+/// Mirrors our current appearance onto the authorized-viewers-only cloak image.
+/mob/living/silicon/robot/model/contractor/proc/sync_cloak_image()
+	if(isnull(cloak_image))
+		return
+	cloak_image.appearance = appearance
+	cloak_image.override = TRUE
+	cloak_image.dir = dir
+	cloak_image.alpha = CLOAK_ALLY_ALPHA
+
+/mob/living/silicon/robot/model/contractor/proc/on_cloaked_dir_change(datum/source, old_dir, new_dir)
+	SIGNAL_HANDLER
+	if(!isnull(cloak_image))
+		cloak_image.dir = new_dir
+
+/// Forcibly drops the cloak with the full disruption fanfare.
+/mob/living/silicon/robot/model/contractor/proc/break_cloak()
+	if(!cloaked)
+		return
+	var/obj/item/robot_model/contractor/contractor_model = model
+	if(!istype(contractor_model))
+		return
+	var/datum/action/cooldown/contractor_cloak/cloak_action = contractor_model.cloak_action_ref?.resolve()
+	cloak_action?.disrupt_cloak()
+
+/// Re-evaluates whether target should be seeing any active contractor cloaks.
+/proc/refresh_contractor_cloak_visibility(mob/target)
+	if(!ismob(target))
+		return
+	for(var/datum/atom_hud/alternate_appearance/basic/contractor_cloak/cloak_hud in GLOB.active_alternate_appearances)
+		cloak_hud.check_hud(target)
+
+/datum/atom_hud/alternate_appearance/basic/contractor_cloak
+
+/datum/atom_hud/alternate_appearance/basic/contractor_cloak/mobShouldSee(mob/viewer)
+	if(isobserver(viewer))
+		return TRUE
+	if(istype(viewer, /mob/living/silicon/robot/model/contractor))
+		return TRUE
+	return HAS_TRAIT(viewer, TRAIT_CONTRACTOR_IMPLANT)
 
 /mob/living/silicon/robot/model/contractor/proc/refresh_thrusters()
 	if(QDELETED(thrusters_emissive))
@@ -232,6 +284,7 @@
 	refresh_eyes()
 	refresh_panel()
 	refresh_thrusters()
+	sync_cloak_image()
 
 /mob/living/silicon/robot/model/contractor/proc/set_hovering(new_hovering)
 	if(hovering == new_hovering)
@@ -246,17 +299,16 @@
 	if(!ion_trail)
 		ion_trail = new /datum/effect_system/trail_follow/ion/grav_allowed(src)
 	if(hovering)
+		break_cloak()
 		ADD_TRAIT(src, TRAIT_MOVE_FLYING, CONTRACTOR_HOVER_TRAIT)
 		ionpulse_on = TRUE
 		ion_trail.start()
-		thruster_audio?.start()
 		update_icons()
 		flick_transition("contractor_thrusters")
 	else
 		REMOVE_TRAIT(src, TRAIT_MOVE_FLYING, CONTRACTOR_HOVER_TRAIT)
 		ionpulse_on = FALSE
 		ion_trail.stop()
-		thruster_audio?.stop()
 		update_icons()
 		flick_transition("contractor_landing")
 	balloon_alert(src, hovering ? "thrusters engaged" : "thrusters disengaged")
@@ -325,7 +377,7 @@
 
 	ingesting = TRUE
 	flick_transition("contractor_open")
-	playsound(src, 'sound/machines/airlock/airlock.ogg', 50, TRUE, -3)
+	playsound(src, 'sound/vehicles/mecha/hydraulic.ogg', 50, TRUE, -3)
 	var/old_alpha = victim.alpha
 	var/old_pixel_x = victim.pixel_x
 	var/old_pixel_y = victim.pixel_y
@@ -349,6 +401,8 @@
 		return
 	victim.forceMove(src)
 	victim.apply_status_effect(/datum/status_effect/contractor_chassis)
+	if(cloaked && !HAS_TRAIT(victim, TRAIT_CONTRACTOR_IMPLANT))
+		break_cloak()
 	update_eject_action()
 	victim.overlay_fullscreen("contractor_chassis_boot", /atom/movable/screen/fullscreen/contractor_chassis/boot)
 	victim.overlay_fullscreen("contractor_chassis_grid", /atom/movable/screen/fullscreen/contractor_chassis/grid)
@@ -390,7 +444,7 @@
 	victim.throw_at(get_step(src, dir), 1, 1, src)
 	update_eject_action()
 	flick_transition("contractor_open")
-	playsound(src, 'sound/machines/airlock/airlock.ogg', 50, TRUE, -3)
+	playsound(src, 'sound/vehicles/mecha/hydraulic.ogg', 50, TRUE, -3)
 
 /mob/living/silicon/robot/model/contractor/container_resist_act(mob/living/user)
 	if(user.loc != src)
@@ -430,7 +484,6 @@
 	basic_modules = list(
 		/obj/item/assembly/flash/cyborg,
 		/obj/item/crowbar/cyborg,
-		/obj/item/pinpointer/syndicate_cyborg,
 		/obj/item/construction/rcd/borg/syndicate,
 		/obj/item/pipe_dispenser,
 		/obj/item/restraints/handcuffs/cable/zipties,
@@ -446,7 +499,7 @@
 		/obj/item/construction/rtd/borg,
 		/obj/item/airlock_painter/decal/cyborg,
 		/obj/item/stack/cable_coil,
-		/obj/item/gun/energy/e_gun/advtaser/cyborg,
+		/obj/item/gun/energy/e_gun/advtaser/cyborg/contractor,
 	)
 	emag_modules = list(
 		/obj/item/borg/stun,
@@ -459,6 +512,7 @@
 	var/datum/weakref/eject_action_ref
 	var/datum/weakref/thermal_action_ref
 	var/datum/weakref/minimap_action_ref
+	var/datum/weakref/registry_action_ref
 
 /obj/item/robot_model/contractor/be_transformed_to(obj/item/robot_model/old_model, forced = FALSE)
 	. = ..()
@@ -486,12 +540,17 @@
 	minimap_action_ref = WEAKREF(minimap)
 	add_minimap_blip(loc, MINIMAP_CONTRACTOR_BLIP, "contractor_borg")
 
+	var/datum/action/registry = new /datum/action/cooldown/contractor_registry(loc)
+	registry.Grant(loc)
+	registry_action_ref = WEAKREF(registry)
+
 /obj/item/robot_model/contractor/Destroy()
 	QDEL_NULL(cloak_action_ref)
 	QDEL_NULL(hover_action_ref)
 	QDEL_NULL(eject_action_ref)
 	QDEL_NULL(thermal_action_ref)
 	QDEL_NULL(minimap_action_ref)
+	QDEL_NULL(registry_action_ref)
 	remove_minimap_blip(MINIMAP_CONTRACTOR_BLIP, loc)
 	return ..()
 
@@ -520,6 +579,11 @@
 		COMSIG_LIVING_STATUS_PARALYZE,
 		COMSIG_LIVING_STATUS_UNCONSCIOUS,
 	)
+	/// Attacking or shooting breaks the cloak.
+	var/static/list/offense_signals = list(
+		COMSIG_MOB_ITEM_ATTACK,
+		COMSIG_MOB_FIRED_GUN,
+	)
 
 /datum/action/cooldown/contractor_cloak/Activate(atom/target)
 	var/mob/living/silicon/robot/model/contractor/borg = owner
@@ -531,6 +595,10 @@
 		return FALSE
 	if(borg.cell && borg.cell.charge < CLOAK_ACTIVATION_COST)
 		borg.balloon_alert(borg, "not enough charge!")
+		return FALSE
+	var/mob/living/occupant = locate() in borg.contents
+	if(occupant && !HAS_TRAIT(occupant, TRAIT_CONTRACTOR_IMPLANT))
+		borg.balloon_alert(borg, "unauthorized occupant interferes!")
 		return FALSE
 
 	deploying = TRUE
@@ -554,6 +622,8 @@
 	animate(borg, alpha = CLOAK_ALPHA, time = CLOAK_FADE_TIME)
 	remove_wibbly_filters(borg, CLOAK_FADE_TIME)
 	borg.set_cloaked(TRUE)
+	// Re-sync once the deploy filters finish animating off, so they aren't baked into the ally image.
+	addtimer(CALLBACK(borg, TYPE_PROC_REF(/mob/living/silicon/robot/model/contractor, sync_cloak_image)), CLOAK_FADE_TIME)
 	borg.balloon_alert(borg, "cloaked")
 	button_icon_state = "contractor_reveal"
 	borg.play_disrupt()
@@ -562,6 +632,8 @@
 	RegisterSignal(borg, COMSIG_ATOM_BUMPED, PROC_REF(on_bumped))
 	RegisterSignal(borg, COMSIG_ATOM_HITBY, PROC_REF(on_hitby))
 	RegisterSignals(borg, stun_signals, PROC_REF(on_stunned))
+	RegisterSignals(borg, offense_signals, PROC_REF(on_offense))
+	RegisterSignal(borg, COMSIG_LIVING_UNARMED_ATTACK, PROC_REF(on_unarmed_attack))
 	build_all_button_icons()
 
 /datum/action/cooldown/contractor_cloak/proc/reveal(silent = TRUE, disrupted = FALSE)
@@ -570,8 +642,9 @@
 		return
 	active = FALSE
 	UnregisterSignal(borg, disrupt_signals)
-	UnregisterSignal(borg, list(COMSIG_MOVABLE_BUMP, COMSIG_ATOM_BUMPED, COMSIG_ATOM_HITBY))
+	UnregisterSignal(borg, list(COMSIG_MOVABLE_BUMP, COMSIG_ATOM_BUMPED, COMSIG_ATOM_HITBY, COMSIG_LIVING_UNARMED_ATTACK))
 	UnregisterSignal(borg, stun_signals)
+	UnregisterSignal(borg, offense_signals)
 	animate(borg, alpha = initial(borg.alpha), time = disrupted ? 0 : 0.5 SECONDS)
 	button_icon_state = "contractor_cloak"
 	borg.set_cloaked(FALSE)
@@ -622,6 +695,18 @@
 	SIGNAL_HANDLER
 	if(amount > 0)
 		disrupt_cloak()
+
+/datum/action/cooldown/contractor_cloak/proc/on_offense(datum/source)
+	SIGNAL_HANDLER
+	disrupt_cloak()
+
+/datum/action/cooldown/contractor_cloak/proc/on_unarmed_attack(datum/source, atom/target, proximity, modifiers)
+	SIGNAL_HANDLER
+	// Borgs interact with almost everything via unarmed attacks; only combat counts.
+	var/mob/living/borg = source
+	if(!isliving(target) || !borg.combat_mode)
+		return
+	disrupt_cloak()
 
 /datum/action/cooldown/contractor_cloak/Remove(mob/removed_from)
 	if(active)
@@ -680,6 +765,33 @@
 /datum/action/cooldown/contractor_eject/IsAvailable(feedback = FALSE)
 	var/mob/living/silicon/robot/model/contractor/borg = owner
 	return ..() && istype(borg) && (locate(/mob/living) in borg.contents)
+
+/datum/action/cooldown/contractor_registry
+	name = "Bounty Registry"
+	desc = "Pull up the bounty board mirror: active contracts, target tracking, and the condition of whatever you're hauling."
+	button_icon = 'icons/mob/actions/actions_AI.dmi'
+	button_icon_state = "modules_menu"
+	check_flags = AB_CHECK_CONSCIOUS
+	cooldown_time = 1 SECONDS
+
+/datum/action/cooldown/contractor_registry/Activate(atom/target)
+	var/mob/living/silicon/robot/model/contractor/borg = owner
+	var/obj/item/modular_computer/tablet = borg.modularInterface
+	if(QDELETED(tablet))
+		borg.balloon_alert(borg, "no interface installed!")
+		return FALSE
+	var/datum/computer_file/program/contractor_bounties/registry = locate() in tablet.stored_files
+	if(isnull(registry))
+		borg.balloon_alert(borg, "no registry installed!")
+		return FALSE
+	if(!tablet.enabled && !tablet.turn_on(borg, open_ui = FALSE))
+		return FALSE
+	tablet.open_program(borg, registry)
+	StartCooldown()
+	return TRUE
+
+/datum/action/cooldown/contractor_registry/IsAvailable(feedback = FALSE)
+	return ..() && istype(owner, /mob/living/silicon/robot/model/contractor)
 
 /obj/effect/contractor_eyes
 	icon = CONTRACTOR_BORG_ICON
@@ -749,6 +861,9 @@
 	var/temperature_per_second = 10
 	/// Drowsiness added per second to an occupant with no contractor implant
 	var/drowsiness_per_second = 2 SECONDS
+	/// Time between automatic resuscitation attempts on a dead occupant
+	var/defib_interval = 10 SECONDS
+	COOLDOWN_DECLARE(defib_cooldown)
 
 /datum/status_effect/contractor_chassis/on_apply()
 	ADD_TRAIT(owner, TRAIT_NOBREATH, CONTRACTOR_CHASSIS_TRAIT)
@@ -783,6 +898,30 @@
 
 	if(!HAS_TRAIT(owner, TRAIT_CONTRACTOR_IMPLANT))
 		owner.adjust_drowsiness(drowsiness_per_second * seconds_between_ticks)
+
+	if(owner.stat == DEAD)
+		try_defib()
+
+/// Periodically tries to defib a dead occupant once the passive healing has repaired them enough.
+/datum/status_effect/contractor_chassis/proc/try_defib()
+	if(!iscarbon(owner) || !COOLDOWN_FINISHED(src, defib_cooldown))
+		return
+	COOLDOWN_START(src, defib_cooldown, defib_interval)
+	var/mob/living/carbon/patient = owner
+	if(patient.can_defib() != DEFIB_POSSIBLE)
+		return
+	patient.notify_revival("The chassis around you is trying to restart your heart!")
+	patient.grab_ghost()
+	playsound(patient, 'sound/machines/defib/defib_zap.ogg', 75, TRUE, -1)
+	patient.set_heartattack(FALSE)
+	patient.revive()
+	patient.emote("gasp")
+	patient.set_jitter_if_lower(200 SECONDS)
+	SEND_SIGNAL(patient, COMSIG_LIVING_MINOR_SHOCK)
+	to_chat(patient, span_userdanger("A jolt of current slams through your chest, dragging you back to life!"))
+	var/mob/living/silicon/robot/borg = patient.loc
+	if(istype(borg))
+		to_chat(borg, span_notice("Occupant cardiac rhythm restored."))
 
 /atom/movable/screen/fullscreen/contractor_chassis
 	screen_loc = "WEST,SOUTH to EAST,NORTH"
@@ -820,12 +959,12 @@
 #undef HOVER_ACTIVATION_COST
 #undef HOVER_UPKEEP_COST
 #undef CLOAK_ALPHA
+#undef CLOAK_ALLY_ALPHA
 #undef CLOAK_BUMP_ALPHA
 #undef CLOAK_FLARE_TIME
 #undef CONTRACTOR_INGEST_TIME
 #undef CONTRACTOR_STRUGGLE_TIME
 #undef CONTRACTOR_RESIST_TIME
-#undef CONTRACTOR_TASER_TETHER_RANGE
 #undef CHASSIS_BOOT_FLASH_TIME
 #undef CHASSIS_BOOT_FADE_TIME
 #undef CHASSIS_GRID_ALPHA_LOW

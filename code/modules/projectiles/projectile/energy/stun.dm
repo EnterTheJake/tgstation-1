@@ -10,6 +10,8 @@
 	impact_type = /obj/effect/projectile/impact/stun
 	/// How much stamina damage will the tase deal in 1 second
 	VAR_PROTECTED/tase_stamina = 60
+	/// The status effect type applied to whoever we latch onto
+	VAR_PROTECTED/tase_effect_type = /datum/status_effect/tased
 	/// Electrodes that follow the projectile
 	VAR_PRIVATE/datum/weakref/beam_weakref
 	/// We need to track who was the ORIGINAL firer of the projectile specifically to ensure deflects work correctly
@@ -51,7 +53,7 @@
 	do_sparks(1, TRUE, src)
 	do_sparks(1, TRUE, fired_from)
 	target.apply_status_effect(
-		/*type = *//datum/status_effect/tased,
+		/*type = */tase_effect_type,
 		/*taser = */fired_from,
 		/*firer = */initial_firer_weakref?.resolve() || firer,
 		/*tase_stamina = */tase_stamina,
@@ -75,11 +77,13 @@
 	tick_interval = 0.25 SECONDS
 	on_remove_on_mob_delete = TRUE
 	/// What atom is tasing us?
-	VAR_PRIVATE/datum/taser
+	VAR_PROTECTED/datum/taser
 	/// What atom is using the atom tasing us? Sometimes the same as the taser, such as with turrets.
-	VAR_PRIVATE/atom/movable/firer
+	VAR_PROTECTED/atom/movable/firer
 	/// The beam datum representing the taser electrodes
-	VAR_PRIVATE/datum/beam/tase_line
+	VAR_PROTECTED/datum/beam/tase_line
+	/// Icon state used for the tase line beam
+	VAR_PROTECTED/tase_beam_state = "electrodes"
 	/// How much stamina damage does it aim to cause in a second?
 	VAR_FINAL/stamina_per_second = 80
 	/// How much energy does the taser use per tick?
@@ -276,7 +280,7 @@
 	tase_line = firer.Beam(
 		BeamTarget = owner,
 		icon = 'icons/effects/beam.dmi',
-		icon_state = "electrodes",
+		icon_state = tase_beam_state,
 		maxdistance = tase_range,
 		beam_type = /obj/effect/ebeam/reacting/electrodes,
 	)

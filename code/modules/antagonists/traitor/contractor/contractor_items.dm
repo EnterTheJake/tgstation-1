@@ -81,9 +81,11 @@
 	if(!.)
 		return
 	ADD_TRAIT(target, TRAIT_CONTRACTOR_IMPLANT, IMPLANT_TRAIT)
+	refresh_contractor_cloak_visibility(target)
 
 /obj/item/implant/explosive/contractor/removed(mob/living/source, silent, special)
 	REMOVE_TRAIT(source, TRAIT_CONTRACTOR_IMPLANT, IMPLANT_TRAIT)
+	refresh_contractor_cloak_visibility(source)
 	return ..()
 
 /// Opens the remote detonation suite instead of self-detonating like a normal explosive implant.
