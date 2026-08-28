@@ -1,4 +1,3 @@
-#define CONTRACTOR_TASER_WINDUP (2 SECONDS)
 
 /obj/item/gun/energy/e_gun/advtaser/cyborg/contractor
 	name = "integrated shock tether"
@@ -22,19 +21,20 @@
 	tase_beam_state = "electrodes_nozap"
 	/// Whether the wind-up has finished and the electrodes are delivering current.
 	var/shocking = FALSE
+	/// windup delay
+	var/windup_delay = 2 SECONDS
 
 /datum/status_effect/tased/contractor/on_apply()
 	. = ..()
 	if(!.)
 		return
-	// No slowdown during the wind-up, so the target has a real chance to break the tether.
+	// effects on a delay
 	owner.remove_movespeed_modifier(/datum/movespeed_modifier/being_tased)
-	addtimer(CALLBACK(src, PROC_REF(begin_shock)), CONTRACTOR_TASER_WINDUP)
+	addtimer(CALLBACK(src, PROC_REF(begin_shock)), windup_delay)
 
 /datum/status_effect/tased/contractor/tick(seconds_between_ticks)
 	if(shocking)
 		return ..()
-	// Winding up: tether break checks only, no current.
 	if(!do_tase_with(taser, seconds_between_ticks))
 		end_tase()
 
@@ -54,4 +54,3 @@
 		span_userdanger("The electrodes latched onto you crackle to life!"),
 	)
 
-#undef CONTRACTOR_TASER_WINDUP
