@@ -13,6 +13,25 @@
 }
 
 .theme-contractor {
+  --button-background-disabled: #1b1210;
+  --button-disabled-opacity: 0.75;
+
+  .Button--disabled:not(.Button--selected) {
+    border-color: hsla(28, 20%, 40%, 0.35) !important;
+    color: hsl(28, 8%, 48%) !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+
+    .Button__content {
+      filter: grayscale(1);
+    }
+  }
+
+  .Button--disabled.Button--selected {
+    background-color: var(--button-background-selected) !important;
+    opacity: 1;
+  }
+
   // Topbar coin readout (passed via Window `buttons`).
   .ContractorCoin {
     display: inline-flex;

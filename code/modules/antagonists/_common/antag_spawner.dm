@@ -401,8 +401,8 @@
 /obj/item/antag_spawner/loadout/contractor
 	name = "contractor support beacon"
 	desc = "A beacon sold to the most prestigeous syndicate members, a single-use radio for calling immediate backup."
-	icon = 'icons/obj/devices/voice.dmi'
-	icon_state = "nukietalkie"
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_remotes.dmi'
+	icon_state = "contractor_remote"
 	outfit = /datum/outfit/contractor_partner
 	use_subtypes = FALSE
 	antag_datum = /datum/antagonist/traitor/contractor_support
@@ -418,10 +418,17 @@
 	desc = "A single-use beacon that drops a contractor retrieval drone into the field, chassis and all."
 	spawn_type = /mob/living/silicon/robot/model/contractor
 	outfit = null
+	antag_datum = /datum/antagonist/traitor/contractor_support/cyborg
 	pod_style = /datum/pod_style/contractor
 
 /obj/item/antag_spawner/loadout/contractor/borg/spawn_antag(client/our_client, turf/spawn_turf, mob/user)
+	if(isnull(spawn_turf))
+		spawn_turf = get_turf(src)
+	if(isnull(spawn_turf))
+		CRASH("contractor drone beacon fired with no landing turf")
 	var/obj/structure/closet/supplypod/pod = setup_pod()
+	if(isnull(pod))
+		CRASH("contractor drone beacon could not build a pod")
 	var/mob/living/silicon/robot/model/contractor/drone = new(spawn_turf)
 	var/drone_name = "[pick(GLOB.last_names)] Retrieval Unit"
 	drone.mmi?.name = "[initial(drone.mmi.name)]: [drone_name]"
@@ -438,6 +445,7 @@
 
 /obj/item/antag_spawner/loadout/contractor/borg/do_special_things(mob/living/silicon/robot/model/contractor/drone, mob/user)
 	drone.contractor_ref = WEAKREF(user)
+	add_minimap_blip(drone, contractor_minimap_tag(user), "contractor_borg")
 	to_chat(drone, span_alertwarning("[user.real_name] is your superior. Follow any, and all orders given by them. You're here to support their mission only."))
 	to_chat(drone, span_alertwarning("Your chassis is built to carry a body. Retrieve who they tell you to, and get them to the dropoff."))
 

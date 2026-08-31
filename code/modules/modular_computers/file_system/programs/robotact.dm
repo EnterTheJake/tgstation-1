@@ -70,6 +70,8 @@
 	data["printerTonerMax"] = cyborg.tonermax //It's a variable, might as well use it
 	data["thrustersInstalled"] = cyborg.ionpulse //If we have a thruster uprade
 	data["thrustersStatus"] = "[cyborg.ionpulse_on?"ACTIVE":"DISABLED"]" //Feedback for thruster status
+	data["thermalsInstalled"] = cyborg.has_thermals
+	data["thermalsStatus"] = "[(cyborg.sight & SEE_MOBS)?"ACTIVE":"DISABLED"]"
 	data["selfDestructAble"] = (cyborg.emagged || istype(cyborg, /mob/living/silicon/robot/model/syndicate))
 
 	data["cyborg_groups"] = list()
@@ -167,6 +169,10 @@
 
 		if("toggleThrusters")
 			cyborg.toggle_ionpulse()
+
+		if("toggleThermals")
+			cyborg.toggle_thermals()
+			return TRUE
 
 		if("lampIntensity")
 			cyborg.lamp_intensity = params["ref"]

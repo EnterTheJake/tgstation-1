@@ -37,7 +37,9 @@
 
 /obj/projectile/bullet/gauss/gyro
 	name = "gyre gauss round"
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_gyre.dmi'
 	icon_state = "drill_off"
+	SET_BASE_PIXEL(-16, -16)
 	damage_type = STAMINA
 	armor_flag = ENERGY
 	armour_penetration = 20

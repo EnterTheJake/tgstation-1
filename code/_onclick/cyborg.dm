@@ -72,6 +72,8 @@
 		if(HAS_TRAIT(src, TRAIT_HANDS_BLOCKED))
 			return
 
+		on_module_used(W, A)
+
 		if(W == A)
 			W.attack_self(src, modifiers)
 			return
@@ -90,6 +92,9 @@
 			return
 		else if(isturf(A) || isturf(A.loc))
 			A.base_ranged_item_interaction(src, W, modifiers)
+
+/mob/living/silicon/robot/proc/on_module_used(obj/item/module, atom/target)
+	return
 
 //Give cyborgs hotkey clicks without breaking existing uses of hotkey clicks
 // for non-doors/apcs

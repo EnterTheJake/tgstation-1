@@ -17,11 +17,25 @@
 	SIGNAL_HANDLER
 	INVOKE_ASYNC(src, PROC_REF(ui_interact), activator)
 
+/proc/contractor_board_owner(mob/user)
+	var/mob/living/silicon/robot/model/contractor/drone = user
+	if(istype(drone))
+		return drone.contractor_ref?.resolve()
+	return user
+
+/proc/contractor_minimap_tag(mob/contractor)
+	if(isnull(contractor))
+		return MINIMAP_CONTRACTOR_BLIP
+	return "[MINIMAP_CONTRACTOR_BLIP]_[REF(contractor)]"
+
+/datum/component/uplink/contractor/proc/get_contract_holder(mob/user)
+	return contractor_board_owner(user)
+
 // TODO: move this to a login act
 /datum/component/uplink/contractor/ui_interact(mob/user, datum/tgui/ui)
-	var/datum/antagonist/traitor/traitor_user = IS_TRAITOR(user)
+	var/datum/antagonist/traitor/traitor_user = IS_TRAITOR(get_contract_holder(user))
 	// Set up the hub before ..() opens the UI, else the first static data has no contracts and payouts read 0.
-	if(!isnull(traitor_user) && isnull(traitor_user.uplink_handler.contractor_state))
+	if(!isnull(traitor_user?.uplink_handler) && isnull(traitor_user.uplink_handler.contractor_state))
 		handler.add_uplink(src, user)
 		traitor_user.uplink_handler.contractor_state = new()
 		user.playsound_local(user, 'sound/music/antag/contractstartup.ogg', 100, FALSE)
@@ -39,12 +53,14 @@
 	data["allow_dangerous_extract"] = allow_dangerous_extract()
 	data["error"] = error
 
-	var/datum/antagonist/traitor/traitor = user?.mind?.has_antag_datum(/datum/antagonist/traitor)
+	var/mob/board_owner = get_contract_holder(user)
+	var/datum/antagonist/traitor/traitor = board_owner?.mind?.has_antag_datum(/datum/antagonist/traitor)
 	var/datum/contractor_state/contract_state = traitor?.uplink_handler?.contractor_state
 	data["redeemable_tc"] = contract_state?.contract_TC_to_redeem || 0
 	data["tracked_contract_id"] = contract_state?.tracked_contract_id
 
 	data["refresh_time"] = timeleft(handler.contract_refresh_timer)
+	data["bounties_only"] = istype(user, /mob/living/silicon/robot/model/contractor)
 
 	var/list/bounty_locations = list()
 	for(var/datum/syndicate_contract/bounty in handler.assigned_contracts)
@@ -96,7 +112,15 @@
 	if(!.)
 		return
 	var/mob/living/user = usr
-	var/datum/antagonist/traitor/traitor = user?.mind?.has_antag_datum(/datum/antagonist/traitor)
+	if(istype(user, /mob/living/silicon/robot/model/contractor))
+		if(action == "call_extraction")
+			error = "Extraction pods answer to the contractor only."
+			return TRUE
+		if(action in list("track", "contract_accept", "contract_abort", "redeem_tc"))
+			error = "Contract selection is set by your contractor."
+			return TRUE
+	var/mob/board_owner = get_contract_holder(user)
+	var/datum/antagonist/traitor/traitor = board_owner?.mind?.has_antag_datum(/datum/antagonist/traitor)
 	if(isnull(traitor))
 		error = "Unauthorized user."
 		return
@@ -170,7 +194,7 @@
 			// Clear the previously tracked blip - only one target is tracked at a time.
 			var/mob/previous = contract_state.tracked_target_ref?.resolve()
 			if(!isnull(previous))
-				remove_minimap_blip(MINIMAP_CONTRACTOR_BLIP, previous)
+				remove_minimap_blip(contractor_minimap_tag(board_owner), previous)
 			contract_state.tracked_target_ref = null
 			// Pressing the already-tracked target untracks it.
 			if(contract_state.tracked_contract_id == contract_id)
@@ -186,7 +210,7 @@
 				user.playsound_local(user, 'sound/machines/uplink/uplinkerror.ogg', 50)
 				error = "Target signal lost - cannot acquire a lock."
 				return TRUE
-			add_contractor_track_blip(target_mob)
+			add_contractor_track_blip(target_mob, board_owner)
 			contract_state.tracked_target_ref = WEAKREF(target_mob)
 			contract_state.tracked_contract_id = contract_id
 			contract_state.tracked_contract_ref = WEAKREF(contract_holder)
@@ -219,3 +243,43 @@
 		// if("PRG_toggle_info")
 		// 	info_screen = !info_screen
 		// 	return TRUE
+
+/// Opens the contractor uplink. The contractor gets the whole board, the drone only the targets.
+/datum/action/contractor_uplink
+	name = "Contractor Uplink"
+	desc = "Raise the syndicate contract board."
+	button_icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_actions.dmi'
+	button_icon_state = "contractor_uplink"
+	check_flags = AB_CHECK_CONSCIOUS | AB_CHECK_INCAPACITATED
+
+/datum/action/contractor_uplink/proc/get_contractor()
+	var/mob/living/silicon/robot/model/contractor/drone = owner
+	if(istype(drone))
+		return drone.contractor_ref?.resolve()
+	return owner
+
+/datum/action/contractor_uplink/proc/get_uplink()
+	var/mob/contractor = get_contractor()
+	if(isnull(contractor))
+		return null
+	for(var/obj/item/held as anything in contractor.get_all_contents())
+		var/datum/component/uplink/contractor/uplink = held.GetComponent(/datum/component/uplink/contractor)
+		if(!isnull(uplink))
+			return uplink
+	return null
+
+/datum/action/contractor_uplink/Trigger(mob/clicker, trigger_flags)
+	. = ..()
+	if(!.)
+		return
+	if(isnull(owner))
+		return FALSE
+	if(isnull(get_contractor()))
+		owner.balloon_alert(owner, "no contractor registered!")
+		return FALSE
+	var/datum/component/uplink/contractor/uplink = get_uplink()
+	if(isnull(uplink))
+		owner.balloon_alert(owner, "contractor uplink offline!")
+		return FALSE
+	uplink.ui_interact(owner)
+	return TRUE

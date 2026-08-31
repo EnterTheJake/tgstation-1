@@ -257,6 +257,12 @@
 		return
 	return TRUE
 
+/mob/living/silicon/robot/proc/toggle_thermals()
+	if(!has_thermals)
+		return
+	sight_mode = (sight & SEE_MOBS) ? BORGDEFAULT : BORGTHERM
+	update_sight()
+
 /mob/living/silicon/robot/proc/toggle_ionpulse()
 	if(!ionpulse)
 		to_chat(src, span_notice("No thrusters are installed!"))
@@ -768,6 +774,9 @@
 		I.forceMove(get_turf(src))
 
 	ionpulse = FALSE
+	has_thermals = FALSE
+	sight_mode = BORGDEFAULT
+	update_sight()
 	revert_shell()
 
 	return TRUE

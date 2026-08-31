@@ -1,3 +1,7 @@
+#define HIGHLIGHT_ALPHA_LOW 110
+#define HIGHLIGHT_ALPHA_HIGH 255
+#define HIGHLIGHT_PULSE_TIME (1.5 SECONDS)
+
 /// Minimap toggle action granted by the contractor tracking suite module.
 /// Reuses the standard implant minimap button, but only renders the contractor's
 /// own position and the blip of the target they've flagged in their uplink.
@@ -12,6 +16,10 @@
 		HUD_TAC_MINIMAP_Z_INDICATOR_UP = /atom/movable/screen/minimap_z_up,
 		HUD_TAC_MINIMAP_Z_INDICATOR_DOWN = /atom/movable/screen/minimap_z_down
 	)
+
+/datum/action/minimap/contractor/add_huds(datum/hud/hud, datum/minimap/minimap, initial_display_z_level)
+	minimap_blip_tags = list(contractor_minimap_tag(contractor_board_owner(owner)))
+	return ..()
 
 /// Per-viewer overlay that shades the tracked contract's extraction areas on the minimap.
 /// Sits just above the base map (below blips) and passes clicks/hover through.
@@ -49,7 +57,7 @@
 	refresh_extraction_highlight()
 
 /atom/movable/screen/minimap_display/contractor/proc/get_tracked_contract()
-	var/mob/viewer = get_mob()
+	var/mob/viewer = contractor_board_owner(get_mob())
 	var/datum/antagonist/traitor/traitor = viewer?.mind?.has_antag_datum(/datum/antagonist/traitor)
 	var/datum/contractor_state/state = traitor?.uplink_handler?.contractor_state
 	return state?.tracked_contract_ref?.resolve()
@@ -106,6 +114,9 @@
 	highlight = new /atom/movable/screen/minimap_element/contractor_highlight()
 	highlight.icon = canvas
 	show_minimap_element(highlight)
+	highlight.alpha = HIGHLIGHT_ALPHA_LOW
+	animate(highlight, alpha = HIGHLIGHT_ALPHA_HIGH, time = HIGHLIGHT_PULSE_TIME, loop = -1)
+	animate(alpha = HIGHLIGHT_ALPHA_LOW, time = HIGHLIGHT_PULSE_TIME)
 
 /atom/movable/screen/minimap_display/contractor/get_hover_text(x, y)
 	. = ..()
@@ -122,14 +133,15 @@
 	)
 	return "[.]<br>[tier_labels[tier]]"
 
-/proc/add_contractor_track_blip(mob/target)
+/proc/add_contractor_track_blip(mob/target, mob/contractor)
 	if(QDELETED(target))
 		return
-	add_minimap_blip(target, MINIMAP_CONTRACTOR_BLIP, "locator")
+	var/blip_tag = contractor_minimap_tag(contractor)
+	add_minimap_blip(target, blip_tag, "locator")
 	var/icon/job_icon = get_job_hud_icon(target.mind?.assigned_role)
 	if(isnull(job_icon))
 		return
-	var/atom/movable/screen/minimap_element/blip/blip = get_minimap_blip(MINIMAP_CONTRACTOR_BLIP, target)
+	var/atom/movable/screen/minimap_element/blip/blip = get_minimap_blip(blip_tag, target)
 	if(isnull(blip))
 		return
 	blip.icon = job_icon
@@ -159,7 +171,7 @@
 	if(isnull(minimap_action))
 		minimap_action = new(src)
 	minimap_action.Grant(mod.wearer)
-	add_minimap_blip(mod.wearer, MINIMAP_CONTRACTOR_BLIP, "contractor")
+	add_minimap_blip(mod.wearer, contractor_minimap_tag(mod.wearer), "contractor")
 
 /obj/item/mod/module/contractor_minimap/on_part_deactivation(deleting = FALSE)
 	. = ..()
@@ -176,8 +188,12 @@
 	var/mob/owner = minimap_action.owner
 	if(isnull(owner))
 		return
-	remove_minimap_blip(MINIMAP_CONTRACTOR_BLIP, owner)
+	remove_minimap_blip(contractor_minimap_tag(contractor_board_owner(owner)), owner)
 	var/datum/hud/hud = owner.hud_used
 	if(!isnull(hud) && minimap_action.has_minimap_huds(hud))
 		minimap_action.remove_huds(hud)
 	minimap_action.Remove(owner)
+
+#undef HIGHLIGHT_ALPHA_LOW
+#undef HIGHLIGHT_ALPHA_HIGH
+#undef HIGHLIGHT_PULSE_TIME

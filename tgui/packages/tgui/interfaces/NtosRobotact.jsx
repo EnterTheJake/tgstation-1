@@ -50,6 +50,8 @@ export const NtosRobotactContent = (props) => {
     printerTonerMax,
     thrustersInstalled,
     thrustersStatus,
+    thermalsInstalled,
+    thermalsStatus,
     selfDestructAble,
     cyborg_groups = [],
     masterAI_online,
@@ -224,6 +226,14 @@ export const NtosRobotactContent = (props) => {
                         <Button
                           content={thrustersStatus}
                           onClick={() => act('toggleThrusters')}
+                        />
+                      </LabeledList.Item>
+                    )}
+                    {!!thermalsInstalled && (
+                      <LabeledList.Item label="Toggle Thermals">
+                        <Button
+                          content={thermalsStatus}
+                          onClick={() => act('toggleThermals')}
                         />
                       </LabeledList.Item>
                     )}

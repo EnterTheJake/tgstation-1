@@ -17,6 +17,10 @@
 /datum/antagonist/traitor/contractor_support/forge_ending_objective()
 	return
 
+/datum/antagonist/traitor/contractor_support/cyborg
+	name = "Contractor Support Cyborg"
+	employer = "Contractor Support Cyborg"
+
 /datum/outfit/contractor_partner
 	name = "Contractor Support Unit"
 

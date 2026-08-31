@@ -147,6 +147,9 @@
 	if(borg.ionpulse)
 		to_chat(user, span_warning("This unit already has ion thrusters installed!"))
 		return FALSE
+	if(borg.has_builtin_flight)
+		to_chat(user, span_warning("This unit already flies under its own power!"))
+		return FALSE
 
 	borg.ionpulse = TRUE
 	borg.toggle_ionpulse() //Enabled by default

@@ -997,7 +997,6 @@
 	model_traits = list(TRAIT_PUSHIMMUNE, TRAIT_NEGATES_GRAVITY)
 	hat_offset = list("north" = list(0, -4), "south" = list(0, -4), "east" = list(4, -4), "west" = list(-4, -4))
 	canDispose = TRUE
-	var/datum/weakref/thermal_vision_ref
 
 /obj/item/robot_model/saboteur/rebuild_modules()
 	..()
@@ -1006,30 +1005,12 @@
 	var/datum/action/minimap/nuclear/tacmap_action = new
 	tacmap_action.Grant(cyborg)
 
-/datum/action/cooldown/borg_thermal
-	name = "Toggle Thermal Night Vision"
-	button_icon = 'icons/mob/actions/actions_mecha.dmi'
-	button_icon_state = "thermal"
-
-/datum/action/cooldown/borg_thermal/Activate()
-	var/mob/living/silicon/robot/borg = owner
-	if(borg.sight & SEE_MOBS)
-		borg.sight_mode = BORGDEFAULT
-	else
-		borg.sight_mode = BORGTHERM
-	borg.update_sight()
-
 /obj/item/robot_model/saboteur/be_transformed_to(obj/item/robot_model/old_model, forced = FALSE)
-	var/datum/action/cooldown/borg_thermal/thermal_vision = new(loc)
 	. = ..()
 	if(!.)
 		return
-	thermal_vision.Grant(loc)
-	thermal_vision_ref = WEAKREF(thermal_vision)
-
-/obj/item/robot_model/saboteur/Destroy()
-	QDEL_NULL(thermal_vision_ref)
-	return ..()
+	var/mob/living/silicon/robot/cyborg = loc
+	cyborg.has_thermals = TRUE
 
 /obj/item/robot_model/syndicate/kiltborg
 	name = "Highlander"

@@ -27,6 +27,8 @@
 /obj/item/mod/module/contractor_uplink
 	name = "Contractor Uplink"
 	desc = "XANTODO Con uplink description" // ANNETODO
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_actions.dmi'
+	icon_state = "contractor_uplink"
 	complexity = 0
 	required_slots = list(ITEM_SLOT_GLOVES)
 	module_type = MODULE_USABLE

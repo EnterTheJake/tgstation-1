@@ -9,6 +9,7 @@ import {
   Tabs,
   TimeDisplay,
 } from 'tgui-core/components';
+import type { BooleanLike } from 'tgui-core/react';
 import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
 
@@ -39,6 +40,7 @@ type ContractorUplinkData = UplinkData & {
   refresh_time?: number;
   /** contract_id of the target currently tracked on the minimap, if any. */
   tracked_contract_id?: number;
+  bounties_only?: BooleanLike;
   /** live target locations keyed by contract_id; updates as targets move. */
   bounty_locations?: Record<string, string>;
   /** user-facing error message; shown as a modal while set. */
@@ -149,9 +151,10 @@ function TabView(props: TabViewProps) {
     refresh_time,
     tracked_contract_id,
     bounty_locations,
+    bounties_only,
   } = props;
 
-  const tabs: Tab[] = [
+  const allTabs: Tab[] = [
     {
       title: 'Mission Info',
       content: <MissionInfo />,
@@ -167,6 +170,7 @@ function TabView(props: TabViewProps) {
           refresh_time={refresh_time}
           tracked_contract_id={tracked_contract_id}
           bounty_locations={bounty_locations}
+          bounties_only={bounties_only}
         />
       ),
       footer: 'Complete contracts alive for the full payout bonus',
@@ -202,6 +206,11 @@ function TabView(props: TabViewProps) {
     },
   ];
 
+  const tabs = bounties_only
+    ? allTabs.filter((tab) => tab.title === 'Bounty Targets')
+    : allTabs;
+
+  const activeTab = Math.min(currentTab, tabs.length - 1);
   const onTabSelect = (tab: number) => {
     setTab(tab);
     tabs[tab].onSelect?.();
@@ -214,7 +223,7 @@ function TabView(props: TabViewProps) {
           {tabs.map((tab, index) => (
             <Tabs.Tab
               key={index}
-              selected={currentTab === index}
+              selected={activeTab === index}
               onClick={() => onTabSelect(index)}
             >
               {tab.title}
@@ -224,13 +233,13 @@ function TabView(props: TabViewProps) {
       </Stack.Item>
 
       <Stack.Item overflowY="auto" grow>
-        {tabs[currentTab].content}
+        {tabs[activeTab].content}
       </Stack.Item>
 
       <Stack.Item>
         <Box className="ContractorFooter">
           <Box as="span">Contractor Support Unit &middot; Secure Channel</Box>
-          <Box as="span">{tabs[currentTab].footer}</Box>
+          <Box as="span">{tabs[activeTab].footer}</Box>
         </Box>
       </Stack.Item>
     </Stack>
@@ -249,6 +258,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
     refresh_time = 0,
     tracked_contract_id,
     bounty_locations,
+    bounties_only,
   } = props;
   const { act } = useBackend();
 
@@ -294,6 +304,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
   const targetsElements =
     bounty_targets?.map((target, index) => {
       const isTracked = Number(target.contract_id) === tracked_contract_id;
+      const trackLabel = bounties_only ? 'Not Tracked' : 'Track on Minimap';
       return (
         <Box
           key={index}
@@ -341,6 +352,12 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
                 <Button
                   icon={isTracked ? undefined : 'location-crosshairs'}
                   selected={isTracked}
+                  disabled={!!bounties_only}
+                  tooltip={
+                    bounties_only
+                      ? 'Target lock is set by your contractor.'
+                      : undefined
+                  }
                   className="BountyTarget__track-btn"
                   onClick={() =>
                     act('track', { contract_id: target.contract_id })
@@ -352,7 +369,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
                       Tracking
                     </>
                   ) : (
-                    'Track on Minimap'
+                    trackLabel
                   )}
                 </Button>
               </Box>
@@ -380,6 +397,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
               </Stack.Item>
             )}
 
+            {!bounties_only && (
             <Stack.Item>
               <Box className="BountyTarget__extract-title" mb={0.5}>
                 Choose Extraction Type
@@ -414,6 +432,7 @@ function BountyTargets(props: PrimaryObjectiveMenuProps) {
                 ))}
               </Stack>
             </Stack.Item>
+            )}
           </Stack>
         </Box>
       );

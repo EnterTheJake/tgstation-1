@@ -97,5 +97,9 @@
 
 /obj/item/uplink/contractor
 	name = "contractor uplink"
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_actions.dmi'
+	icon_state = "contractor_uplink"
+	inhand_icon_state = null
+	worn_icon_state = null
 	uplink_type = /datum/component/uplink/contractor
 	uplink_flag = UPLINK_CONTRACTOR

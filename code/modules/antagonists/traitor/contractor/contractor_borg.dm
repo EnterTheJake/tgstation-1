@@ -4,8 +4,8 @@
 #define CONTRACTOR_HOVER_TRAIT "contractor_hover"
 #define CONTRACTOR_CHASSIS_TRAIT "contractor_chassis"
 #define CLOAK_ACTIVATION_COST (0.3 * STANDARD_CELL_CHARGE)
-#define HOVER_ACTIVATION_COST (0.2 * STANDARD_CELL_CHARGE)
-#define HOVER_UPKEEP_COST (0.02 * STANDARD_CELL_CHARGE)
+#define HOVER_ACTIVATION_COST (0.1 * STANDARD_CELL_CHARGE)
+#define HOVER_UPKEEP_COST (0.01 * STANDARD_CELL_CHARGE)
 #define CLOAK_ALPHA 0
 #define CLOAK_ALLY_ALPHA 50
 #define CLOAK_BUMP_ALPHA 40
@@ -15,6 +15,8 @@
 #define CONTRACTOR_DISRUPT_TIME (0.6 SECONDS)
 #define CONTRACTOR_INGEST_TIME (0.6 SECONDS)
 #define CONTRACTOR_STRUGGLE_TIME (4 SECONDS)
+/// Runtime of the contractor_open chassis animation, 12 frames at 1 decisecond
+#define CONTRACTOR_OPEN_TIME (1.2 SECONDS)
 #define CONTRACTOR_RESIST_TIME (30 SECONDS)
 #define CHASSIS_BOOT_FLASH_TIME (0.3 SECONDS)
 #define CHASSIS_BOOT_FADE_TIME 4
@@ -50,7 +52,7 @@
 	var/obj/effect/contractor_eyes_emissive/eyes_emissive
 	var/obj/effect/contractor_disrupt_emissive/disrupt_emissive
 	var/obj/effect/contractor_thrusters_emissive/thrusters_emissive
-	/// The contractor who deployed us. Their bounty board is what the registry program mirrors.
+	/// The contractor who deployed us. Their bounty board and minimap channel are the ones we use.
 	var/datum/weakref/contractor_ref
 	var/static/list/thruster_glow_states = list(
 		"contractor_hover",
@@ -63,9 +65,8 @@
 /mob/living/silicon/robot/model/contractor/Initialize(mapload, datum/ai_laws/innate_laws, mob/living/silicon/master_ai, aisync, lawsync)
 	aisync = FALSE
 	. = ..()
-	var/obj/item/borg/upgrade/thrusters/thrusters = new(src)
-	add_to_upgrades(thrusters)
-	ionpulse = TRUE
+	has_builtin_flight = TRUE
+	has_thermals = TRUE
 
 	panel = new(null)
 	vis_contents += panel
@@ -90,6 +91,15 @@
 
 	refresh_overlay_planes()
 
+	sight_mode = BORGTHERM
+	update_sight()
+
+/mob/living/silicon/robot/model/contractor/Process_Spacemove(movement_dir = 0, continuous_move = FALSE)
+	. = ..()
+	if(.)
+		return TRUE
+	return hovering
+
 /mob/living/silicon/robot/model/contractor/make_laws()
 	laws = new /datum/ai_laws/cybersun_override()
 
@@ -98,7 +108,6 @@
 		return
 	modularInterface.device_theme = PDA_THEME_CONTRACTOR
 	modularInterface.icon_state = "tablet-silicon-syndicate"
-	modularInterface.store_file(new /datum/computer_file/program/contractor_bounties())
 	modularInterface.update_icon()
 
 /mob/living/silicon/robot/model/contractor/proc/refresh_overlay_planes()
@@ -113,6 +122,20 @@
 	. = ..()
 	if(!same_z_layer)
 		refresh_overlay_planes()
+
+/mob/living/silicon/robot/model/contractor/add_shared_particles(particle_type, custom_key = null, particle_flags = NONE, pool_size = 3)
+	var/obj/effect/abstract/shared_particle_holder/holder = ..(particle_type, "[custom_key || particle_type]_contractor", particle_flags, pool_size)
+	if(isnull(holder))
+		return holder
+	var/list/offsets = get_icon_centering_offset(src)
+	holder.pixel_x = offsets[1]
+	holder.pixel_y = offsets[2]
+	return holder
+
+/mob/living/silicon/robot/model/contractor/remove_shared_particles(particle_key, delete_on_empty = TRUE)
+	if(!particle_key)
+		return
+	return ..("[particle_key]_contractor", delete_on_empty)
 
 /mob/living/silicon/robot/model/contractor/Destroy()
 	for(var/mob/living/trapped in contents)
@@ -188,6 +211,9 @@
 		return
 	var/datum/action/cooldown/contractor_cloak/cloak_action = contractor_model.cloak_action_ref?.resolve()
 	cloak_action?.disrupt_cloak()
+
+/mob/living/silicon/robot/model/contractor/on_module_used(obj/item/module, atom/target)
+	break_cloak()
 
 /// Re-evaluates whether target should be seeing any active contractor cloaks.
 /proc/refresh_contractor_cloak_visibility(mob/target)
@@ -289,7 +315,7 @@
 /mob/living/silicon/robot/model/contractor/proc/set_hovering(new_hovering)
 	if(hovering == new_hovering)
 		return
-	if(new_hovering && !ionpulse)
+	if(new_hovering && !has_builtin_flight)
 		to_chat(src, span_warning("No thrusters are installed!"))
 		return
 	if(new_hovering && cell && !cell.use(HOVER_ACTIVATION_COST))
@@ -301,13 +327,11 @@
 	if(hovering)
 		break_cloak()
 		ADD_TRAIT(src, TRAIT_MOVE_FLYING, CONTRACTOR_HOVER_TRAIT)
-		ionpulse_on = TRUE
 		ion_trail.start()
 		update_icons()
 		flick_transition("contractor_thrusters")
 	else
 		REMOVE_TRAIT(src, TRAIT_MOVE_FLYING, CONTRACTOR_HOVER_TRAIT)
-		ionpulse_on = FALSE
 		ion_trail.stop()
 		update_icons()
 		flick_transition("contractor_landing")
@@ -366,18 +390,21 @@
 	if(!can_ingest(victim, user))
 		return
 
+	var/struggled = FALSE
 	if(!ingest_is_unopposed(victim))
 		balloon_alert(user, "forcing them in...")
 		to_chat(victim, span_userdanger("[src] is trying to force you into its chassis!"))
 		ingesting = TRUE
+		struggled = TRUE
+		addtimer(CALLBACK(src, PROC_REF(play_ingest_open)), CONTRACTOR_STRUGGLE_TIME - CONTRACTOR_OPEN_TIME)
 		var/won = do_after(user || src, CONTRACTOR_STRUGGLE_TIME, target = victim)
 		ingesting = FALSE
 		if(!won || !can_ingest(victim, user))
 			return
 
 	ingesting = TRUE
-	flick_transition("contractor_open")
-	playsound(src, 'sound/vehicles/mecha/hydraulic.ogg', 50, TRUE, -3)
+	if(!struggled)
+		play_ingest_open()
 	var/old_alpha = victim.alpha
 	var/old_pixel_x = victim.pixel_x
 	var/old_pixel_y = victim.pixel_y
@@ -389,6 +416,20 @@
 		time = CONTRACTOR_INGEST_TIME,
 	)
 	addtimer(CALLBACK(src, PROC_REF(finish_ingest), victim, old_alpha, old_pixel_x, old_pixel_y), CONTRACTOR_INGEST_TIME)
+
+/mob/living/silicon/robot/model/contractor/proc/play_ingest_open()
+	if(!ingesting)
+		return
+	play_chassis_open()
+
+/mob/living/silicon/robot/model/contractor/proc/play_chassis_open()
+	flick_transition("contractor_open")
+	playsound(src, 'sound/vehicles/mecha/hydraulic.ogg', 50, TRUE, -3)
+	ADD_TRAIT(src, TRAIT_IMMOBILIZED, CONTRACTOR_CHASSIS_TRAIT)
+	addtimer(CALLBACK(src, PROC_REF(end_chassis_open)), CONTRACTOR_OPEN_TIME, TIMER_UNIQUE | TIMER_OVERRIDE)
+
+/mob/living/silicon/robot/model/contractor/proc/end_chassis_open()
+	REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, CONTRACTOR_CHASSIS_TRAIT)
 
 /mob/living/silicon/robot/model/contractor/proc/finish_ingest(mob/living/victim, old_alpha, old_pixel_x, old_pixel_y)
 	ingesting = FALSE
@@ -443,8 +484,7 @@
 	victim.forceMove(drop_location())
 	victim.throw_at(get_step(src, dir), 1, 1, src)
 	update_eject_action()
-	flick_transition("contractor_open")
-	playsound(src, 'sound/vehicles/mecha/hydraulic.ogg', 50, TRUE, -3)
+	play_chassis_open()
 
 /mob/living/silicon/robot/model/contractor/container_resist_act(mob/living/user)
 	if(user.loc != src)
@@ -484,8 +524,7 @@
 	basic_modules = list(
 		/obj/item/assembly/flash/cyborg,
 		/obj/item/crowbar/cyborg,
-		/obj/item/construction/rcd/borg/syndicate,
-		/obj/item/pipe_dispenser,
+		/obj/item/construction/rcd/borg,
 		/obj/item/restraints/handcuffs/cable/zipties,
 		/obj/item/extinguisher,
 		/obj/item/weldingtool/largetank/cyborg,
@@ -494,10 +533,8 @@
 		/obj/item/borg/cyborg_omnitool/engineering,
 		/obj/item/stack/sheet/iron,
 		/obj/item/stack/sheet/glass,
-		/obj/item/borg/apparatus/sheet_manipulator,
 		/obj/item/stack/rods/cyborg,
 		/obj/item/construction/rtd/borg,
-		/obj/item/airlock_painter/decal/cyborg,
 		/obj/item/stack/cable_coil,
 		/obj/item/gun/energy/e_gun/advtaser/cyborg/contractor,
 	)
@@ -510,9 +547,8 @@
 	var/datum/weakref/cloak_action_ref
 	var/datum/weakref/hover_action_ref
 	var/datum/weakref/eject_action_ref
-	var/datum/weakref/thermal_action_ref
 	var/datum/weakref/minimap_action_ref
-	var/datum/weakref/registry_action_ref
+	var/datum/weakref/uplink_action_ref
 
 /obj/item/robot_model/contractor/be_transformed_to(obj/item/robot_model/old_model, forced = FALSE)
 	. = ..()
@@ -531,27 +567,21 @@
 	eject.Grant(loc)
 	eject_action_ref = WEAKREF(eject)
 
-	var/datum/action/thermal = new /datum/action/cooldown/borg_thermal(loc)
-	thermal.Grant(loc)
-	thermal_action_ref = WEAKREF(thermal)
-
 	var/datum/action/minimap = new /datum/action/minimap/contractor(loc)
 	minimap.Grant(loc)
 	minimap_action_ref = WEAKREF(minimap)
-	add_minimap_blip(loc, MINIMAP_CONTRACTOR_BLIP, "contractor_borg")
 
-	var/datum/action/registry = new /datum/action/cooldown/contractor_registry(loc)
-	registry.Grant(loc)
-	registry_action_ref = WEAKREF(registry)
+	var/datum/action/uplink = new /datum/action/contractor_uplink(loc)
+	uplink.Grant(loc)
+	uplink_action_ref = WEAKREF(uplink)
 
 /obj/item/robot_model/contractor/Destroy()
 	QDEL_NULL(cloak_action_ref)
 	QDEL_NULL(hover_action_ref)
 	QDEL_NULL(eject_action_ref)
-	QDEL_NULL(thermal_action_ref)
 	QDEL_NULL(minimap_action_ref)
-	QDEL_NULL(registry_action_ref)
-	remove_minimap_blip(MINIMAP_CONTRACTOR_BLIP, loc)
+	QDEL_NULL(uplink_action_ref)
+	remove_minimap_blip(contractor_minimap_tag(contractor_board_owner(loc)), loc)
 	return ..()
 
 /datum/action/cooldown/contractor_cloak
@@ -601,6 +631,7 @@
 		borg.balloon_alert(borg, "unauthorized occupant interferes!")
 		return FALSE
 
+	borg.set_hovering(FALSE)
 	deploying = TRUE
 	borg.balloon_alert(borg, "cloaking...")
 	playsound(borg, 'sound/effects/seedling_chargeup.ogg', 100, TRUE, -6)
@@ -735,7 +766,7 @@
 
 /datum/action/cooldown/contractor_hover/IsAvailable(feedback = FALSE)
 	var/mob/living/silicon/robot/model/contractor/borg = owner
-	return ..() && istype(borg) && (borg.ionpulse || borg.hovering)
+	return ..() && istype(borg) && !borg.cloaked && (borg.has_builtin_flight || borg.hovering)
 
 /datum/action/cooldown/contractor_eject
 	name = "Eject Occupant"
@@ -766,32 +797,9 @@
 	var/mob/living/silicon/robot/model/contractor/borg = owner
 	return ..() && istype(borg) && (locate(/mob/living) in borg.contents)
 
-/datum/action/cooldown/contractor_registry
-	name = "Bounty Registry"
-	desc = "Pull up the bounty board mirror: active contracts, target tracking, and the condition of whatever you're hauling."
-	button_icon = 'icons/mob/actions/actions_AI.dmi'
-	button_icon_state = "modules_menu"
-	check_flags = AB_CHECK_CONSCIOUS
-	cooldown_time = 1 SECONDS
-
-/datum/action/cooldown/contractor_registry/Activate(atom/target)
-	var/mob/living/silicon/robot/model/contractor/borg = owner
-	var/obj/item/modular_computer/tablet = borg.modularInterface
-	if(QDELETED(tablet))
-		borg.balloon_alert(borg, "no interface installed!")
-		return FALSE
-	var/datum/computer_file/program/contractor_bounties/registry = locate() in tablet.stored_files
-	if(isnull(registry))
-		borg.balloon_alert(borg, "no registry installed!")
-		return FALSE
-	if(!tablet.enabled && !tablet.turn_on(borg, open_ui = FALSE))
-		return FALSE
-	tablet.open_program(borg, registry)
-	StartCooldown()
-	return TRUE
-
-/datum/action/cooldown/contractor_registry/IsAvailable(feedback = FALSE)
-	return ..() && istype(owner, /mob/living/silicon/robot/model/contractor)
+/obj/item/gun/energy/e_gun/advtaser/cyborg/contractor
+	name = "tether taser"
+	desc = "An integrated hybrid taser wired for retrieval work. The electrodes trail a monofilament line 		that stays hooked into whatever it hits, wearing the target down until it snaps."
 
 /obj/effect/contractor_eyes
 	icon = CONTRACTOR_BORG_ICON
@@ -863,10 +871,16 @@
 	var/drowsiness_per_second = 2 SECONDS
 	/// Time between automatic resuscitation attempts on a dead occupant
 	var/defib_interval = 10 SECONDS
+	/// How long the chassis spends charging before it delivers the shock
+	var/defib_charge_time = 7 SECONDS
+	/// Whether a charge cycle is already underway
+	var/defibrillating = FALSE
 	COOLDOWN_DECLARE(defib_cooldown)
 
 /datum/status_effect/contractor_chassis/on_apply()
 	ADD_TRAIT(owner, TRAIT_NOBREATH, CONTRACTOR_CHASSIS_TRAIT)
+	if(owner.stat == DEAD)
+		try_defib()
 	return TRUE
 
 /datum/status_effect/contractor_chassis/on_remove()
@@ -904,13 +918,35 @@
 
 /// Periodically tries to defib a dead occupant once the passive healing has repaired them enough.
 /datum/status_effect/contractor_chassis/proc/try_defib()
-	if(!iscarbon(owner) || !COOLDOWN_FINISHED(src, defib_cooldown))
+	if(defibrillating || !iscarbon(owner) || !COOLDOWN_FINISHED(src, defib_cooldown))
 		return
 	COOLDOWN_START(src, defib_cooldown, defib_interval)
 	var/mob/living/carbon/patient = owner
 	if(patient.can_defib() != DEFIB_POSSIBLE)
 		return
+	defibrillating = TRUE
 	patient.notify_revival("The chassis around you is trying to restart your heart!")
+	playsound(patient, 'sound/machines/defib/defib_charge.ogg', 60, FALSE)
+	to_chat(patient, span_notice("The chassis clamps tighten around your chest, and something inside it begins to whine..."))
+	var/mob/living/silicon/robot/charging_borg = patient.loc
+	if(istype(charging_borg))
+		to_chat(charging_borg, span_notice("Charging defibrillation array..."))
+		charging_borg.balloon_alert(charging_borg, "charging defib...")
+	addtimer(CALLBACK(src, PROC_REF(finish_defib)), defib_charge_time)
+
+/datum/status_effect/contractor_chassis/proc/finish_defib()
+	defibrillating = FALSE
+	if(QDELETED(src) || !iscarbon(owner))
+		return
+	var/mob/living/carbon/patient = owner
+	var/mob/living/silicon/robot/borg = patient.loc
+	if(patient.can_defib() != DEFIB_POSSIBLE)
+		playsound(patient, 'sound/machines/defib/defib_failed.ogg', 60, FALSE)
+		to_chat(patient, span_warning("The whine dies away without a shock."))
+		if(istype(borg))
+			to_chat(borg, span_warning("Defibrillation aborted: occupant is beyond recovery."))
+			borg.balloon_alert(borg, "defib failed!")
+		return
 	patient.grab_ghost()
 	playsound(patient, 'sound/machines/defib/defib_zap.ogg', 75, TRUE, -1)
 	patient.set_heartattack(FALSE)
@@ -919,9 +955,9 @@
 	patient.set_jitter_if_lower(200 SECONDS)
 	SEND_SIGNAL(patient, COMSIG_LIVING_MINOR_SHOCK)
 	to_chat(patient, span_userdanger("A jolt of current slams through your chest, dragging you back to life!"))
-	var/mob/living/silicon/robot/borg = patient.loc
 	if(istype(borg))
 		to_chat(borg, span_notice("Occupant cardiac rhythm restored."))
+		borg.balloon_alert(borg, "rhythm restored")
 
 /atom/movable/screen/fullscreen/contractor_chassis
 	screen_loc = "WEST,SOUTH to EAST,NORTH"
@@ -964,6 +1000,7 @@
 #undef CLOAK_FLARE_TIME
 #undef CONTRACTOR_INGEST_TIME
 #undef CONTRACTOR_STRUGGLE_TIME
+#undef CONTRACTOR_OPEN_TIME
 #undef CONTRACTOR_RESIST_TIME
 #undef CHASSIS_BOOT_FLASH_TIME
 #undef CHASSIS_BOOT_FADE_TIME

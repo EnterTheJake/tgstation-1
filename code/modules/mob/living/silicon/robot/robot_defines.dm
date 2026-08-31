@@ -108,6 +108,10 @@
 
 	///Jetpack-like effect.
 	var/ionpulse = FALSE
+	/// Whether this chassis has thermal optics available to toggle.
+	var/has_thermals = FALSE
+	/// Whether this chassis flies under its own power. Blocks bolt-on ion thrusters.
+	var/has_builtin_flight = FALSE
 	///Jetpack-like effect.
 	var/ionpulse_on = FALSE
 	///Ionpulse effect.
