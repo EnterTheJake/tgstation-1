@@ -66,6 +66,9 @@
 
 /obj/item/contractor_bomb/update_icon_state()
 	. = ..()
+	if(disarmed)
+		icon_state = "bomb_hatch_open"
+		return
 	if(explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
 		icon_state = "bomb_plutoniumcore"
 		bomb_overlay_atom.icon_state = "mob_" + icon_state
@@ -84,6 +87,9 @@
 /obj/item/contractor_bomb/proc/on_dialogue(datum/source, duration)
 	SIGNAL_HANDLER
 	addtimer(CALLBACK(src, TYPE_PROC_REF(/atom, update_appearance)), duration)
+	if(disarmed)
+		icon_state = "bomb_hatch_open_talk"
+		return
 	if(explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR)
 		icon_state = "bomb_plutoniumcore_talk"
 		bomb_overlay_atom.icon_state = "mob_" + icon_state
@@ -135,6 +141,12 @@
 	return ..()
 
 /obj/item/contractor_bomb/process(seconds_per_tick)
+	if(owner?.stat == DEAD)
+		active = FALSE
+		update_appearance()
+		pre_explosion()
+		return PROCESS_KILL
+
 	if(!active)
 		if(disarmed)
 			SEND_SIGNAL(src, COMSIG_CONTRACTOR_DISARMED_PROCESS)
@@ -172,6 +184,7 @@
 		active = FALSE
 		update_appearance()
 		pre_explosion()
+		return PROCESS_KILL
 
 /// Plants the bomb on our victim and adds it to the contractor's bomb UI
 /obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/controlling_state)
@@ -317,7 +330,6 @@
 /// Cuts the selected wire, will perform effects based on the wire (or be a dud)
 /obj/item/contractor_bomb/proc/cut_wire(datum/contractor_wire/chosen_wire, mob/defuser)
 	cable_icons -= chosen_wire.name
-	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_WIRE_CUT, chosen_wire.wire_flags)
 
 	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_EXPLOSIVE)
 		//XANTODO DEBUG
@@ -354,6 +366,7 @@
 	defuser.playsound_local(defuser, 'sound/items/tools/wirecutter.ogg', 50, 0)
 	if(active)
 		defusal_loop(defuser) // Loop until defusal, cancellation or explosion
+	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_WIRE_CUT, chosen_wire.wire_flags)
 
 /// Called when the bomb is defused
 /obj/item/contractor_bomb/proc/defuse()
@@ -365,9 +378,8 @@
 	owner.temporarilyRemoveItemFromInventory(src, TRUE)
 	owner = null
 	forceMove(get_turf(src))
-	update_appearance()
 	disarmed = TRUE
-	icon_state = "bomb_hatch_open"
+	update_appearance(UPDATE_ICON)
 
 /// Checks if there are any special conditions, plays a voiceline if any match and then explode afterwards
 /obj/item/contractor_bomb/proc/pre_explosion()

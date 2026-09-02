@@ -484,6 +484,7 @@
 /// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
 /datum/component/dialogue_system/contractor_bomb/proc/emit_sound_from_list(list/sound_list, explodes = FALSE, obj/item/contractor_bomb/about_to_explode)
 	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
+	sound_list -= sound
 	sound?.emit_sound(location = parent)
 	var/line_duration = rustg_sound_length(sound.sound_path)
 	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
@@ -526,6 +527,7 @@
 			sound_pool = has_special_line(bomb_bad_wire_upgrade)
 	if(wire_flags & CONTRACTOR_WIRE_DEFUSIVE)
 		sound_pool = has_special_line(bomb_deactivated_surgery)
+		COOLDOWN_START(src, last_idle, 1 MINUTES)
 	if(wire_flags & CONTRACTOR_WIRE_TIME_ADDER)
 		sound_pool = has_special_line(bomb_good_wire)
 	if(wire_flags & CONTRACTOR_WIRE_TIME_REDUCER)
@@ -601,30 +603,31 @@
 	if(active_surgery)
 		return // Once our bomb carrier is being operated on, we will just assume they are soon going to be defused or eradicated
 
-	if(is_nuclear)
+	if(is_nuclear && !clown_bomb)
 		// Drop the timer lines if they ever get a nuclear core, instead we'll just play the nuclear-exclusive lines
 		play_nuclear_idle()
 		return
 
-	switch(timeleft_percentage)
-		if(51 to 75)
-			if(previous_threshold <= 75)
+	if(!felinid_bomb && !clown_bomb)
+		switch(timeleft_percentage)
+			if(51 to 75)
+				if(previous_threshold <= 75)
+					return
+				previous_threshold = 75
+				emit_sound_from_list(has_special_line(timer_lines)["seventy_five"])
 				return
-			previous_threshold = 75
-			emit_sound_from_list(has_special_line(timer_lines)["seventy_five"])
-			return
-		if(26 to 50)
-			if(previous_threshold <= 50)
+			if(26 to 50)
+				if(previous_threshold <= 50)
+					return
+				previous_threshold = 50
+				emit_sound_from_list(has_special_line(timer_lines)["fifty"])
 				return
-			previous_threshold = 50
-			emit_sound_from_list(has_special_line(timer_lines)["fifty"])
-			return
-		if(1 to 25)
-			if(previous_threshold <= 25)
+			if(1 to 25)
+				if(previous_threshold <= 25)
+					return
+				previous_threshold = 25
+				emit_sound_from_list(has_special_line(timer_lines)["twenty_five"])
 				return
-			previous_threshold = 25
-			emit_sound_from_list(has_special_line(timer_lines)["twenty_five"])
-			return
 
 	if(!check_idle_time())
 		return

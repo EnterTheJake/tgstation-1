@@ -2,7 +2,7 @@
 	/// The sound file path to play.
 	var/sound_path
 	/// Volume for playback.
-	var/volume = 70
+	var/volume = 100
 	var/vary = FALSE
 	/// Assigned by the owning dialogue component instance.
 	var/channel = 0
