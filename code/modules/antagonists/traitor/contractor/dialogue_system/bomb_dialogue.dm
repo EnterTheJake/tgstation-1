@@ -230,9 +230,9 @@
 
 	bomb_deactivated_contractor = list(
 		DEFAULT_BOMB_SOUND = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor1_take1.ogg', priority = 3),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor2_take1.ogg', priority = 3),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor3_take2.ogg', priority = 3),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor1_take1.ogg', priority = 3),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor2_take1.ogg', priority = 3),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/bomb_deactivated_contractor/bomb_deactivated_contractor3_take2.ogg', priority = 3),
 		),
 		NUCLEAR_BOMB_SOUND = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_bomb/nuclear/try_deactivate/nuke_agent_deactivate1_take2.ogg', priority = 3),
@@ -483,6 +483,8 @@
 
 /// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
 /datum/component/dialogue_system/contractor_bomb/proc/emit_sound_from_list(list/sound_list, explodes = FALSE, obj/item/contractor_bomb/about_to_explode)
+	if(!length(sound_list))
+		return
 	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
 	sound_list -= sound
 	sound?.emit_sound(location = parent)

@@ -193,6 +193,7 @@
 		clown_bomb = TRUE
 	forceMove(victim.get_bodypart(BODY_ZONE_CHEST))
 	RegisterSignal(victim, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
+	RegisterSignal(victim, COMSIG_CARBON_PRE_SET_SPECIES, PROC_REF(on_attempt_species_swap))
 	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_ATTACHED_TO, victim)
 	victim.vis_contents += bomb_overlay_atom
 	victim.add_overlay(bomb_overlay_appearance)
@@ -219,6 +220,14 @@
 
 	else
 		return NONE
+
+/// Attempting to race swap to strip off the bomb will backfire on you
+/obj/item/contractor_bomb/proc/on_attempt_species_swap(datum/source, force) // XANTODO: Figure out how to block monkeyize() idk
+	SIGNAL_HANDLER
+	if(disarmed && !owner)
+		return FALSE
+	pre_explosion()
+	return TRUE
 
 /// Installs the nuke core into the bomb after a do_after
 /obj/item/contractor_bomb/proc/install_core(mob/living/user, obj/item/nuke_core/core, atom/target)
@@ -268,6 +277,7 @@
 	COOLDOWN_START(src, next_beep, 0.1 SECONDS)
 	START_PROCESSING(SSobj, src)
 	RegisterSignal(bomb_target, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
+	RegisterSignal(bomb_target, COMSIG_CARBON_PRE_SET_SPECIES, PROC_REF(on_attempt_species_swap))
 	return TRUE
 // XANTODO: SECOND REMINDER THIS WHOLE PROC IS PLACEHOLDER JUST FOR TESTING SHIT OUT DO NOT LEAVE THIS IN
 // DON'T LEAVE THIS IN  ^^^^^^^^^^^^^^^^^^^^^

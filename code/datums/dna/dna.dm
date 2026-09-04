@@ -402,6 +402,9 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	else
 		CRASH("set_species called with an invalid mrace [mrace]")
 
+	if(SEND_SIGNAL(src, COMSIG_CARBON_PRE_SET_SPECIES))
+		return
+
 	var/datum/species/old_species = dna.species
 	dna.species = new_race
 
