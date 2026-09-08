@@ -69,10 +69,11 @@
 
 // Contractor implant
 /obj/item/implanter/contractor
-	name = "implanter (contractor)"
+	name = "implanter (Cybersun)"
 	imp_type = /obj/item/implant/explosive/contractor
 
 /obj/item/implant/explosive/contractor
+	name = "Cybersun implant"
 	actions_types = list(/datum/action/item_action/contractor_detonator)
 	hidden_implant = TRUE
 

@@ -14,6 +14,8 @@
 	var/static/list/channel_busy_until = list()
 	/// Priority of the currently active line per dialogue channel.
 	var/static/list/channel_active_priority = list()
+	/// Volume of the currently active line per dialogue channel, so a fade starts from the level actually playing.
+	var/static/list/channel_active_volume = list()
 	/// Monotonic token per channel used to discard stale delayed play-after-fade callbacks.
 	var/static/list/channel_replay_nonce = list()
 	/// Volume preference for dialogue lines.
@@ -93,11 +95,31 @@
 		return FALSE
 	return world.time < (channel_busy_until["[channel]"] || 0)
 
+/datum/dialogue_sound/proc/claim_channel(duration)
+	if(!channel)
+		return
+	channel_busy_until["[channel]"] = world.time + duration
+	channel_active_priority["[channel]"] = priority
+	channel_active_volume["[channel]"] = volume
+
+/datum/dialogue_sound/proc/release_channel()
+	if(!channel)
+		return
+	channel_busy_until["[channel]"] = 0
+	channel_active_priority["[channel]"] = 0
+
+/datum/dialogue_sound/proc/bump_channel_nonce()
+	if(!channel)
+		return null
+	var/next_nonce = (channel_replay_nonce["[channel]"] || 0) + 1
+	channel_replay_nonce["[channel]"] = next_nonce
+	return next_nonce
+
 /datum/dialogue_sound/proc/mark_channel_busy()
 	if(!channel)
 		return
-	channel_busy_until["[channel]"] = world.time + get_sound_length()
-	channel_active_priority["[channel]"] = priority
+	claim_channel(get_sound_length())
+	bump_channel_nonce()
 
 /datum/dialogue_sound/proc/debug_to_chat(mob/player, message, is_warning = FALSE)
 #ifdef TESTING
@@ -117,8 +139,9 @@
 	debug_to_chat(player, "[src]: fade start on channel [channel], duration [fade_duration] ticks.")
 	var/fade_steps = 5
 	var/step_delay = max(round(fade_duration / fade_steps, 1), 1)
+	var/start_volume = channel_active_volume["[channel]"] || volume
 	for(var/step in 1 to fade_steps)
-		var/step_volume = round(volume * (1 - (step / fade_steps)), 1)
+		var/step_volume = round(start_volume * (1 - (step / fade_steps)), 1)
 		addtimer(CALLBACK(player, TYPE_PROC_REF(/mob, set_sound_channel_volume), channel, step_volume), step * step_delay)
 
 	addtimer(CALLBACK(player, TYPE_PROC_REF(/mob, stop_sound_channel), channel), fade_duration)
@@ -132,6 +155,7 @@
 		return FALSE
 	if(!can_play(player, location))
 		debug_to_chat(player, "[src]: play_after_fade aborted (can_play returned FALSE).", TRUE)
+		release_channel()
 		return FALSE
 	return execute_playback(player, location)
 
@@ -182,8 +206,10 @@
 			debug_to_chat(player, "[src]: play aborted (channel busy; priority [priority] <= active [current_priority]).", TRUE)
 			return FALSE
 		var/fade_duration = fade_interrupting_line(player)
-		debug_to_chat(player, "[src]: channel busy, scheduling play_after_fade in [fade_duration + 1] ticks.")
-		addtimer(CALLBACK(src, PROC_REF(play_after_fade), player, location), fade_duration + 1, TIMER_UNIQUE)
+		claim_channel(fade_duration + get_sound_length())
+		var/nonce = bump_channel_nonce()
+		debug_to_chat(player, "[src]: channel busy, scheduling play_after_fade in [fade_duration + 1] ticks (nonce [nonce]).")
+		addtimer(CALLBACK(src, PROC_REF(play_after_fade), player, location, nonce), fade_duration + 1, TIMER_UNIQUE)
 		return TRUE
 	debug_to_chat(player, "[src]: channel free, executing playback now.")
 	return execute_playback(player, location)
