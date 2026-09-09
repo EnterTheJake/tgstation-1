@@ -335,7 +335,7 @@
 	var/datum/contractor_wire/chosen_wire = cable_list[selection]
 	if(chosen_wire.cut)
 		return
-	cut_wire(chosen_wire, defuser)
+	INVOKE_ASYNC(src, PROC_REF(cut_wire), chosen_wire, defuser)
 
 /// Cuts the selected wire, will perform effects based on the wire (or be a dud)
 /obj/item/contractor_bomb/proc/cut_wire(datum/contractor_wire/chosen_wire, mob/defuser)
@@ -375,7 +375,7 @@
 	cable_icons += list(chosen_wire.name = image(icon = chosen_wire.cable_icon, icon_state = chosen_wire.cable_icon_state))
 	defuser.playsound_local(defuser, 'sound/items/tools/wirecutter.ogg', 50, 0)
 	if(active)
-		defusal_loop(defuser) // Loop until defusal, cancellation or explosion
+		INVOKE_ASYNC(src, PROC_REF(defusal_loop), defuser)
 	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_WIRE_CUT, chosen_wire.wire_flags)
 
 /// Called when the bomb is defused

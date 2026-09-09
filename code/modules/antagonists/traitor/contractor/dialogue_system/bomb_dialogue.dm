@@ -487,7 +487,7 @@
 		return
 	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
 	sound_list -= sound
-	sound?.emit_sound(location = parent)
+	sound?.play(location = parent)
 	var/line_duration = rustg_sound_length(sound.sound_path)
 	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
 	if(!explodes)
