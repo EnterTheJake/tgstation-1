@@ -26,5 +26,5 @@
 			var/glow = style::glow_color
 			if (glow)
 				glow = "pod_glow_[glow]"
-				pod_icon.blend_icon(uni_icon('icons/obj/supplypods.dmi', glow), ICON_OVERLAY)
+				pod_icon.blend_icon(uni_icon('icons/obj/supplypods.dmi', glow), ICON_OVERLAY, 1 + style::glow_pixel_x, 1 + style::glow_pixel_y)
 		insert_icon("pod_asset[style::id]", pod_icon)
