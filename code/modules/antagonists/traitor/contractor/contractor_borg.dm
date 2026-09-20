@@ -46,6 +46,7 @@
 	var/cloaked = FALSE
 	/// While cloaked, our appearance as shown only to authorized viewers.
 	var/image/cloak_image
+	// you might wonder why we're not using overlays. The reason is simple. Can't flick() them
 	var/obj/effect/contractor_eyes/eyes
 	var/obj/effect/contractor_panel/panel
 	var/obj/effect/contractor_disrupt/disrupt
