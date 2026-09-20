@@ -170,8 +170,7 @@
 
 /obj/structure/closet/supplypod/proc/set_style(datum/pod_style/chosen_style) //Used to give the sprite an icon state, name, and description.
 	style = chosen_style
-	if(chosen_style::icon)
-		icon = chosen_style::icon
+	icon = chosen_style::icon || initial(icon)
 	icon_state = chosen_style::icon_state
 	decal = chosen_style::decal_icon
 	rubble_type = chosen_style::rubble_type
