@@ -444,7 +444,7 @@
 	new /obj/effect/pod_landingzone(spawn_turf, pod)
 
 /obj/item/antag_spawner/loadout/contractor/borg/do_special_things(mob/living/silicon/robot/model/contractor/drone, mob/user)
-	drone.contractor_ref = WEAKREF(user)
+	drone.link_contractor(user)
 	add_minimap_blip(drone, contractor_minimap_tag(user), "contractor_borg")
 	to_chat(drone, span_alertwarning("[user.real_name] is your superior. Follow any, and all orders given by them. You're here to support their mission only."))
 	to_chat(drone, span_alertwarning("Your chassis is built to carry a body. Retrieve who they tell you to, and get them to the dropoff."))

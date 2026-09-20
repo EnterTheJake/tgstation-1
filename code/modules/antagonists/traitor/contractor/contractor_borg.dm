@@ -54,6 +54,16 @@
 	var/obj/effect/contractor_thrusters_emissive/thrusters_emissive
 	/// The contractor who deployed us. Their bounty board and minimap channel are the ones we use.
 	var/datum/weakref/contractor_ref
+	/// UI datum for the retrieval interface
+	var/datum/retrieval_os/retrieval_os
+	/// Name, rank and fate of whoever was last released from the chassis
+	var/list/last_occupant
+	/// Bumped on every hit, so the chassis OS can play a matching glitch
+	var/damage_pulses = 0
+	/// How hard the last hit was, from 0 to 1, for sizing that glitch
+	var/last_hit_severity = 0
+	/// Sealed atmosphere the Holding Chamber keeps around its occupant, reset to station air whenever it is read
+	var/datum/gas_mixture/chamber_air
 	var/static/list/thruster_glow_states = list(
 		"contractor_hover",
 		"contractor_hover_open",
@@ -91,6 +101,9 @@
 
 	refresh_overlay_planes()
 
+	retrieval_os = new(src)
+	RegisterSignal(src, COMSIG_MOB_APPLY_DAMAGE, PROC_REF(on_damaged))
+
 	sight_mode = BORGTHERM
 	update_sight()
 
@@ -120,8 +133,19 @@
 
 /mob/living/silicon/robot/model/contractor/on_changed_z_level(turf/old_turf, turf/new_turf, same_z_layer, notify_contents = TRUE)
 	. = ..()
-	if(!same_z_layer)
-		refresh_overlay_planes()
+	reattach_overlays()
+	addtimer(CALLBACK(src, PROC_REF(reattach_overlays)), 1, TIMER_UNIQUE | TIMER_OVERRIDE)
+
+/// Detaches, re-planes and re-attaches our overlay objects. A plane change on its own does not
+/// make the client redraw them, so they have to be handed back over as new visual contents.
+/mob/living/silicon/robot/model/contractor/proc/reattach_overlays()
+	if(QDELETED(src))
+		return
+	var/list/parts = list(panel, eyes, disrupt, eyes_emissive, disrupt_emissive, thrusters_emissive)
+	vis_contents -= parts
+	refresh_overlay_planes()
+	vis_contents += parts
+	update_icons()
 
 /mob/living/silicon/robot/model/contractor/add_shared_particles(particle_type, custom_key = null, particle_flags = NONE, pool_size = 3)
 	var/obj/effect/abstract/shared_particle_holder/holder = ..(particle_type, "[custom_key || particle_type]_contractor", particle_flags, pool_size)
@@ -152,7 +176,47 @@
 	QDEL_NULL(eyes_emissive)
 	QDEL_NULL(disrupt_emissive)
 	QDEL_NULL(thrusters_emissive)
+	QDEL_NULL(retrieval_os)
+	QDEL_NULL(chamber_air)
 	return ..()
+
+/mob/living/silicon/robot/model/contractor/proc/open_retrieval_os()
+	retrieval_os.ui_interact(src)
+
+/mob/living/silicon/robot/model/contractor/return_air()
+	if(isnull(locate(/mob/living) in contents))
+		return ..()
+	var/static/datum/gas_mixture/station_air
+	if(isnull(station_air))
+		station_air = SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture)
+	if(isnull(chamber_air))
+		chamber_air = new
+	chamber_air.copy_from(station_air)
+	return chamber_air
+
+/mob/living/silicon/robot/model/contractor/proc/link_contractor(mob/contractor)
+	var/mob/previous = contractor_ref?.resolve()
+	if(previous)
+		UnregisterSignal(previous, COMSIG_CONTRACTOR_TRACK_CHANGED)
+	contractor_ref = WEAKREF(contractor)
+	RegisterSignal(contractor, COMSIG_CONTRACTOR_TRACK_CHANGED, PROC_REF(on_contractor_track_changed))
+
+/mob/living/silicon/robot/model/contractor/proc/on_contractor_track_changed(datum/source)
+	SIGNAL_HANDLER
+	SEND_SIGNAL(src, COMSIG_CONTRACTOR_TRACK_CHANGED)
+
+/mob/living/silicon/robot/model/contractor/get_hud_x_offset()
+	return -base_pixel_x
+
+/mob/living/silicon/robot/model/contractor/get_hud_y_offset()
+	return -base_pixel_y
+
+/mob/living/silicon/robot/model/contractor/proc/on_damaged(datum/source, damage, damagetype)
+	SIGNAL_HANDLER
+	if(damage <= 0)
+		return
+	damage_pulses++
+	last_hit_severity = clamp(damage / maxHealth * 4, 0.15, 1)
 
 /mob/living/silicon/robot/model/contractor/proc/eyes_lit()
 	return !IS_UNCONSCIOUS(src) && !IsStun() && !IsParalyzed() && !low_power_mode
@@ -442,6 +506,7 @@
 		return
 	victim.forceMove(src)
 	victim.apply_status_effect(/datum/status_effect/contractor_chassis)
+	retrieval_os.refresh()
 	if(cloaked && !HAS_TRAIT(victim, TRAIT_CONTRACTOR_IMPLANT))
 		break_cloak()
 	update_eject_action()
@@ -478,6 +543,12 @@
 /mob/living/silicon/robot/model/contractor/proc/expel(mob/living/victim)
 	if(victim.loc != src)
 		return
+	last_occupant = list(
+		"name" = victim.real_name,
+		"rank" = victim.mind?.assigned_role?.title || "Unknown",
+		"alive" = victim.stat != DEAD,
+		"released_at" = world.time,
+	)
 	victim.clear_fullscreen("contractor_chassis_boot")
 	victim.clear_fullscreen("contractor_chassis_grid")
 	victim.remove_status_effect(/datum/status_effect/contractor_chassis)
@@ -485,6 +556,7 @@
 	victim.throw_at(get_step(src, dir), 1, 1, src)
 	update_eject_action()
 	play_chassis_open()
+	retrieval_os?.refresh()
 
 /mob/living/silicon/robot/model/contractor/container_resist_act(mob/living/user)
 	if(user.loc != src)
@@ -548,7 +620,7 @@
 	var/datum/weakref/hover_action_ref
 	var/datum/weakref/eject_action_ref
 	var/datum/weakref/minimap_action_ref
-	var/datum/weakref/uplink_action_ref
+	var/datum/weakref/retrieval_action_ref
 
 /obj/item/robot_model/contractor/be_transformed_to(obj/item/robot_model/old_model, forced = FALSE)
 	. = ..()
@@ -571,16 +643,16 @@
 	minimap.Grant(loc)
 	minimap_action_ref = WEAKREF(minimap)
 
-	var/datum/action/uplink = new /datum/action/contractor_uplink(loc)
-	uplink.Grant(loc)
-	uplink_action_ref = WEAKREF(uplink)
+	var/datum/action/retrieval = new /datum/action/retrieval_os(loc)
+	retrieval.Grant(loc)
+	retrieval_action_ref = WEAKREF(retrieval)
 
 /obj/item/robot_model/contractor/Destroy()
 	QDEL_NULL(cloak_action_ref)
 	QDEL_NULL(hover_action_ref)
 	QDEL_NULL(eject_action_ref)
 	QDEL_NULL(minimap_action_ref)
-	QDEL_NULL(uplink_action_ref)
+	QDEL_NULL(retrieval_action_ref)
 	remove_minimap_blip(contractor_minimap_tag(contractor_board_owner(loc)), loc)
 	return ..()
 
@@ -852,112 +924,226 @@
 	id = "contractor chassis"
 	alert_type = null
 	duration = -1
-	tick_interval = 2 SECONDS
-	/// Total damage healed per second, spread across the damage types in order
-	var/heal_per_second = 2
-	/// Extra oxygen damage healed per second, on top of the general pass
-	var/oxy_bonus_per_second = 2
-	/// Bleed stacks cleared from each bodypart per second
-	var/bleed_cleared_per_second = 1
-	/// Blood flow bled off each wound per second, before the wound itself closes
-	var/wound_flow_cleared_per_second = 0.1
-	/// Organ damage repaired per second, applied to every organ
-	var/organ_healed_per_second = 0.2
+	tick_interval = 1 SECONDS
+	/// The one target each repair thread is working on, or null while that thread idles
+	var/list/focus = list("damage" = null, "body" = null, "organ" = null)
+	/// Damage healed per second on the selected damage type
+	var/damage_rate = 2
+	/// Oxygen healed per second on top of damage_rate while oxygen is selected
+	var/oxy_bonus = 2
 	/// Blood volume restored per second, up to BLOOD_VOLUME_NORMAL
-	var/blood_restored_per_second = 2
+	var/blood_rate = 2
 	/// Kelvin per second the occupant is dragged back towards a normal body temperature
-	var/temperature_per_second = 10
+	var/temperature_rate = 10
+	/// Bleed stacks cleared from each bodypart per second
+	var/bleed_rate = 1
+	/// Blood flow bled off each wound per second, before the wound itself closes
+	var/wound_rate = 0.1
+	/// Damage repaired per second on the selected organ
+	var/organ_rate = 1.4
+	/// Cell energy each running repair thread draws per second
+	var/thread_energy = 0.025 * STANDARD_CELL_CHARGE
+	/// Cell energy drawn to charge the resuscitation array once
+	var/charge_energy = STANDARD_CELL_CHARGE
+	/// How long the array spends charging before it can discharge
+	var/charge_time = 7 SECONDS
+	/// world.time the current charge began, or 0 while not charging
+	var/charge_started = 0
+	/// Whether the array holds a charge ready to discharge
+	var/charged = FALSE
+	/// world.time the occupant was sealed in
+	var/sealed_at = 0
 	/// Drowsiness added per second to an occupant with no contractor implant
 	var/drowsiness_per_second = 2 SECONDS
-	/// Time between automatic resuscitation attempts on a dead occupant
-	var/defib_interval = 10 SECONDS
-	/// How long the chassis spends charging before it delivers the shock
-	var/defib_charge_time = 7 SECONDS
-	/// Whether a charge cycle is already underway
-	var/defibrillating = FALSE
-	COOLDOWN_DECLARE(defib_cooldown)
 
 /datum/status_effect/contractor_chassis/on_apply()
-	ADD_TRAIT(owner, TRAIT_NOBREATH, CONTRACTOR_CHASSIS_TRAIT)
-	if(owner.stat == DEAD)
-		try_defib()
+	sealed_at = world.time
+	RegisterSignal(owner, COMSIG_CARBON_ATTEMPT_BREATHE, PROC_REF(supply_breath))
 	return TRUE
 
 /datum/status_effect/contractor_chassis/on_remove()
-	REMOVE_TRAIT(owner, TRAIT_NOBREATH, CONTRACTOR_CHASSIS_TRAIT)
+	UnregisterSignal(owner, COMSIG_CARBON_ATTEMPT_BREATHE)
+
+/datum/status_effect/contractor_chassis/proc/supply_breath(mob/living/carbon/source, seconds_per_tick)
+	SIGNAL_HANDLER
+	var/static/datum/gas_mixture/station_breath
+	if(isnull(station_breath))
+		var/datum/gas_mixture/station_air = SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture)
+		station_breath = station_air.remove(station_air.total_moles() * BREATH_PERCENTAGE)
+	INVOKE_ASYNC(source, TYPE_PROC_REF(/mob/living/carbon, check_breath), can_breathe() ? station_breath.copy() : null)
+	return COMSIG_CARBON_BLOCK_BREATH
+
+/datum/status_effect/contractor_chassis/proc/can_breathe()
+	var/mob/living/carbon/patient = owner
+	if(!istype(patient) || patient.stat >= HARD_CRIT)
+		return FALSE
+	var/obj/item/organ/lungs = patient.get_organ_slot(ORGAN_SLOT_LUNGS)
+	return !(lungs?.organ_flags & ORGAN_FAILING)
 
 /datum/status_effect/contractor_chassis/tick(seconds_between_ticks)
-	var/temperature_delta = BODYTEMP_NORMAL - owner.bodytemperature
-	if(temperature_delta)
-		var/amount = temperature_per_second * seconds_between_ticks
-		owner.adjust_bodytemperature(clamp(temperature_delta, -amount, amount))
-
-	owner.heal_ordered_damage(heal_per_second * seconds_between_ticks, list(OXY, BRUTE, BURN, TOX, STAMINA))
-	owner.adjust_oxy_loss(-oxy_bonus_per_second * seconds_between_ticks)
-
-	if(owner.blood_volume < BLOOD_VOLUME_NORMAL)
-		owner.blood_volume = min(owner.blood_volume + blood_restored_per_second * seconds_between_ticks, BLOOD_VOLUME_NORMAL)
-
-	if(iscarbon(owner))
-		var/mob/living/carbon/carbon_owner = owner
-		for(var/obj/item/bodypart/part as anything in carbon_owner.bodyparts)
-			part.adjustBleedStacks(-bleed_cleared_per_second * seconds_between_ticks, 0)
-		for(var/obj/item/organ/organ as anything in carbon_owner.organs)
-			organ.apply_organ_damage(-organ_healed_per_second * seconds_between_ticks)
-		for(var/datum/wound/wound as anything in carbon_owner.all_wounds)
-			wound.adjust_blood_flow(-wound_flow_cleared_per_second * seconds_between_ticks)
-			if(wound.blood_flow <= 0)
-				wound.remove_wound()
-				break
-
 	if(!HAS_TRAIT(owner, TRAIT_CONTRACTOR_IMPLANT))
 		owner.adjust_drowsiness(drowsiness_per_second * seconds_between_ticks)
-
-	if(owner.stat == DEAD)
-		try_defib()
-
-/// Periodically tries to defib a dead occupant once the passive healing has repaired them enough.
-/datum/status_effect/contractor_chassis/proc/try_defib()
-	if(defibrillating || !iscarbon(owner) || !COOLDOWN_FINISHED(src, defib_cooldown))
+	var/running = running_threads()
+	if(!running)
 		return
-	COOLDOWN_START(src, defib_cooldown, defib_interval)
+	var/mob/living/silicon/robot/drone = owner.loc
+	if(!istype(drone) || !drone.cell?.use(thread_energy * running * seconds_between_ticks))
+		return
+	if(focus["damage"])
+		repair_damage(focus["damage"], seconds_between_ticks)
+	if(focus["body"])
+		repair_body(focus["body"], seconds_between_ticks)
+	if(focus["organ"])
+		repair_organ(focus["organ"], seconds_between_ticks)
+
+/datum/status_effect/contractor_chassis/proc/running_threads()
+	. = 0
+	for(var/thread in focus)
+		if(focus[thread])
+			.++
+
+/datum/status_effect/contractor_chassis/proc/bleed_stacks()
+	. = 0
 	var/mob/living/carbon/patient = owner
-	if(patient.can_defib() != DEFIB_POSSIBLE)
+	if(!istype(patient))
 		return
-	defibrillating = TRUE
+	for(var/obj/item/bodypart/part as anything in patient.bodyparts)
+		. += part.generic_bleedstacks
+
+/datum/status_effect/contractor_chassis/proc/set_focus(thread, target)
+	if(!(thread in focus))
+		return FALSE
+	if(focus[thread] == target)
+		focus[thread] = null
+		return TRUE
+	if(!needs_repair(thread, target))
+		return FALSE
+	focus[thread] = target
+	return TRUE
+
+/datum/status_effect/contractor_chassis/proc/needs_repair(thread, target)
+	var/static/list/damage_targets = list(BRUTE, BURN, TOX, OXY)
+	var/mob/living/carbon/patient = owner
+	switch(thread)
+		if("damage")
+			return (target in damage_targets) && owner.get_current_damage_of_type(target) > 0
+		if("body")
+			switch(target)
+				if("blood")
+					return owner.blood_volume < BLOOD_VOLUME_NORMAL
+				if("temperature")
+					return abs(owner.get_body_temp_normal() - owner.bodytemperature) >= 0.5
+				if("bleeding")
+					return bleed_stacks() > 0
+				if("wounds")
+					return istype(patient) && length(patient.all_wounds) > 0
+		if("organ")
+			var/obj/item/organ/organ = istype(patient) ? patient.get_organ_slot(target) : null
+			return !isnull(organ) && organ.damage > 0
+	return FALSE
+
+/datum/status_effect/contractor_chassis/proc/repair_damage(damage_type, seconds)
+	var/amount = damage_rate * seconds
+	if(damage_type == OXY)
+		amount += oxy_bonus * seconds
+	owner.heal_damage_type(amount, damage_type)
+	if(owner.get_current_damage_of_type(damage_type) <= 0)
+		focus["damage"] = null
+
+/datum/status_effect/contractor_chassis/proc/repair_body(target, seconds)
+	var/mob/living/carbon/patient = owner
+	switch(target)
+		if("blood")
+			owner.blood_volume = min(owner.blood_volume + blood_rate * seconds, BLOOD_VOLUME_NORMAL)
+		if("temperature")
+			var/step = temperature_rate * seconds
+			owner.adjust_bodytemperature(clamp(owner.get_body_temp_normal() - owner.bodytemperature, -step, step))
+		if("bleeding")
+			if(istype(patient))
+				for(var/obj/item/bodypart/part as anything in patient.bodyparts)
+					part.adjustBleedStacks(-bleed_rate * seconds, 0)
+		if("wounds")
+			if(istype(patient))
+				for(var/datum/wound/wound as anything in LAZYCOPY(patient.all_wounds))
+					wound.adjust_blood_flow(-wound_rate * seconds)
+					if(wound.blood_flow <= 0)
+						wound.remove_wound()
+	if(!needs_repair("body", target))
+		focus["body"] = null
+
+/datum/status_effect/contractor_chassis/proc/repair_organ(slot, seconds)
+	var/mob/living/carbon/patient = owner
+	var/obj/item/organ/organ = istype(patient) ? patient.get_organ_slot(slot) : null
+	if(isnull(organ))
+		focus["organ"] = null
+		return
+	organ.apply_organ_damage(-organ_rate * seconds)
+	if(organ.damage <= 0)
+		focus["organ"] = null
+
+/datum/status_effect/contractor_chassis/proc/start_charge()
+	var/mob/living/carbon/patient = owner
+	var/mob/living/silicon/robot/drone = owner.loc
+	if(!istype(patient) || !istype(drone) || patient.stat != DEAD || charge_started || charged)
+		return FALSE
+	if(patient.can_defib() != DEFIB_POSSIBLE)
+		drone.balloon_alert(drone, "shock will not take!")
+		return FALSE
+	if(!drone.cell?.use(charge_energy))
+		drone.balloon_alert(drone, "not enough charge!")
+		return FALSE
+	charge_started = world.time
 	patient.notify_revival("The chassis around you is trying to restart your heart!")
 	playsound(patient, 'sound/machines/defib/defib_charge.ogg', 60, FALSE)
 	to_chat(patient, span_notice("The chassis clamps tighten around your chest, and something inside it begins to whine..."))
-	var/mob/living/silicon/robot/charging_borg = patient.loc
-	if(istype(charging_borg))
-		to_chat(charging_borg, span_notice("Charging defibrillation array..."))
-		charging_borg.balloon_alert(charging_borg, "charging defib...")
-	addtimer(CALLBACK(src, PROC_REF(finish_defib)), defib_charge_time)
+	to_chat(drone, span_notice("Charging resuscitation array..."))
+	addtimer(CALLBACK(src, PROC_REF(finish_charge)), charge_time)
+	return TRUE
 
-/datum/status_effect/contractor_chassis/proc/finish_defib()
-	defibrillating = FALSE
-	if(QDELETED(src) || !iscarbon(owner))
+/datum/status_effect/contractor_chassis/proc/finish_charge()
+	if(!charge_started)
 		return
+	charge_started = 0
+	charged = TRUE
+	playsound(owner, 'sound/machines/defib/defib_ready.ogg', 50, FALSE)
+
+/datum/status_effect/contractor_chassis/proc/discharge()
 	var/mob/living/carbon/patient = owner
-	var/mob/living/silicon/robot/borg = patient.loc
-	if(patient.can_defib() != DEFIB_POSSIBLE)
+	var/mob/living/silicon/robot/drone = owner.loc
+	if(!charged || !istype(patient))
+		return FALSE
+	charged = FALSE
+	if(patient.stat != DEAD || patient.can_defib() != DEFIB_POSSIBLE)
 		playsound(patient, 'sound/machines/defib/defib_failed.ogg', 60, FALSE)
 		to_chat(patient, span_warning("The whine dies away without a shock."))
-		if(istype(borg))
-			to_chat(borg, span_warning("Defibrillation aborted: occupant is beyond recovery."))
-			borg.balloon_alert(borg, "defib failed!")
-		return
-	patient.grab_ghost()
+		if(istype(drone))
+			drone.balloon_alert(drone, "defib failed!")
+		return TRUE
+	var/total_brute = patient.get_brute_loss()
+	var/total_burn = patient.get_fire_loss()
+	var/revive_health = (HEALTH_THRESHOLD_CRIT + HEALTH_THRESHOLD_DEAD) * 0.5
+	if(patient.health > revive_health)
+		patient.adjust_oxy_loss(patient.health - revive_health, updating_health = FALSE)
+	else
+		var/overall_damage = total_brute + total_burn + patient.get_tox_loss() + patient.get_oxy_loss()
+		var/mob_health = patient.health
+		patient.adjust_oxy_loss((mob_health - revive_health) * (patient.get_oxy_loss() / overall_damage), updating_health = FALSE)
+		patient.adjust_tox_loss((mob_health - revive_health) * (patient.get_tox_loss() / overall_damage), updating_health = FALSE, forced = TRUE)
+		patient.adjust_fire_loss((mob_health - revive_health) * (total_burn / overall_damage), updating_health = FALSE)
+		patient.adjust_brute_loss((mob_health - revive_health) * (total_brute / overall_damage), updating_health = FALSE)
+	patient.updatehealth()
 	playsound(patient, 'sound/machines/defib/defib_zap.ogg', 75, TRUE, -1)
 	patient.set_heartattack(FALSE)
+	patient.grab_ghost()
 	patient.revive()
 	patient.emote("gasp")
 	patient.set_jitter_if_lower(200 SECONDS)
 	SEND_SIGNAL(patient, COMSIG_LIVING_MINOR_SHOCK)
 	to_chat(patient, span_userdanger("A jolt of current slams through your chest, dragging you back to life!"))
-	if(istype(borg))
-		to_chat(borg, span_notice("Occupant cardiac rhythm restored."))
-		borg.balloon_alert(borg, "rhythm restored")
+	if(istype(drone))
+		to_chat(drone, span_notice("Occupant cardiac rhythm restored."))
+		drone.balloon_alert(drone, "rhythm restored")
+	return TRUE
 
 /atom/movable/screen/fullscreen/contractor_chassis
 	screen_loc = "WEST,SOUTH to EAST,NORTH"

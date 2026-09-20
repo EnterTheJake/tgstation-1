@@ -567,6 +567,8 @@
 		return
 	glow_effect = new(src)
 	glow_effect.icon_state = "pod_glow_" + style::glow_color
+	glow_effect.pixel_x = style::glow_pixel_x
+	glow_effect.pixel_y = style::glow_pixel_y
 	vis_contents += glow_effect
 	glow_effect.layer = GASFIRE_LAYER
 	SET_PLANE_EXPLICIT(glow_effect, ABOVE_GAME_PLANE, src)

@@ -110,7 +110,7 @@
 	var/location = pick_list_weighted(WANTED_FILE, "location")
 	wanted_message = "[base] [verb_string] [noun] [location]."
 
-/datum/syndicate_contract/proc/handle_extraction(mob/living/user, extraction_type = CONTRACTOR_DROPOFF_SAFE)
+/datum/syndicate_contract/proc/handle_extraction(mob/living/user, extraction_type = CONTRACTOR_DROPOFF_SAFE, mob/living/pod_owner = user)
 	var/area/dropoff_area = get_area(user)
 	if (contract?.target?.current && contract.dropoff_check(user, contract.target.current, extraction_type))
 
@@ -118,7 +118,7 @@
 
 		if (free_location)
 			// We've got a valid location, launch.
-			launch_extraction_pod(user, free_location)
+			launch_extraction_pod(pod_owner, free_location)
 			return TRUE
 
 	return FALSE
@@ -154,13 +154,13 @@
 				traitor_data.uplink_handler.contractor_state.contract_TC_to_redeem += contract.payout_bonus
 			contractor_uplink = WEAKREF(traitor_data.uplink_handler.contractor_state)
 		status = CONTRACT_STATUS_COMPLETE
-		if(traitor_data.uplink_handler.contractor_state.current_contract == src)
+		if(traitor_data?.uplink_handler?.contractor_state?.current_contract == src)
 			traitor_data.uplink_handler.contractor_state.current_contract = null
 		if(pod_owner)
 			SEND_SIGNAL(pod_owner, COMSIG_CONTRACTOR_KIDNAPPED, person_sent)
 	else
 		status = CONTRACT_STATUS_ABORTED // Sending a target that wasn't even yours is as good as just aborting it
-		if(traitor_data.uplink_handler.contractor_state.current_contract == src)
+		if(traitor_data?.uplink_handler?.contractor_state?.current_contract == src)
 			traitor_data.uplink_handler.contractor_state.current_contract = null
 
 	for(var/obj/item/person_contents as anything in person_sent.gather_belongings(FALSE, FALSE))

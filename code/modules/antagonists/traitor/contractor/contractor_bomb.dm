@@ -490,53 +490,49 @@
 		data["max_health"] = 100
 		return data
 
-	var/is_dead = (victim.stat == DEAD)
-	var/blood_pct = clamp(round((victim.blood_volume / BLOOD_VOLUME_NORMAL) * 100), 0, 100)
-	var/oxy = round(victim.get_oxy_loss())
-	// Health as a 0..1 vitality factor blending blood volume and overall health.
-	var/vitality = clamp(((blood_pct / 100) + (victim.health / victim.maxHealth)) / 2, 0, 1)
-
 	data["name"] = victim.real_name
 	data["rank"] = victim.mind?.assigned_role?.title || victim.job || "Unknown"
 	data["location"] = get_area_name(victim, format_text = TRUE) || "Unknown"
-	data["dead"] = is_dead
+	data["dead"] = victim.stat == DEAD
 	data["brute"] = round(victim.get_brute_loss())
 	data["burn"] = round(victim.get_fire_loss())
 	data["tox"] = round(victim.get_tox_loss())
-	data["oxy"] = oxy
+	data["oxy"] = round(victim.get_oxy_loss())
 	data["max_health"] = victim.maxHealth
+	var/list/vitals = contractor_vitals(victim)
+	for(var/key in vitals)
+		data[key] = vitals[key]
+	return data
 
-	// knocked out isn't a stat anymore, so it has to be checked before we look at one
-	if(IS_UNCONSCIOUS_AND_ALIVE(victim))
-		data["stat_text"] = "CRITICAL"
-	else
-		switch(victim.stat)
-			if(STABLE)
-				data["stat_text"] = "CONSCIOUS"
-			if(SOFT_CRIT)
-				data["stat_text"] = "PAIN CRIT"
-			if(HARD_CRIT)
-				data["stat_text"] = "CRITICAL"
-			if(DEAD)
-				data["stat_text"] = "FLATLINE"
+/proc/contractor_vitals(mob/living/carbon/victim)
+	var/list/vitals = list()
+	switch(victim.stat)
+		if(DEAD)
+			vitals["stat_text"] = "FLATLINE"
+		if(HARD_CRIT)
+			vitals["stat_text"] = "CRITICAL"
+		if(SOFT_CRIT)
+			vitals["stat_text"] = "PAIN CRIT"
+		else
+			if(victim.IsSleeping())
+				vitals["stat_text"] = "ASLEEP"
+			else if(IS_UNCONSCIOUS(victim))
+				vitals["stat_text"] = "UNCONSCIOUS"
 			else
-				data["stat_text"] = "UNKNOWN"
-
-	if(is_dead)
-		data["blood_pressure"] = "0/0"
-		data["blood_oxygen"] = 0
-		data["pulse"] = 0
-		return data
-
-	// Pulse climbs as vitality drops (shock/tachycardia), with a little jitter.
-	data["pulse"] = clamp(round(64 + (1 - vitality) * 90 + rand(-4, 4)), 0, 220)
-	// Blood oxygen saturation falls with blood loss and oxygen damage.
-	data["blood_oxygen"] = clamp(round(99 - (100 - blood_pct) * 0.4 - oxy * 0.3 + rand(-2, 2)), 0, 100)
-	// Systolic / diastolic pressures scale with vitality.
+				vitals["stat_text"] = "CONSCIOUS"
+	if(victim.stat == DEAD)
+		vitals["blood_pressure"] = "0/0"
+		vitals["blood_oxygen"] = 0
+		vitals["pulse"] = 0
+		return vitals
+	var/blood_pct = clamp(round((victim.blood_volume / BLOOD_VOLUME_NORMAL) * 100), 0, 100)
+	var/vitality = clamp(((blood_pct / 100) + (victim.health / victim.maxHealth)) / 2, 0, 1)
+	vitals["pulse"] = clamp(round(64 + (1 - vitality) * 90 + rand(-4, 4)), 0, 220)
+	vitals["blood_oxygen"] = clamp(round(99 - (100 - blood_pct) * 0.4 - round(victim.get_oxy_loss()) * 0.3 + rand(-2, 2)), 0, 100)
 	var/systolic = clamp(round(118 * vitality + 12 + rand(-6, 6)), 0, 200)
 	var/diastolic = clamp(round(76 * vitality + 8 + rand(-4, 4)), 0, 140)
-	data["blood_pressure"] = "[systolic]/[diastolic]"
-	return data
+	vitals["blood_pressure"] = "[systolic]/[diastolic]"
+	return vitals
 
 /datum/contractor_wire
 	var/name = "cable"

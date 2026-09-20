@@ -21,6 +21,9 @@
 	var/decal_icon = "default"
 	/// Color that this pod glows when landing
 	var/glow_color = "yellow"
+	/// Pixel offsets for the engine glow, for styles whose sprite does not sit where the stock pod does
+	var/glow_pixel_x = 0
+	var/glow_pixel_y = 0
 	/// Type of rubble that this pod creates upon landing
 	var/rubble_type = RUBBLE_NORMAL
 	/// ID for TGUI data
@@ -61,6 +64,7 @@
 	decal_icon = null
 	glow_color = "red"
 	rubble_type = RUBBLE_NONE
+	glow_pixel_y = 10
 	id = "contractor"
 
 /datum/pod_style/deathsquad

@@ -75,6 +75,8 @@
 	if(qdel_in_time)
 		QDEL_IN(particle, qdel_in_time)
 
+	oldposition = get_turf(holder)
+
 /datum/effect_system/trail_follow/proc/check_conditions()
 	if(!get_turf(holder))
 		return FALSE
