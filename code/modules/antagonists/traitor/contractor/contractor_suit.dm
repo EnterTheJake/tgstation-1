@@ -89,6 +89,7 @@
 
 /obj/item/mod/control/pre_equipped/contractor/debugsuit
 	applied_modules = list(
+		/obj/item/mod/module/contractor_baton,
 		/obj/item/mod/module/storage/syndicate,
 		/obj/item/mod/module/chameleon,
 		/obj/item/mod/module/shock_absorber,
@@ -103,6 +104,7 @@
 		/obj/item/mod/module/laughing_gas,
 	)
 	default_pins = list(
+		/obj/item/mod/module/contractor_baton,
 		/obj/item/mod/module/dart_gun,
 		/obj/item/mod/module/energy_net/snatcher,
 		/obj/item/mod/module/energy_net/scorpion_hook,

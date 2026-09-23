@@ -179,6 +179,10 @@
 /datum/component/singularity/proc/consume_bullets(datum/source, obj/projectile/projectile)
 	SIGNAL_HANDLER
 
+	if(parent.type == /obj/singularity && istype(projectile, /obj/projectile/bullet/gauss/antimatter)) // Specifically upgrades normal singularities
+		var/turf/old_turf = get_turf(parent)
+		qdel(parent)
+		new /obj/singularity/dark_matter(old_turf)
 	qdel(projectile)
 	return COMPONENT_BULLET_BLOCKED
 

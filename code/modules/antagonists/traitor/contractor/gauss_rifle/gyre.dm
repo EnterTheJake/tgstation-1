@@ -7,6 +7,7 @@
 	charged_e_cost = GAUSS_NANITES(6)
 	max_charge_time = 10 SECONDS
 	charged_cooldown_time = 1 MINUTES
+	fire_sound = 'sound/items/weapons/contractor_gun/bullet_sounds/gyre_fired.ogg'
 
 /// The charged round homes, so the spin-up needs a mob target rather than a turf.
 /obj/item/ammo_casing/energy/gauss/gyro/get_charge_focus(atom/target, mob/living/user)
@@ -37,8 +38,8 @@
 
 /obj/projectile/bullet/gauss/gyro
 	name = "gyre gauss round"
-	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_gyre.dmi'
-	icon_state = "drill_off"
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_bullets.dmi'
+	icon_state = "gyro_projectile"
 	SET_BASE_PIXEL(-16, -16)
 	damage_type = STAMINA
 	armor_flag = ENERGY
@@ -64,6 +65,9 @@
 	var/shocked_target = FALSE
 
 /obj/projectile/bullet/gauss/gyro/empower(charge_ratio, atom/target)
+	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_drill.dmi'
+	icon_state = "drill_on"
+	SET_BASE_PIXEL(-32, -32)
 	charged = TRUE
 	damage = 80
 	armour_penetration = 35
@@ -99,7 +103,7 @@
 	var/turf/closed/wall/drilled_wall = istype(drilled_turf, /turf/closed/wall) ? drilled_turf : null
 	var/wall_hardness = drilled_wall ? drilled_wall.hardness : 40
 	var/drill_time = clamp((70 - wall_hardness) * 0.05 SECONDS, 0.4 SECONDS, 4 SECONDS)
-	playsound(drilled_turf, 'sound/items/tools/drill_use.ogg', 35, TRUE)
+	playsound(drilled_turf, 'sound/items/weapons/contractor_gun/bullet_sounds/drill_loop.ogg', 35, TRUE)
 	do_sparks(2, FALSE, drilled_turf)
 	addtimer(CALLBACK(src, PROC_REF(finish_drilling)), drill_time)
 

@@ -64,6 +64,16 @@
 	spent_round?.reset_charge()
 	emit_ammo_signal()
 
+/obj/item/gun/energy/gauss_rifle/fire_sounds()
+	var/obj/item/ammo_casing/energy/gauss/shot = ammo_type[select]
+	var/sound/playing_sound = sound(suppressed ? suppressed_sound : fire_sound)
+	if(shot.projectile_sound && !suppressed)
+		playing_sound = sound(shot.projectile_sound)
+	if(suppressed)
+		playsound(src, playing_sound, suppressed_volume, vary_fire_sound, ignore_walls = FALSE, extrarange = SILENCED_SOUND_EXTRARANGE, falloff_distance = 0)
+	else
+		playsound(src, playing_sound, fire_sound_volume, vary_fire_sound)
+
 /obj/item/gun/energy/gauss_rifle/can_shoot()
 	if(overheated)
 		return FALSE
@@ -183,10 +193,12 @@
 	icon_state = "ammo_hud"
 	maxcharge = GAUSS_NANITES(GAUSS_MAGAZINE_NANITES)
 	w_class = WEIGHT_CLASS_NORMAL
+	slot_flags = ITEM_SLOT_BELT | ITEM_SLOT_POCKETS
 
 /obj/item/stock_parts/power_store/gauss_nanites/Initialize(mapload, override_maxcharge)
 	. = ..()
 	AddElement(/datum/element/empprotection, EMP_PROTECT_ALL)
+	ADD_TRAIT(src, TRAIT_NO_WORN_ICON, TRAIT_GENERIC)
 
 /obj/item/stock_parts/power_store/gauss_nanites/pre_attack(atom/target, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(!istype(target, /obj/item/gun/energy/gauss_rifle))
@@ -218,6 +230,16 @@
 	playsound(target_gun, 'sound/items/weapons/kinetic_reload.ogg', 60, TRUE)
 	balloon_alert(user, "cell recharged")
 	return TRUE
+
+/obj/item/stock_parts/power_store/gauss_nanites/update_icon_state()
+	. = ..()
+	if(charge >= maxcharge)
+		icon_state = "nanites_full"
+		return
+	if(charge <= (maxcharge * 0.1)) // Reasonably "empty"
+		icon_state = "nanites_empty"
+		return
+	icon_state = "nanites_partial"
 
 /obj/item/ammo_box/magazine/gauss
 	name = "Raijin Horizon Gauss Magazine"

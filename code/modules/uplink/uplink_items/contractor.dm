@@ -70,7 +70,7 @@
 		round is selected, at a steeper nanite cost."
 	item = /obj/item/storage/contractor_gun_case
 	limited_stock = 1
-	cost = 8
+	cost = 7
 
 /datum/uplink_item/contractor/gauss_nanites
 	name = "Raijin Horizon Nanite Cell"

@@ -28,6 +28,8 @@
 	var/datum/weakref/charge_target
 	var/charge_alert = "spinning up..."
 	var/charge_sound = 'sound/items/weapons/gun/general/chunkyrack.ogg'
+	/// Projectile sound, some bullets have them custom
+	var/projectile_sound
 	COOLDOWN_DECLARE(charged_cooldown)
 
 /obj/item/ammo_casing/energy/gauss/fire_casing(atom/target, mob/living/user, params, distro, quiet, zone_override, spread, atom/fired_from)
@@ -138,7 +140,7 @@
 	name = "standard gauss round"
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_bullets.dmi'
 	icon_state = "standard_projectile"
-	damage = 35
+	damage = 30
 	armour_penetration = 20
 	speed = 2
 	wound_bonus = -20
@@ -147,4 +149,5 @@
 /obj/projectile/bullet/gauss/proc/empower(charge_ratio, atom/target)
 	damage = 55
 	armour_penetration = 35
+	speed = 3
 	projectile_piercing = PASSMOB

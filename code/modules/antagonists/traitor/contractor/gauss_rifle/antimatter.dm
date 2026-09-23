@@ -11,7 +11,8 @@
 	scope_only = TRUE
 	charged_cooldown_time = 5 MINUTES
 	charge_alert = "charging..."
-	charge_sound = 'sound/effects/magic/lightning_chargeup.ogg'
+	charge_sound = 'sound/items/weapons/contractor_gun/bullet_sounds/antimatter_charging.ogg'
+	fire_sound = 'sound/items/weapons/contractor_gun/bullet_sounds/antimatter_fired.ogg'
 	/// How long the rifle stays overheated after it translocates a sliver of antimatter.
 	var/antimatter_overheat = 15 SECONDS
 	/// Purple recolor of the voltaic heart lightning overlay. The shooter wears it while charging.

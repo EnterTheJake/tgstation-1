@@ -29,6 +29,7 @@
 	return "[MINIMAP_CONTRACTOR_BLIP]_[REF(contractor)]"
 
 /datum/component/uplink/contractor/proc/get_contract_holder(mob/user)
+	RETURN_TYPE(/mob)
 	return contractor_board_owner(user)
 
 // TODO: move this to a login act
