@@ -26,6 +26,10 @@ export type Occupant = {
   blood_max: number;
   temperature_target: number;
   focus: Record<string, string | null>;
+  auto: Record<string, string>;
+  manual_multiplier: number;
+  automatic: BooleanLike;
+  stasis: BooleanLike;
   rates: Record<string, number>;
   thread_power: string;
   charge_cost: string;

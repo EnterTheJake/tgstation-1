@@ -3,9 +3,9 @@
 #define CONTRACTOR_BORG_ICON_SIZE 48
 #define CONTRACTOR_HOVER_TRAIT "contractor_hover"
 #define CONTRACTOR_CHASSIS_TRAIT "contractor_chassis"
-#define CLOAK_ACTIVATION_COST (0.3 * STANDARD_CELL_CHARGE)
-#define HOVER_ACTIVATION_COST (0.1 * STANDARD_CELL_CHARGE)
-#define HOVER_UPKEEP_COST (0.01 * STANDARD_CELL_CHARGE)
+#define CLOAK_ACTIVATION_COST (0.15 * STANDARD_CELL_CHARGE)
+#define HOVER_ACTIVATION_COST (0.05 * STANDARD_CELL_CHARGE)
+#define HOVER_UPKEEP_COST (0.005 * STANDARD_CELL_CHARGE)
 #define CLOAK_ALPHA 0
 #define CLOAK_ALLY_ALPHA 50
 #define CLOAK_BUMP_ALPHA 40
@@ -13,9 +13,10 @@
 #define CLOAK_FADE_TIME (0.5 SECONDS)
 #define CLOAK_DEPLOY_TIME (1.5 SECONDS)
 #define CONTRACTOR_DISRUPT_TIME (0.6 SECONDS)
+#define CONTRACTOR_TASER_SPINUP (2 SECONDS)
+#define CHASSIS_STASIS_EFFECT "contractor_chassis"
 #define CONTRACTOR_INGEST_TIME (0.6 SECONDS)
 #define CONTRACTOR_STRUGGLE_TIME (4 SECONDS)
-/// Runtime of the contractor_open chassis animation, 12 frames at 1 decisecond
 #define CONTRACTOR_OPEN_TIME (1.2 SECONDS)
 #define CONTRACTOR_RESIST_TIME (30 SECONDS)
 #define CHASSIS_BOOT_FLASH_TIME (0.3 SECONDS)
@@ -40,9 +41,9 @@
 	var/chassis_open = FALSE
 	var/ingesting = FALSE
 	var/resisting = FALSE
-	/// Whether we are mid-stride. Drives the walk cycle vs. the static idle pose.
+	/// Whether we are mid-stride. Controls the walk cycle vs. the static idle pose.
 	var/walking = FALSE
-	/// Whether the cloak is up. Suppresses the eye and thruster emissives so we don't glow through it.
+	/// Whether the cloak is up. Disables the eye and thruster emissives so we don't glow through it.
 	var/cloaked = FALSE
 	/// While cloaked, our appearance as shown only to authorized viewers.
 	var/image/cloak_image
@@ -65,6 +66,8 @@
 	var/last_hit_severity = 0
 	/// Sealed atmosphere the Holding Chamber keeps around its occupant, reset to station air whenever it is read
 	var/datum/gas_mixture/chamber_air
+	/// Spin-up the shock tether needs before it can fire again once the cloak drops
+	COOLDOWN_DECLARE(taser_spinup)
 	var/static/list/thruster_glow_states = list(
 		"contractor_hover",
 		"contractor_hover_open",
@@ -185,14 +188,14 @@
 	retrieval_os.ui_interact(src)
 
 /mob/living/silicon/robot/model/contractor/return_air()
-	if(isnull(locate(/mob/living) in contents))
-		return ..()
 	var/static/datum/gas_mixture/station_air
 	if(isnull(station_air))
 		station_air = SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture)
 	if(isnull(chamber_air))
 		chamber_air = new
 	chamber_air.copy_from(station_air)
+	var/mob/living/occupant = locate(/mob/living) in contents
+	chamber_air.temperature = occupant?.get_body_temp_normal() || BODYTEMP_NORMAL
 	return chamber_air
 
 /mob/living/silicon/robot/model/contractor/proc/link_contractor(mob/contractor)
@@ -241,6 +244,7 @@
 	if(cloaked == new_cloaked)
 		return
 	cloaked = new_cloaked
+	COOLDOWN_START(src, taser_spinup, CONTRACTOR_TASER_SPINUP)
 	if(cloaked)
 		cloak_image = image(null, src)
 		sync_cloak_image()
@@ -258,6 +262,11 @@
 	if(isnull(cloak_image))
 		return
 	cloak_image.appearance = appearance
+	// The copied appearance brings our pixel offsets with it, and the image already rides them once. Clear the copy.
+	cloak_image.pixel_x = 0
+	cloak_image.pixel_y = 0
+	cloak_image.pixel_w = 0
+	cloak_image.pixel_z = 0
 	cloak_image.override = TRUE
 	cloak_image.dir = dir
 	cloak_image.alpha = CLOAK_ALLY_ALPHA
@@ -443,6 +452,10 @@
 		return FALSE
 	if(opened)
 		balloon_alert(user, "maintenance cover open!")
+		return FALSE
+	if(cloaked)
+		balloon_alert(user, "the chassis cannot open cloaked!")
+		break_cloak()
 		return FALSE
 	if(locate(/mob/living) in contents)
 		balloon_alert(user, "chassis occupied!")
@@ -926,8 +939,22 @@
 	alert_type = null
 	duration = -1
 	tick_interval = 1 SECONDS
-	/// The one target each repair thread is working on, or null while that thread idles
+	/// The one target each repair thread is aimed at by hand, or null while that thread picks its own
 	var/list/focus = list("damage" = null, "body" = null, "organ" = null)
+	/// Repairs run this many times faster on a thread aimed by hand instead of one left to itself
+	var/manual_multiplier = 2
+	/// Whether idle threads pick their own repairs. Off leaves every thread waiting to be aimed.
+	var/automatic = TRUE
+	/// Whether the chamber holds the occupant in stasis, the way a stasis bed does
+	var/stasis = FALSE
+	/// Cell energy stasis draws per second while it holds
+	var/stasis_energy = 0.025 * STANDARD_CELL_CHARGE
+	/// The order each thread works through on its own, first match wins
+	var/static/list/auto_order = list(
+		"damage" = list(OXY, BRUTE, BURN, TOX),
+		"body" = list("bleeding", "blood", "temperature", "wounds"),
+		"organ" = list(ORGAN_SLOT_HEART, ORGAN_SLOT_BRAIN, ORGAN_SLOT_LUNGS, ORGAN_SLOT_LIVER, ORGAN_SLOT_STOMACH, ORGAN_SLOT_EYES, ORGAN_SLOT_EARS, ORGAN_SLOT_APPENDIX),
+	)
 	/// Damage healed per second on the selected damage type
 	var/damage_rate = 2
 	/// Oxygen healed per second on top of damage_rate while oxygen is selected
@@ -943,9 +970,9 @@
 	/// Damage repaired per second on the selected organ
 	var/organ_rate = 1.4
 	/// Cell energy each running repair thread draws per second
-	var/thread_energy = 0.025 * STANDARD_CELL_CHARGE
+	var/thread_energy = 0.0125 * STANDARD_CELL_CHARGE
 	/// Cell energy drawn to charge the resuscitation array once
-	var/charge_energy = STANDARD_CELL_CHARGE
+	var/charge_energy = 0.5 * STANDARD_CELL_CHARGE
 	/// How long the array spends charging before it can discharge
 	var/charge_time = 7 SECONDS
 	/// world.time the current charge began, or 0 while not charging
@@ -956,6 +983,10 @@
 	var/sealed_at = 0
 	/// Drowsiness added per second to an occupant with no contractor implant
 	var/drowsiness_per_second = 2 SECONDS
+	/// How long an occupant with no contractor implant stays awake before the chamber puts them under
+	var/sleep_after = 10 SECONDS
+	/// Sleep topped up each second once the occupant is under, so they wake shortly after release
+	var/sleep_per_tick = 4 SECONDS
 
 /datum/status_effect/contractor_chassis/on_apply()
 	sealed_at = world.time
@@ -964,6 +995,7 @@
 
 /datum/status_effect/contractor_chassis/on_remove()
 	UnregisterSignal(owner, COMSIG_CARBON_ATTEMPT_BREATHE)
+	set_stasis(FALSE)
 
 /datum/status_effect/contractor_chassis/proc/supply_breath(mob/living/carbon/source, seconds_per_tick)
 	SIGNAL_HANDLER
@@ -971,7 +1003,11 @@
 	if(isnull(station_breath))
 		var/datum/gas_mixture/station_air = SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture)
 		station_breath = station_air.remove(station_air.total_moles() * BREATH_PERCENTAGE)
-	INVOKE_ASYNC(source, TYPE_PROC_REF(/mob/living/carbon, check_breath), can_breathe() ? station_breath.copy() : null)
+	var/datum/gas_mixture/breath = null
+	if(can_breathe())
+		breath = station_breath.copy()
+		breath.temperature = source.get_body_temp_normal()
+	INVOKE_ASYNC(source, TYPE_PROC_REF(/mob/living/carbon, check_breath), breath)
 	return COMSIG_CARBON_BLOCK_BREATH
 
 /datum/status_effect/contractor_chassis/proc/can_breathe()
@@ -984,24 +1020,49 @@
 /datum/status_effect/contractor_chassis/tick(seconds_between_ticks)
 	if(!HAS_TRAIT(owner, TRAIT_CONTRACTOR_IMPLANT))
 		owner.adjust_drowsiness(drowsiness_per_second * seconds_between_ticks)
-	var/running = running_threads()
-	if(!running)
-		return
+		if(world.time >= sealed_at + sleep_after && owner.stat != DEAD)
+			owner.Sleeping(sleep_per_tick)
 	var/mob/living/silicon/robot/drone = owner.loc
-	if(!istype(drone) || !drone.cell?.use(thread_energy * running * seconds_between_ticks))
+	if(automatic)
+		set_stasis(owner.stat >= SOFT_CRIT)
+	if(stasis && !drone?.cell?.use(stasis_energy * seconds_between_ticks))
+		set_stasis(FALSE)
+	var/list/working = working_targets()
+	if(!length(working))
 		return
-	if(focus["damage"])
-		repair_damage(focus["damage"], seconds_between_ticks)
-	if(focus["body"])
-		repair_body(focus["body"], seconds_between_ticks)
-	if(focus["organ"])
-		repair_organ(focus["organ"], seconds_between_ticks)
+	if(!istype(drone) || !drone.cell?.use(thread_energy * length(working) * seconds_between_ticks))
+		return
+	for(var/thread in working)
+		var/seconds = seconds_between_ticks * (focus[thread] ? manual_multiplier : 1)
+		switch(thread)
+			if("damage")
+				repair_damage(working[thread], seconds)
+			if("body")
+				repair_body(working[thread], seconds)
+			if("organ")
+				repair_organ(working[thread], seconds)
+
+/// What each thread is repairing right now, by hand or on its own. Threads with nothing to do are left out.
+/datum/status_effect/contractor_chassis/proc/working_targets()
+	. = list()
+	for(var/thread in focus)
+		var/target = focus[thread] || (automatic ? auto_target(thread) : null)
+		if(target)
+			.[thread] = target
+
+/// The first thing this thread can find to repair on its own, or null if it has nothing to do
+/datum/status_effect/contractor_chassis/proc/auto_target(thread)
+	for(var/target in auto_order[thread])
+		if(needs_repair(thread, target))
+			return target
+	return null
 
 /datum/status_effect/contractor_chassis/proc/running_threads()
-	. = 0
-	for(var/thread in focus)
-		if(focus[thread])
-			.++
+	return length(working_targets())
+
+/// Everything the chamber is drawing from the cell right now, threads and stasis together
+/datum/status_effect/contractor_chassis/proc/power_draw()
+	return thread_energy * running_threads() + (stasis ? stasis_energy : 0)
 
 /datum/status_effect/contractor_chassis/proc/bleed_stacks()
 	. = 0
@@ -1011,15 +1072,53 @@
 	for(var/obj/item/bodypart/part as anything in patient.bodyparts)
 		. += part.generic_bleedstacks
 
+/datum/status_effect/contractor_chassis/proc/set_stasis(new_stasis)
+	if(stasis == new_stasis)
+		return FALSE
+	stasis = new_stasis
+	if(stasis)
+		owner.apply_status_effect(/datum/status_effect/grouped/stasis, CHASSIS_STASIS_EFFECT)
+		owner.extinguish_mob()
+		playsound(owner, 'sound/effects/spray.ogg', 5, TRUE, 2, frequency = rand(24750, 26550))
+	else
+		owner.remove_status_effect(/datum/status_effect/grouped/stasis, CHASSIS_STASIS_EFFECT)
+	var/mob/living/silicon/robot/drone = owner.loc
+	if(istype(drone))
+		drone.balloon_alert(drone, stasis ? "stasis engaged" : "stasis released")
+	return TRUE
+
+/datum/status_effect/contractor_chassis/proc/toggle_stasis()
+	// Taking stasis into your own hands drops the whole system out of automatic, the same as aiming a thread.
+	set_automatic(FALSE)
+	return set_stasis(!stasis)
+
+/datum/status_effect/contractor_chassis/proc/toggle_automatic()
+	return set_automatic(!automatic)
+
+/datum/status_effect/contractor_chassis/proc/set_automatic(new_automatic)
+	if(automatic == new_automatic)
+		return TRUE
+	automatic = new_automatic
+	// Handing the threads back drops every hand-aimed lock, and the doubled output that came with it.
+	if(automatic)
+		for(var/thread in focus)
+			focus[thread] = null
+	var/mob/living/silicon/robot/drone = owner.loc
+	if(istype(drone))
+		drone.balloon_alert(drone, automatic ? "life support automatic" : "life support manual")
+	return TRUE
+
 /datum/status_effect/contractor_chassis/proc/set_focus(thread, target)
 	if(!(thread in focus))
 		return FALSE
+	// Aiming a thread by hand drops the whole system out of automatic. Only the switch puts it back.
 	if(focus[thread] == target)
 		focus[thread] = null
 		return TRUE
 	if(!needs_repair(thread, target))
 		return FALSE
 	focus[thread] = target
+	set_automatic(FALSE)
 	return TRUE
 
 /datum/status_effect/contractor_chassis/proc/needs_repair(thread, target)
@@ -1083,6 +1182,7 @@
 		focus["organ"] = null
 
 /datum/status_effect/contractor_chassis/proc/start_charge()
+	set_automatic(FALSE)
 	var/mob/living/carbon/patient = owner
 	var/mob/living/silicon/robot/drone = owner.loc
 	if(!istype(patient) || !istype(drone) || patient.stat != DEAD || charge_started || charged)
@@ -1109,11 +1209,13 @@
 	playsound(owner, 'sound/machines/defib/defib_ready.ogg', 50, FALSE)
 
 /datum/status_effect/contractor_chassis/proc/discharge()
+	set_automatic(FALSE)
 	var/mob/living/carbon/patient = owner
 	var/mob/living/silicon/robot/drone = owner.loc
 	if(!charged || !istype(patient))
 		return FALSE
 	charged = FALSE
+	set_stasis(FALSE)
 	if(patient.stat != DEAD || patient.can_defib() != DEFIB_POSSIBLE)
 		playsound(patient, 'sound/machines/defib/defib_failed.ogg', 60, FALSE)
 		to_chat(patient, span_warning("The whine dies away without a shock."))
@@ -1178,6 +1280,8 @@
 #undef CLOAK_FADE_TIME
 #undef CLOAK_DEPLOY_TIME
 #undef CONTRACTOR_DISRUPT_TIME
+#undef CONTRACTOR_TASER_SPINUP
+#undef CHASSIS_STASIS_EFFECT
 #undef CLOAK_ACTIVATION_COST
 #undef HOVER_ACTIVATION_COST
 #undef HOVER_UPKEEP_COST

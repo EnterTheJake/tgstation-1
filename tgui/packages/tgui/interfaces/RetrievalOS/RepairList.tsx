@@ -1,7 +1,9 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useBackend } from '../../backend';
+import { AutoSwitch } from './AutoSwitch';
 import { GlitchContext } from './glitch';
 import { titleCase } from './helpers';
+import { StasisButton } from './StasisButton';
 import type { Data, Occupant, Organ } from './types';
 
 type RowSpec = {
@@ -51,13 +53,17 @@ export const RepairList = (props: RepairListProps) => {
   const { occupant } = props;
   const { act } = useBackend<Data>();
   const { g, tear, torn } = useContext(GlitchContext);
-  const { focus, rates, damage, body } = occupant;
+  const { focus, auto, rates, damage, body } = occupant;
+  const boost = occupant.manual_multiplier;
+  const worked = (thread: string, target: string) =>
+    focus[thread] === target ? boost : auto[thread] === target ? 1 : 0;
   const dead = !!occupant.dead;
   const peaks = useRef<Record<string, number>>({});
   const settled = useRef<Record<string, number>>({});
   const previousFocus = useRef<Record<string, string | null>>({ ...focus });
   const [, setFlashTick] = useState(0);
   const shownOrgans = useRef<Map<string, OrganEntry>>(new Map());
+  const seenOrgans = useRef<Set<string> | null>(null);
   const exitingOrgans = useRef<Map<string, OrganEntry>>(new Map());
 
   const peak = (key: string, value: number) => {
@@ -67,7 +73,6 @@ export const RepairList = (props: RepairListProps) => {
 
   const damageRows: RowSpec[] = DAMAGE_ROWS.map(([key, name, grad, color]) => {
     const value = damage[key] || 0;
-    const focused = focus.damage === key;
     const oxygen = key === 'oxygen' && !dead;
     const breathing = oxygen && !!occupant.breathing;
     const choking = oxygen && !occupant.breathing;
@@ -82,9 +87,9 @@ export const RepairList = (props: RepairListProps) => {
       pct: (value / DAMAGE_MAX) * 100,
       done: value <= 0.05,
       down: true,
-      rate: focused
-        ? rates.damage + (key === 'oxygen' ? rates.oxy_bonus : 0)
-        : 0,
+      rate:
+        worked('damage', key) *
+        (rates.damage + (key === 'oxygen' ? rates.oxy_bonus : 0)),
       remain: value,
       idleText: choking
         ? 'NOT BREATHING'
@@ -119,7 +124,7 @@ export const RepairList = (props: RepairListProps) => {
       pct: (blood / occupant.blood_max) * 100,
       done: blood >= occupant.blood_max - 0.05,
       down: false,
-      rate: focus.body === 'blood' ? rates.blood : 0,
+      rate: worked('body', 'blood') * rates.blood,
       remain: occupant.blood_max - blood,
       grad: 'linear-gradient(90deg,#5e1414,#c23b3b)',
       color: '#e06a6a',
@@ -138,7 +143,7 @@ export const RepairList = (props: RepairListProps) => {
           100,
       done: Math.abs(target - temperature) < 0.5,
       down: hot,
-      rate: focus.body === 'temperature' ? rates.temperature : 0,
+      rate: worked('body', 'temperature') * rates.temperature,
       remain: Math.abs(target - temperature),
       grad: hot
         ? 'linear-gradient(90deg,#7a2a08,#ff8a3a)'
@@ -156,7 +161,7 @@ export const RepairList = (props: RepairListProps) => {
       pct: (body.bleeding / peak('bleeding', body.bleeding)) * 100,
       done: body.bleeding <= 0.05,
       down: true,
-      rate: focus.body === 'bleeding' ? rates.bleeding : 0,
+      rate: worked('body', 'bleeding') * rates.bleeding,
       remain: body.bleeding,
       movingText: '▼ CLOTTING',
       grad: 'linear-gradient(90deg,#5e0606,#ff3b2f)',
@@ -173,7 +178,7 @@ export const RepairList = (props: RepairListProps) => {
       pct: (body.wounds / peak('wounds', body.wounds)) * 100,
       done: body.wounds <= 0,
       down: true,
-      rate: focus.body === 'wounds' ? rates.wounds : 0,
+      rate: worked('body', 'wounds') * rates.wounds,
       remain: body.wounds,
       movingText: '▼ CLOSING',
       grad: 'linear-gradient(90deg,#5e0606,#ff3b2f)',
@@ -207,7 +212,7 @@ export const RepairList = (props: RepairListProps) => {
       pct: (organ.damage / organ.max) * 100,
       done: organ.damage <= 0.05,
       down: true,
-      rate: focus.organ === organ.slot ? rates.organ : 0,
+      rate: worked('organ', organ.slot) * rates.organ,
       remain: organ.damage,
       idleText: organ.failing ? 'FAILING' : undefined,
       idleColor: organ.failing ? 'var(--color-dead)' : undefined,
@@ -218,6 +223,15 @@ export const RepairList = (props: RepairListProps) => {
       color: organ.slot === 'heart' ? '#ff5c46' : '#ffab2e',
     }));
   const liveKeys = new Set(organRows.map((row) => row.key));
+  const fresh = new Set<string>();
+  if (seenOrgans.current) {
+    for (const key of liveKeys) {
+      if (!seenOrgans.current.has(key)) {
+        fresh.add(key);
+      }
+    }
+  }
+  seenOrgans.current = liveKeys;
   for (const [key, entry] of shownOrgans.current) {
     if (!liveKeys.has(key) && !exitingOrgans.current.has(key)) {
       exitingOrgans.current.set(key, { ...entry, until: now + ORGAN_EXIT_MS });
@@ -285,8 +299,8 @@ export const RepairList = (props: RepairListProps) => {
     return () => timers.forEach(clearTimeout);
   }, [focus.damage, focus.body, focus.organ]);
 
-  const nameOf = (thread: string) => {
-    const key = focus[thread];
+  const nameOf = (thread: string, manualOnly = true) => {
+    const key = manualOnly ? focus[thread] : focus[thread] || auto[thread];
     if (!key) {
       return null;
     }
@@ -299,7 +313,7 @@ export const RepairList = (props: RepairListProps) => {
     return all.find((row) => row.target === key)?.name ?? titleCase(key);
   };
   const running = ['damage', 'body', 'organ']
-    .map(nameOf)
+    .map((thread) => nameOf(thread, false))
     .filter((name): name is string => !!name);
 
   const renderRow = (row: RowSpec) => {
@@ -330,11 +344,13 @@ export const RepairList = (props: RepairListProps) => {
     const classes = [
       'rep',
       `rep--${row.kind}`,
+      moving && !focused && 'is-auto',
       !moving && 'is-idle',
       (!row.done || focused) && 'can-pick',
       focused && 'is-focus',
       justDone && 'just-done',
       row.leaving && 'is-leaving',
+      fresh.has(row.key) && 'is-entering',
     ]
       .filter(Boolean)
       .join(' ');
@@ -381,12 +397,19 @@ export const RepairList = (props: RepairListProps) => {
     );
   };
 
-  const header = (label: string, thread: string, verb: string) => {
-    const name = nameOf(thread);
+  const header = (label: string, thread: string) => {
+    const manual = nameOf(thread);
+    const self = nameOf(thread, false);
+    let state = occupant.automatic ? 'NO REPAIR REQUIRED' : 'AWAITING TARGET';
+    if (manual) {
+      state = `MANUAL: ${manual.toUpperCase()}`;
+    } else if (self) {
+      state = `AUTOMATIC: ${self.toUpperCase()}`;
+    }
     return (
       <div className="rep__hdr">
         {label}
-        <b>{name ? `${verb} ${name}` : 'idle — click one'}</b>
+        <b>{state}</b>
       </div>
     );
   };
@@ -397,25 +420,25 @@ export const RepairList = (props: RepairListProps) => {
         Life Support{' '}
         <em>
           {running.length
-            ? `— ${running.length} of 3 threads running: ${running.join(' + ')}`
-            : '— all three threads idle'}
+            ? `— ${running.length} OF 3 THREADS ENGAGED`
+            : '— ALL THREADS IDLE'}
         </em>
-        {running.length > 0 && (
-          <span className="pwr">⚡ {g(occupant.thread_power, 'power')}</span>
-        )}
+        <StasisButton on={occupant.stasis} auto={occupant.automatic} />
+        <span className="pwr">⚡ {g(occupant.thread_power, 'power')}</span>
+        <AutoSwitch on={occupant.automatic} />
       </div>
       <div>
-        {header('DAMAGE', 'damage', 'repairing')}
+        {header('DAMAGE', 'damage')}
         {damageRows.map(renderRow)}
-        {header('BODY', 'body', 'running')}
+        {header('BODY', 'body')}
         {bodyRows.map(renderRow)}
-        {header('ORGANS', 'organ', 'repairing')}
+        {header('ORGANS', 'organ')}
         {organList.map(renderRow)}
         {clean.length > 0 && (
           <div className="nominal">
-            ✓ {clean.length} {organRows.length ? 'further ' : ''}organ
-            {clean.length === 1 ? '' : 's'} nominal
-            {brainClean && dead ? ' — brain intact, within revival window' : ''}
+            ✓ {clean.length} {organRows.length ? 'FURTHER ' : ''}ORGAN
+            {clean.length === 1 ? '' : 'S'} NOMINAL
+            {brainClean && dead ? ' · BRAIN INTACT, REVIVAL WINDOW OPEN' : ''}
           </div>
         )}
       </div>

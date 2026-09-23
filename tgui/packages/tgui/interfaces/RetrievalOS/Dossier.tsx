@@ -115,9 +115,9 @@ export const Dossier = (props: DossierProps) => {
             <span className="tgt__l">CONTRACT</span>
             <span className="tgt__b">
               Designated target of your <b>handler</b>. Deliver <b>alive</b> for
-              +{contract.bonus} TC.
+              +{contract.bonus} CC.
             </span>
-            <span className="tgt__tc">{g(contract.payout, 'payout')} TC</span>
+            <span className="tgt__tc">{g(contract.payout, 'payout')} CC</span>
           </div>
           <ExtractionRow />
         </>

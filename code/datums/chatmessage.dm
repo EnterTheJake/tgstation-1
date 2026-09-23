@@ -275,7 +275,10 @@
 	message.appearance_flags = APPEARANCE_UI_IGNORE_ALPHA | KEEP_APART
 	message.alpha = 0
 	message.pixel_z = starting_height
+	// We hang off the atom, so its own offsets come along for the ride unless we cancel them.
 	message.pixel_w = -message_loc.base_pixel_w
+	message.pixel_x = -message_loc.base_pixel_x
+	message.pixel_y = -message_loc.base_pixel_y
 	message.maptext_width = CHAT_MESSAGE_WIDTH
 	message.maptext_height = mheight * 1.25 // We add extra because some characters are superscript, like actions
 	message.maptext_x = (CHAT_MESSAGE_WIDTH - owner.bound_width) * -0.5

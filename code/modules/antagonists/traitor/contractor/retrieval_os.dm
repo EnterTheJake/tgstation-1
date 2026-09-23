@@ -171,6 +171,10 @@
 		"blood_max" = BLOOD_VOLUME_NORMAL,
 		"temperature_target" = occupant.get_body_temp_normal(),
 		"focus" = chassis.focus,
+		"auto" = chassis.working_targets(),
+		"automatic" = chassis.automatic,
+		"stasis" = chassis.stasis,
+		"manual_multiplier" = chassis.manual_multiplier,
 		"rates" = list(
 			"damage" = chassis.damage_rate,
 			"oxy_bonus" = chassis.oxy_bonus,
@@ -180,7 +184,7 @@
 			"wounds" = chassis.wound_rate,
 			"organ" = chassis.organ_rate,
 		),
-		"thread_power" = display_power(chassis.thread_energy * chassis.running_threads(), convert = FALSE),
+		"thread_power" = display_power(chassis.power_draw(), convert = FALSE),
 		"charge_cost" = display_energy(chassis.charge_energy),
 		"charge_time" = chassis.charge_time,
 		"charge_elapsed" = chassis.charge_started ? world.time - chassis.charge_started : null,
@@ -269,6 +273,10 @@
 	if(isnull(chassis))
 		return FALSE
 	switch(action)
+		if("toggle_stasis")
+			return chassis.toggle_stasis()
+		if("toggle_automatic")
+			return chassis.toggle_automatic()
 		if("set_focus")
 			return chassis.set_focus(params["thread"], params["target"])
 		if("charge")

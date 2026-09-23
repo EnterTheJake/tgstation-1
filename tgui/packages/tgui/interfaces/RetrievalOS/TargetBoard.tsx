@@ -74,7 +74,7 @@ export const TargetBoard = () => {
               </div>
               <div className="board__pay">
                 <div className="board__tc">
-                  {g(`${target.tc_reward} TC`, `tc-${target.contract_id}`)}
+                  {g(`${target.tc_reward} CC`, `tc-${target.contract_id}`)}
                 </div>
                 <div className="board__bonus">
                   {g(

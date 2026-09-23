@@ -9,6 +9,20 @@
 	charge_delay = 4
 	ammo_type = list(/obj/item/ammo_casing/energy/electrode/contractor, /obj/item/ammo_casing/energy/disabler)
 
+/obj/item/gun/energy/e_gun/advtaser/cyborg/contractor/can_trigger_gun(mob/living/user, akimbo_usage)
+	. = ..()
+	if(!.)
+		return .
+	var/mob/living/silicon/robot/model/contractor/borg = user
+	if(!istype(borg))
+		return .
+	if(borg.cloaked)
+		balloon_alert(borg, "cloak active!")
+		return FALSE
+	if(!COOLDOWN_FINISHED(borg, taser_spinup))
+		balloon_alert(borg, "tether spinning up!")
+		return FALSE
+
 /obj/item/ammo_casing/energy/electrode/contractor
 	projectile_type = /obj/projectile/energy/electrode/contractor
 

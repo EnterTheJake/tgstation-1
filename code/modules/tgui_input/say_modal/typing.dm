@@ -68,7 +68,11 @@
 /mob/living/create_thinking_indicator()
 	if(active_thinking_indicator || active_typing_indicator || IS_UNCONSCIOUS_OR_CRIT(src) || !HAS_TRAIT(src, TRAIT_THINKING_IN_CHARACTER))
 		return FALSE
-	active_thinking_indicator = mutable_appearance('icons/mob/effects/talk.dmi', "[bubble_icon]3", TYPING_LAYER)
+	// Overlays ride our own pixel offsets, so cancel them and let the bubble sit where a plain mob's does.
+	var/mutable_appearance/thinking = mutable_appearance('icons/mob/effects/talk.dmi', "[bubble_icon]3", TYPING_LAYER)
+	thinking.pixel_x = -base_pixel_x
+	thinking.pixel_y = -base_pixel_y
+	active_thinking_indicator = thinking
 	add_overlay(active_thinking_indicator)
 	play_fov_effect(src, 6, "talk", ignore_self = TRUE)
 
@@ -81,7 +85,10 @@
 /mob/living/create_typing_indicator()
 	if(active_typing_indicator || active_thinking_indicator || IS_UNCONSCIOUS_OR_CRIT(src) || !HAS_TRAIT(src, TRAIT_THINKING_IN_CHARACTER))
 		return FALSE
-	active_typing_indicator = mutable_appearance('icons/mob/effects/talk.dmi', "[bubble_icon]0", TYPING_LAYER)
+	var/mutable_appearance/typing = mutable_appearance('icons/mob/effects/talk.dmi', "[bubble_icon]0", TYPING_LAYER)
+	typing.pixel_x = -base_pixel_x
+	typing.pixel_y = -base_pixel_y
+	active_typing_indicator = typing
 	add_overlay(active_typing_indicator)
 	play_fov_effect(src, 6, "talk", ignore_self = TRUE)
 
