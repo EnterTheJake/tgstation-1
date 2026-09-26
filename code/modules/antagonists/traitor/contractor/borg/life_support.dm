@@ -123,11 +123,6 @@
 
 /datum/status_effect/contractor_chassis/proc/running_threads()
 	return length(working_targets())
-
-/// Everything the chamber is drawing from the cell right now, threads and stasis together
-/datum/status_effect/contractor_chassis/proc/power_draw()
-	return thread_energy * running_threads() + (stasis ? stasis_energy : 0)
-
 /datum/status_effect/contractor_chassis/proc/bleed_stacks()
 	. = 0
 	var/mob/living/carbon/patient = owner

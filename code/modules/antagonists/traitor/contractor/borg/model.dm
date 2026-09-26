@@ -27,7 +27,6 @@
 	var/datum/weakref/hover_action_ref
 	var/datum/weakref/eject_action_ref
 	var/datum/weakref/minimap_action_ref
-	var/datum/weakref/retrieval_action_ref
 
 /obj/item/robot_model/contractor/be_transformed_to(obj/item/robot_model/old_model, forced = FALSE)
 	. = ..()
@@ -50,15 +49,10 @@
 	minimap.Grant(loc)
 	minimap_action_ref = WEAKREF(minimap)
 
-	var/datum/action/retrieval = new /datum/action/retrieval_os(loc)
-	retrieval.Grant(loc)
-	retrieval_action_ref = WEAKREF(retrieval)
-
 /obj/item/robot_model/contractor/Destroy()
 	QDEL_NULL(cloak_action_ref)
 	QDEL_NULL(hover_action_ref)
 	QDEL_NULL(eject_action_ref)
 	QDEL_NULL(minimap_action_ref)
-	QDEL_NULL(retrieval_action_ref)
 	remove_minimap_blip(contractor_minimap_tag(contractor_board_owner(loc)), loc)
 	return ..()

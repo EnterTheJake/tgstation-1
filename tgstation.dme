@@ -3804,7 +3804,6 @@
 #include "code\modules\antagonists\traitor\contractor\borg\hover.dm"
 #include "code\modules\antagonists\traitor\contractor\borg\life_support.dm"
 #include "code\modules\antagonists\traitor\contractor\borg\model.dm"
-#include "code\modules\antagonists\traitor\contractor\borg\retrieval_os.dm"
 #include "code\modules\antagonists\traitor\contractor\borg\taser.dm"
 #include "code\modules\antagonists\traitor\contractor\dialogue_system\_dialogue_system.dm"
 #include "code\modules\antagonists\traitor\contractor\dialogue_system\bomb_dialogue.dm"

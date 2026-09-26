@@ -87,7 +87,6 @@
 		return
 	victim.forceMove(src)
 	victim.apply_status_effect(/datum/status_effect/contractor_chassis)
-	retrieval_os.refresh()
 	if(cloaked && !HAS_TRAIT(victim, TRAIT_CONTRACTOR_IMPLANT))
 		break_cloak()
 	update_eject_action()
@@ -107,12 +106,6 @@
 /mob/living/silicon/robot/model/contractor/proc/expel(mob/living/victim)
 	if(victim.loc != src)
 		return
-	last_occupant = list(
-		"name" = victim.real_name,
-		"rank" = victim.mind?.assigned_role?.title || "Unknown",
-		"alive" = victim.stat != DEAD,
-		"released_at" = world.time,
-	)
 	victim.clear_fullscreen("contractor_chassis_boot")
 	victim.clear_fullscreen("contractor_chassis_grid")
 	victim.remove_status_effect(/datum/status_effect/contractor_chassis)
@@ -120,7 +113,6 @@
 	victim.throw_at(get_step(src, dir), 1, 1, src)
 	update_eject_action()
 	play_chassis_open()
-	retrieval_os?.refresh()
 
 /mob/living/silicon/robot/model/contractor/container_resist_act(mob/living/user)
 	if(user.loc != src)

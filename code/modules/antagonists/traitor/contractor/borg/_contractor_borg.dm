@@ -29,14 +29,6 @@
 	var/obj/effect/contractor_thrusters_emissive/thrusters_emissive
 	/// The contractor who deployed us. Their bounty board and minimap channel are the ones we use.
 	var/datum/weakref/contractor_ref
-	/// UI datum for the retrieval interface
-	var/datum/retrieval_os/retrieval_os
-	/// Name, rank and fate of whoever was last released from the chassis
-	var/list/last_occupant
-	/// Bumped on every hit, so the chassis OS can play a matching glitch
-	var/damage_pulses = 0
-	/// How hard the last hit was, from 0 to 1, for sizing that glitch
-	var/last_hit_severity = 0
 	/// Sealed atmosphere the Holding Chamber keeps around its occupant, reset to station air whenever it is read
 	var/datum/gas_mixture/chamber_air
 	/// Spin-up the shock tether needs before it can fire again once the cloak drops
@@ -78,9 +70,6 @@
 
 	refresh_overlay_planes()
 
-	retrieval_os = new(src)
-	RegisterSignal(src, COMSIG_MOB_APPLY_DAMAGE, PROC_REF(on_damaged))
-
 	sight_mode = BORGTHERM
 	update_sight()
 
@@ -109,13 +98,8 @@
 	QDEL_NULL(eyes_emissive)
 	QDEL_NULL(disrupt_emissive)
 	QDEL_NULL(thrusters_emissive)
-	QDEL_NULL(retrieval_os)
 	QDEL_NULL(chamber_air)
 	return ..()
-
-/mob/living/silicon/robot/model/contractor/proc/open_retrieval_os()
-	retrieval_os.ui_interact(src)
-
 /mob/living/silicon/robot/model/contractor/return_air()
 	var/static/datum/gas_mixture/station_air
 	if(isnull(station_air))
@@ -143,14 +127,6 @@
 
 /mob/living/silicon/robot/model/contractor/get_hud_y_offset()
 	return -base_pixel_y
-
-/mob/living/silicon/robot/model/contractor/proc/on_damaged(datum/source, damage, damagetype)
-	SIGNAL_HANDLER
-	if(damage <= 0)
-		return
-	damage_pulses++
-	last_hit_severity = clamp(damage / maxHealth * 4, 0.15, 1)
-
 /mob/living/silicon/robot/model/contractor/death(gibbed)
 	for(var/mob/living/trapped in contents)
 		expel(trapped)
