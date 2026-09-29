@@ -27,3 +27,6 @@
 
 /// Sent to the STORAGE when an ITEM is REMOVED. (obj/item, atom, silent)
 #define COMSIG_STORAGE_REMOVED_ITEM "storage_removing_item"
+
+/// Sent when the "closer" button is pressed
+#define COMSIG_CLOSEBUTTON_PRESSED "storage_contents_hidden"

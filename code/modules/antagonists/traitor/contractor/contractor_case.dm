@@ -31,6 +31,8 @@
 	atom_storage.UnregisterSignal(src, COMSIG_ATOM_ATTACK_HAND_SECONDARY)
 	RegisterSignal(atom_storage, COMSIG_STORAGE_STORED_ITEM, PROC_REF(on_storage_updated))
 	RegisterSignal(atom_storage, COMSIG_STORAGE_REMOVED_ITEM, PROC_REF(on_storage_updated))
+	RegisterSignal(src, COMSIG_CLOSEBUTTON_PRESSED, PROC_REF(on_storage_hidden))
+	RegisterSignal(src, COMSIG_ITEM_PRE_STORAGE_INSERTION, PROC_REF(before_storage_attempt))
 	atom_storage.set_locked(STORAGE_FULLY_LOCKED)
 	update_processing()
 	update_appearance()
@@ -48,6 +50,7 @@
 /obj/item/storage/contractor_gun_case/PopulateContents()
 	new /obj/item/gun/energy/gauss_rifle(src)
 	new /obj/item/stock_parts/power_store/gauss_nanites(src)
+	new /obj/item/storage/pouch/contractor_cell_pouch(src)
 
 /obj/item/storage/contractor_gun_case/attack_hand(mob/user, list/modifiers)
 	if(loc.atom_storage)
@@ -215,6 +218,20 @@
 
 	update_processing()
 	update_appearance()
+
+/// Closes the case when you close the storage view
+/obj/item/storage/contractor_gun_case/proc/on_storage_hidden(datum/source, mob/closer)
+	SIGNAL_HANDLER
+	var/mob/living/guy_who_has_the_box = get(loc, /mob)
+	if(guy_who_has_the_box != closer) // Ghost grief prevention
+		return
+	close_case()
+
+/// Locks and closes the case, so that it's less jank when trying to store the suitcase in your backpack
+/obj/item/storage/contractor_gun_case/proc/before_storage_attempt()
+	SIGNAL_HANDLER
+	close_case()
+	lock_case()
 
 /obj/item/storage/contractor_gun_case/proc/update_processing()
 	if(length(get_charging_cells()))

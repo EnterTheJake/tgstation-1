@@ -495,15 +495,13 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 /datum/storage/proc/attempt_insert(obj/item/to_insert, mob/user, override = FALSE, force = STORAGE_NOT_LOCKED, messages = TRUE)
 	SHOULD_NOT_SLEEP(TRUE)
 
+	if(SEND_SIGNAL(to_insert, COMSIG_ITEM_PRE_STORAGE_INSERTION, parent, user, force, messages) & BLOCK_STORAGE_INSERT)
+		return FALSE
 	if(!can_insert(to_insert, user, messages = messages, force = force))
 		return FALSE
 	if(SEND_SIGNAL(parent, COMSIG_ATOM_PRE_STORED_ITEM, to_insert, user, force, messages) & BLOCK_STORAGE_INSERT)
 		return FALSE
-	if(SEND_SIGNAL(to_insert, COMSIG_ITEM_PRE_STORAGE_INSERTION, parent, user, force, messages) & BLOCK_STORAGE_INSERT)
-		return FALSE
 
-	SEND_SIGNAL(parent, COMSIG_ATOM_STORED_ITEM, to_insert, user, force)
-	SEND_SIGNAL(src, COMSIG_STORAGE_STORED_ITEM, to_insert, user, force)
 	if(ismob(to_insert.loc))
 		var/mob/item_carrier = to_insert.loc
 		item_carrier.transferItemToLoc(to_insert, real_location, animated = FALSE) // This allows has_unequipped() to be properly called.
@@ -513,6 +511,8 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 		to_insert.do_pickup_animation(real_location, user)
 	if (messages)
 		item_insertion_feedback(user, to_insert, override)
+	SEND_SIGNAL(parent, COMSIG_ATOM_STORED_ITEM, to_insert, user, force)
+	SEND_SIGNAL(src, COMSIG_STORAGE_STORED_ITEM, to_insert, user, force)
 	return TRUE
 
 /// Since items inside storages ignore transparency for QOL reasons, we're tracking when things are dropped onto them instead of our UI elements
