@@ -62,12 +62,17 @@
 		to_chat(viewer, span_emote("[icon2html(src, viewer)] [src.name]: [text]"))
 		return
 
-	var/image/balloon_alert = image(loc = isturf(src) ? src : get_atom_on_turf(src), layer = ABOVE_MOB_LAYER)
+	var/atom/anchor = isturf(src) ? src : get_atom_on_turf(src)
+	var/image/balloon_alert = image(loc = anchor, layer = ABOVE_MOB_LAYER)
 	SET_PLANE_EXPLICIT(balloon_alert, BALLOON_CHAT_PLANE, src)
 	balloon_alert.alpha = 0
 	balloon_alert.appearance_flags = RESET_ALPHA|RESET_COLOR|RESET_TRANSFORM
 	balloon_alert.maptext = MAPTEXT("<span style='text-align: center; -dm-text-outline: 1px #0005'>[text]</span>")
-	balloon_alert.maptext_x = (BALLOON_TEXT_WIDTH - ICON_SIZE_X) * -0.5 - base_pixel_y
+	balloon_alert.maptext_x = (BALLOON_TEXT_WIDTH - ICON_SIZE_X) * -0.5
+	balloon_alert.pixel_x = -anchor.base_pixel_x
+	balloon_alert.pixel_w = -anchor.base_pixel_w
+	balloon_alert.pixel_y = -anchor.base_pixel_y
+	balloon_alert.pixel_z = -anchor.base_pixel_z
 	WXH_TO_HEIGHT(viewer_client?.MeasureText(text, null, BALLOON_TEXT_WIDTH), balloon_alert.maptext_height)
 	balloon_alert.maptext_width = BALLOON_TEXT_WIDTH
 
@@ -77,7 +82,7 @@
 
 	animate(
 		balloon_alert,
-		pixel_y = ICON_SIZE_Y * 1.2,
+		pixel_y = ICON_SIZE_Y * 1.2 - anchor.base_pixel_y,
 		time = BALLOON_TEXT_TOTAL_LIFETIME(length_mult),
 		easing = SINE_EASING | EASE_OUT,
 	)
