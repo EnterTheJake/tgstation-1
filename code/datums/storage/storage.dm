@@ -103,6 +103,8 @@
 
 	/// if TRUE, alt-click takes an item out instantly rather than opening up storage.
 	var/quickdraw = FALSE
+	/// if TRUE, normal left click will take out an item rather than open up the storage
+	var/clickdraw = FALSE
 
 	/// Instead of displaying multiple items of the same type, display them as numbered contents.
 	var/numerical_stacking = FALSE
@@ -908,13 +910,16 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 
 	if(!attack_hand_interact)
 		return
+	if(clickdraw && can_clickdraw(user))
+		do_clickdraw(user)
+		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(user.active_storage == src && parent.loc == user)
 		user.active_storage.hide_contents(user)
 		hide_contents(user)
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 	if(ishuman(user))
 		var/mob/living/carbon/human/hum = user
-		if(hum.l_store == parent || hum.r_store == parent)
+		if((hum.l_store == parent || hum.r_store == parent) && !clickdraw)
 			return
 	if(parent.loc == user)
 		INVOKE_ASYNC(src, PROC_REF(open_storage), user)
@@ -1002,6 +1007,26 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 
 	return TRUE
 
+/// Tries to draw an item out of the storage. Returns TRUE if there is something to draw (and draws it), returns FALSE otherwise
+/datum/storage/proc/can_clickdraw(mob/living/drawer)
+	if(!length(real_location.contents))
+		return FALSE
+	return TRUE
+
+/// Quickdraws an item out of the inventory
+/datum/storage/proc/do_clickdraw(mob/living/user)
+	var/obj/item/to_remove = real_location.contents[1]
+	if(!to_remove)
+		return
+
+	if(remove_single(user, to_remove))
+		INVOKE_ASYNC(src, PROC_REF(put_in_hands_async), user, to_remove)
+		if(!silent)
+			user.visible_message(
+				span_warning("[user] draws [to_remove] from [parent]!"),
+				span_notice("You draw [to_remove] from [parent]."),
+			)
+		return
 
 /// Async version of putting something into a mobs hand.
 /datum/storage/proc/put_in_hands_async(mob/to_show, obj/item/toremove)

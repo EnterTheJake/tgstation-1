@@ -21,7 +21,7 @@
 				UNSEALED_MESSAGE = HELMET_UNSEAL_MESSAGE,
 				SEALED_MESSAGE = HELMET_SEAL_MESSAGE,
 			),
-			/obj/item/clothing/suit/mod = list(
+			/obj/item/clothing/suit/mod/contractor = list(
 				UNSEALED_CLOTHING = THICKMATERIAL,
 				SEALED_CLOTHING = STOPSPRESSUREDAMAGE,
 				SEALED_INVISIBILITY = HIDEJUMPSUIT,
@@ -45,6 +45,10 @@
 		),
 		)
 	inbuilt_modules = list(/obj/item/mod/module/infiltrator/contractor, /obj/item/mod/module/contractor_uplink, /obj/item/mod/module/contractor_minimap)
+
+/obj/item/clothing/suit/mod/contractor/Initialize(mapload)
+	. = ..()
+	allowed += /obj/item/storage/contractor_gun_case
 
 /datum/armor/mod_theme_contractor
 	melee = 30

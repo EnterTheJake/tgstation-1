@@ -13,6 +13,7 @@
 	righthand_file = 'icons/mob/inhands/equipment/toolbox_righthand.dmi'
 	w_class = WEIGHT_CLASS_NORMAL
 	storage_type = /datum/storage/contractor_gun_case
+	slot_flags = ITEM_SLOT_SUITSTORE
 	/// Whether the case lid is currently open.
 	var/case_opened = FALSE
 	/// Whether the case has been unlocked from its default inert mode.
@@ -49,7 +50,6 @@
 
 /obj/item/storage/contractor_gun_case/PopulateContents()
 	new /obj/item/gun/energy/gauss_rifle(src)
-	new /obj/item/stock_parts/power_store/gauss_nanites(src)
 	new /obj/item/storage/pouch/contractor_cell_pouch(src)
 
 /obj/item/storage/contractor_gun_case/attack_hand(mob/user, list/modifiers)
@@ -240,15 +240,15 @@
 	STOP_PROCESSING(SSobj, src)
 
 /datum/storage/contractor_gun_case
-	max_slots = 5
+	max_slots = 2
 	max_specific_storage = WEIGHT_CLASS_BULKY
-	max_total_storage = WEIGHT_CLASS_BULKY + WEIGHT_CLASS_NORMAL * 3
+	max_total_storage = WEIGHT_CLASS_BULKY * 2
 	animated = FALSE
 	click_alt_open = FALSE
 
 /datum/storage/contractor_gun_case/New(atom/parent, max_slots, max_specific_storage, max_total_storage, rustle_sound, remove_rustle_sound)
 	. = ..()
-	set_holdable(list(/obj/item/gun/energy/gauss_rifle, /obj/item/stock_parts/power_store/gauss_nanites))
+	set_holdable(list(/obj/item/gun/energy/gauss_rifle, /obj/item/storage/pouch/contractor_cell_pouch))
 
 /datum/storage/contractor_gun_case/can_insert(obj/item/to_insert, mob/user, messages = TRUE, force = STORAGE_NOT_LOCKED)
 	. = ..()

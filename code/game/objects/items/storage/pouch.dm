@@ -22,6 +22,10 @@
 	RegisterSignal(atom_storage, COMSIG_STORAGE_STORED_ITEM, PROC_REF(on_storage_updated))
 	RegisterSignal(atom_storage, COMSIG_STORAGE_REMOVED_ITEM, PROC_REF(on_storage_updated))
 
+/obj/item/storage/pouch/contractor_cell_pouch/PopulateContents()
+	new /obj/item/stock_parts/power_store/gauss_nanites(src)
+	update_appearance()
+
 /obj/item/storage/pouch/contractor_cell_pouch/Destroy(force)
 	STOP_PROCESSING(SSobj, src)
 	if(atom_storage)
@@ -69,9 +73,10 @@
 		if(cell.charge >= cell.maxcharge)
 			play_ding = TRUE
 	if(play_ding)
-		playsound(src, 'sound/machines/ping.ogg', 30, TRUE, extrarange = -20)
+		playsound(src, 'sound/machines/ping.ogg', 30, TRUE, extrarange = -14)
 	if(!has_activity)
 		charging_cells = FALSE
+		update_appearance()
 		return PROCESS_KILL
 
 #undef CONTRACTOR_POUCH_RECHARGE_RATE
@@ -85,6 +90,8 @@
 /obj/item/storage/pouch/contractor_cell_pouch/proc/update_processing()
 	var/list/cells = list()
 	for(var/obj/item/stock_parts/power_store/cell in contents)
+		if(cell.charge >= cell.maxcharge) // Don't bother processing if our cells are full
+			continue
 		cells += cell
 	if(length(cells))
 		START_PROCESSING(SSobj, src)

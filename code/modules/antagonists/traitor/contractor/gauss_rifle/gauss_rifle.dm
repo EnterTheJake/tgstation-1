@@ -273,7 +273,6 @@
 
 /obj/item/ammo_box/magazine/gauss/emp
 	name = "Raijin Horizon Smart EMP Gauss Magazine"
-	color = COLOR_BLUE
 	icon_state = "emp"
 	ammo_type = /obj/item/ammo_casing/energy/gauss/emp
 	pattern_desc = "The projectile unleashes its energy payload as ionized radiation bursts upon impact with a solid surface, disrupting electronic devices and synthetic lifeforms. \n\
@@ -283,7 +282,6 @@
 
 /obj/item/ammo_box/magazine/gauss/gyro
 	name = "Raijin Horizon Gyre Gauss Magazine"
-	color = COLOR_YELLOW
 	icon_state = "gyre"
 	ammo_type = /obj/item/ammo_casing/energy/gauss/gyro
 	pattern_desc = "The projectile deliberately slows itself down to generate power through internal gyroscopes to charge a secondary power capacitor payload. \n\
@@ -294,7 +292,6 @@
 
 /obj/item/ammo_box/magazine/gauss/antimatter
 	name = "Raijin Horizon Antimatter Gauss Magazine"
-	color = COLOR_PURPLE
 	icon_state = "anti-matter"
 	ammo_type = /obj/item/ammo_casing/energy/gauss/antimatter
 	pattern_desc = "The projectile contains a translocated microscopic antimatter sliver into which the additional kinetic energy is diverted into upon impact with a surface. \n\
@@ -304,7 +301,6 @@
 
 /obj/item/ammo_box/magazine/gauss/thermite
 	name = "Raijin Horizon Red Sun Gauss Magazine"
-	color = COLOR_RED
 	icon_state = "I forgot but its like the hot one"
 	ammo_type = /obj/item/ammo_casing/energy/gauss/thermite
 	pattern_desc = "The projectile embeds itself into a surface before unleashing a rapid buildup of thermal energy through a microfusion cascade. \n\
