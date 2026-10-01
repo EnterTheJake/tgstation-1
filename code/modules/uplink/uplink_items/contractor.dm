@@ -26,6 +26,8 @@
 	category = /datum/uplink_category/contractor
 	purchasable_from = UPLINK_CONTRACTOR //they will be added to extra_purchasable
 
+// XANTODO: All these costs are 0 for debug purposes
+
 /datum/uplink_item/contractor/pinpointer
 	name = "Contractor Pinpointer"
 	desc = "A pinpointer that finds targets even without active suit sensors. \
@@ -34,7 +36,7 @@
 		Becomes permanently locked to the user that first activates it."
 	item = /obj/item/pinpointer/crew/contractor
 	limited_stock = 2
-	cost = 1
+	cost = 0//1
 
 /datum/uplink_item/contractor/extraction_kit
 	name = "Fulton Extraction Kit"
@@ -44,7 +46,7 @@
 		make sure they're not just going to run away though!"
 	item = /obj/item/storage/box/contractor/fulton_extraction
 	limited_stock = 1
-	cost = 1
+	cost = 0//1
 
 /datum/uplink_item/contractor/partner
 	name = "Contractor Reinforcement"
@@ -52,7 +54,7 @@
 		they are paid separately, and will not take a cut from your profits."
 	item = /obj/item/antag_spawner/loadout/contractor
 	limited_stock = 1
-	cost = 2
+	cost = 0//2
 
 // TODO make this go down by 2 per succesfull abduction with a minimum of 6
 /datum/uplink_item/contractor/drone
@@ -60,7 +62,7 @@
 	desc = "A cyborg chassis built for pickups rather than fights. It cloaks, hovers on ion thrusters, and can 		swallow a target whole to carry them to the dropoff. Arrives by pod, crewed by a fellow agent who 		answers to you."
 	item = /obj/item/antag_spawner/loadout/contractor/borg
 	limited_stock = 1
-	cost = 12
+	cost = 0//12
 
 /datum/uplink_item/contractor/gauss_rifle
 	name = "Raijin Horizon Gauss Rifle"
@@ -70,14 +72,14 @@
 		round is selected, at a steeper nanite cost."
 	item = /obj/item/storage/contractor_gun_case
 	limited_stock = 1
-	cost = 7
+	cost = 0//7
 
 /datum/uplink_item/contractor/gauss_nanites
 	name = "Raijin Horizon Nanite Cell"
 	desc = "A spare twenty-five nanite power store for the Raijin Horizon. Applying it to the rifle tops \
 		the magazine straight back up, no recharger or case required."
 	item = /obj/item/stock_parts/power_store/gauss_nanites
-	cost = 2
+	cost = 0//2
 
 /datum/uplink_item/contractor/gauss_emp
 	name = "Raijin Horizon Smart EMP Magazine"
@@ -86,7 +88,7 @@
 		down for minutes at a time. Empowered shots trade a light pulse for a heavy one."
 	item = /obj/item/ammo_box/magazine/gauss/emp
 	limited_stock = 1
-	cost = 1
+	cost = 0//1
 
 /datum/uplink_item/contractor/gauss_red_sun
 	name = "Raijin Horizon Red Sun Magazine"
@@ -95,16 +97,16 @@
 		flies faster, burns hotter, and is likelier to stay lodged in the wound."
 	item = /obj/item/ammo_box/magazine/gauss/thermite
 	limited_stock = 1
-	cost = 2
+	cost = 0//2
 
-/datum/uplink_item/contractor/gauss_antimatter
+/datum/uplink_item/contractor/gauss_darkmatter
 	name = "Raijin Horizon Dark Matter Magazine"
-	desc = "Teaches the Raijin's fabricator the antimatter pattern. A long channel roots you in place \
+	desc = "Teaches the Raijin's fabricator the darkmatter pattern. A long channel roots you in place \
 		before a translocated sliver destabilises along the whole firing line, dragging everything in it \
 		together and tearing through walls, armour and bystanders alike. Empties the magazine per shot."
-	item = /obj/item/ammo_box/magazine/gauss/antimatter
+	item = /obj/item/ammo_box/magazine/gauss/darkmatter
 	limited_stock = 1
-	cost = 5
+	cost = 0//5
 
 
 // The whole fucking category is TODO | XANTODO | JAKETODO | ANNETODO zzzzzzzzzzzz

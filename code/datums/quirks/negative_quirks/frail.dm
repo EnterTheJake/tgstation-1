@@ -10,7 +10,7 @@
 	hardcore_value = 4
 	mail_goodies = list(/obj/effect/spawner/random/medical/minor_healing)
 
-/// A temporary version of the Frail quirk's trait, inflicted by antimatter gauss rounds.
+/// A temporary version of the Frail quirk's trait, inflicted by darkmatter gauss rounds.
 /datum/status_effect/frail
 	id = "frail"
 	duration = 5 MINUTES
@@ -60,4 +60,4 @@
 
 /atom/movable/screen/alert/status_effect/frail/super
 	name = "Super Frail"
-	desc = "Your body is a fragile shell moments from disintegration. Another antimatter round will annihilate you outright."
+	desc = "Your body is a fragile shell moments from disintegration. Another darkmatter round will annihilate you outright."

@@ -592,3 +592,4 @@
 	new /obj/item/storage/box/syndicate/contract_kit(src)
 	new /obj/item/wirecutters(src)
 	new /obj/item/kitchen/fork(src)
+	new /obj/item/gun/magic/wand/resurrection/debug(src)

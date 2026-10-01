@@ -2,12 +2,17 @@
 /datum/component/dialogue_system/contractor_gun
 	dupe_mode = COMPONENT_DUPE_UNIQUE
 	signals_to_unregister = list(COMSIG_ITEM_PICKUP, COMSIG_ITEM_DROPPED, COMSIG_GAUSS_RIFLE_MODE_CHANGED, COMSIG_CONTRACTOR_KIDNAPPED)
+	/// Weakref to the mob currently holding the parent, used to register/unregister kidnap signals.
+	var/datum/weakref/current_holder_ref
+
+	//---- Gun has a lot of lines, means we got a lot of lists for different situations. Buncha snowflake
 	/// Job-title keyed kidnapped sound pools (e.g. JOB_HEAD_OF_PERSONNEL => list(...)).
 	var/list/kidnapped_sounds_by_rank
 	/// Ammo-casing-type keyed mode swap sound pools.
 	var/list/mode_swap_sounds_by_ammo_type
-	/// Weakref to the mob currently holding the parent, used to register/unregister kidnap signals.
-	var/datum/weakref/current_holder_ref
+	var/list/mode_unlocked
+	var/list/unathorized_user
+	var/list/unathorized_user_poisoned
 
 /datum/component/dialogue_system/contractor_gun/setup_sound_lists()
 	. = ..()
@@ -37,6 +42,7 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/on_pickup/on_pickup7_take5.ogg'),
 	)
 
+	// XANTODO: Make it so that there's specific checks to whoever gets kidnapped for stuff like antag and shit
 	kidnapped_sounds_by_rank = list(
 		JOB_CAPTAIN = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/captain/kidnapped_captain_1_take2.ogg'),
@@ -119,70 +125,84 @@
 		),
 	)
 
+	mode_unlocked = list(
+		/obj/item/ammo_casing/energy/gauss/emp = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_unlocked/mode_swap_emp_2_take1_rare.ogg'),
+		),
+		/obj/item/ammo_casing/energy/gauss/thermite = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_unlocked/thermal_mode_unlocked.ogg'),
+		),
+		/obj/item/ammo_casing/energy/gauss/darkmatter = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/mode_unlocked/dark_matter_installed.ogg'),
+		),
+	)
 
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-XANTODO: Have to convert this over to the new system
 	mode_swap_sounds_by_ammo_type = list(
 		/obj/item/ammo_casing/energy/gauss = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_1_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_4_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_3_take1_rare.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_4_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_5_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_6_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_7_take2.ogg'),
 		),
 		/obj/item/ammo_casing/energy/gauss/emp = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap_emp_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap_emp_2_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap_emp_3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap_emp_3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap_emp_4_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap_emp_4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_3_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_3_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_4_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_5_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_6_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_7_take1.ogg'),
 		),
 		/obj/item/ammo_casing/energy/gauss/gyro = list(
+//			giga_drillu_breakaaaaaaaaaa = list(
+//				new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre1_take2.ogg'),
+//				new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre2_take2.ogg'),
+//				new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre3_take2.ogg'),
+//			), XANTODO: These lines are meant to be rare I think
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_2_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_2_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_3_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_4_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_5_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_6_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_7_take1.ogg'),
 		),
-		/obj/item/ammo_casing/energy/gauss/antimatter = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_anti/mode_swap_anti_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_anti/mode_swap_anti_2_take4.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_anti/mode_swap_anti_4_take3.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_anti/mode_swap_anti_4_take4.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_anti/mode_swap_anti_4_take5.ogg'),
+		/obj/item/ammo_casing/energy/gauss/darkmatter = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark2_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark3_take3_rare.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark4_take2_rare.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark5_take2.ogg'),
 		),
 		/obj/item/ammo_casing/energy/gauss/thermite = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap_thermal_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap_thermal_2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap_thermal_3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap_thermal_3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap_thermal_4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_3_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_3_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_4_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_4_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_5_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_6_take1.ogg'),
 		),
 	)
 
-*/
+	unathorized_user = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user/unauthorized_user_1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user/unauthorized_user_2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user/unauthorized_user_3_take2.ogg'),
+	)
 
-
-
-
-
-
-
-
+	unathorized_user_poisoned = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user_poisoned/unauthorized_user_poison_1_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user_poisoned/unauthorized_user_poison_2_take_stitched1.ogg'),
+	)
 
 /* // XANTODO : Start implementing the lines
 
@@ -322,81 +342,11 @@ XANTODO: Have to convert this over to the new system
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire3_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire4_take1.ogg'),
 		),
-		mode_unlocked = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/mode_unlocked/dark_matter_installed.ogg'),
-		),
 		reluctant_concession = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/reluctant_concession/mode_swap_dark_allow_take2.ogg'),
 		),
 		steve_has_had_enough_of_your_bs = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/steve_has_had_enough_of_your_bs/darkmatter_stevesaysnope_take1.ogg'),
-		),
-		swap_to = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark2_take3.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark3_take3_rare.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark4_take2_rare.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/swap_to/mode_swap_dark5_take2.ogg'),
-		),
-	)
-
-	mode_swap_emp = list(
-		mode_swap = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_4_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_4_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_5_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_6_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_swap/mode_swap_emp_7_take1.ogg'),
-		),
-		mode_unlocked = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_emp/mode_unlocked/mode_swap_emp_2_take1_rare.ogg'),
-		),
-	)
-
-	mode_swap_gyre = list(
-		giga_drillu_breakaaaaaaaaaa = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre3_take2.ogg'),
-		),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_3_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_4_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_4_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_5_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_6_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_7_take1.ogg'),
-	)
-
-	mode_swap_normal = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_1_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_3_take1_rare.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_4_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_5_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_6_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_normal/mode_swap_normal_7_take2.ogg'),
-	)
-
-	mode_swap_thermal = list(
-		mode_swap = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_3_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_4_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_4_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_5_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_swap/mode_swap_thermal_6_take1.ogg'),
-		),
-		mode_unlocked = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_thermal/mode_unlocked/thermal_mode_unlocked.ogg'),
 		),
 	)
 
@@ -511,24 +461,6 @@ XANTODO: Have to convert this over to the new system
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_2_take2.ogg'),
 	)
 
-	unathorized_user = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user/unauthorized_user_1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user/unauthorized_user_2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user/unauthorized_user_3_take2.ogg'),
-	)
-
-	unathorized_user_poisoned = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user_poisoned/unauthorized_user_poison_1_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user_poisoned/unauthorized_user_poison_2_take_stitched1.ogg'),
-	)
-
-	user_died = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_3_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_4_take2.ogg'),
-	)
-
 	user_paid = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_2_take4.ogg'),
@@ -543,6 +475,13 @@ XANTODO: Have to convert this over to the new system
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_3_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_4_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_5_take1.ogg'),
+	)
+
+	user_died = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_4_take2.ogg'),
 	)
 
 */
@@ -573,10 +512,25 @@ XANTODO: Have to convert this over to the new system
 	. = ..()
 	apply_channel_to_sound_pool_list(assoc_to_values(kidnapped_sounds_by_rank))
 	apply_channel_to_sound_pool_list(assoc_to_values(mode_swap_sounds_by_ammo_type))
+	apply_channel_to_sound_pool_list(assoc_to_values(mode_unlocked))
+	apply_channel_to_sound_list(unathorized_user)
+	apply_channel_to_sound_list(unathorized_user_poisoned)
 
 /datum/component/dialogue_system/contractor_gun/RegisterWithParent()
 	. = ..()
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_MODE_CHANGED, PROC_REF(on_mode_changed))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_AMMOTYPE_UNLOCKED, PROC_REF(on_mode_unlocked))
+	RegisterSignal(parent, COMSIG_FIRING_PIN_AUTH_FAILED, PROC_REF(on_auth_failed))
+
+/// Helper proc, plays a sound from a given sound pool.
+/datum/component/dialogue_system/contractor_gun/proc/emit_sound_from_list(list/sound_list)
+	if(!length(sound_list))
+		return
+	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
+	sound_list -= sound
+	sound?.play(location = parent)
+	var/line_duration = rustg_sound_length(sound.sound_path)
+	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
 
 /datum/component/dialogue_system/contractor_gun/Destroy(force)
 	_unregister_holder()
@@ -592,14 +546,30 @@ XANTODO: Have to convert this over to the new system
 	_unregister_holder()
 	return ..()
 
+/datum/component/dialogue_system/contractor_gun/proc/on_mode_unlocked(datum/source, obj/item/ammo_casing/energy/casing_path)
+	SIGNAL_HANDLER
+	emit_sound_from_list(mode_unlocked[casing_path])
+
 /datum/component/dialogue_system/contractor_gun/on_pickup(obj/item/source, mob/taker)
 	_unregister_holder()
 	current_holder_ref = WEAKREF(taker)
 	RegisterSignal(taker, COMSIG_CONTRACTOR_KIDNAPPED, PROC_REF(on_kidnapped))
 	return ..()
 
+/datum/component/dialogue_system/contractor_gun/try_play_pickup_line(mob/living/taker)
+	if(!isliving(taker))
+		return
+	if(!taker?.is_holding(parent))
+		return
+	var/list/sound_pool = pickup_sounds
+	if(!locate(/obj/item/implant/explosive/contractor) in taker.implants) // No implant found?
+		sound_pool = unathorized_user
+	emit_sound_from_list(sound_pool)
+
 /datum/component/dialogue_system/contractor_gun/on_dropped(obj/item/source, mob/user)
 	_unregister_holder()
+	if(!locate(/obj/item/implant/explosive/contractor) in taker.implants) // No implant found?
+		return // Parent call plays a line "hey you forgot me"
 	return ..()
 
 /// Called when the contractor successfully kidnaps a target.
@@ -614,6 +584,11 @@ XANTODO: Have to convert this over to the new system
 /datum/component/dialogue_system/contractor_gun/proc/on_mode_changed(obj/item/gun/energy/gauss_rifle/source, mob/living/user, obj/item/ammo_casing/energy/new_mode)
 	SIGNAL_HANDLER
 
-	var/list/sounds_for_mode = mode_swap_sounds_by_ammo_type?[new_mode.type]
-	var/datum/dialogue_sound/sound = pick_available_sound(sounds_for_mode, user, parent)
+	var/list/sound_pool = mode_swap_sounds_by_ammo_type?[new_mode.type]
+	var/datum/dialogue_sound/sound = pick_available_sound(sound_pool, user, parent)
 	sound?.play(user, parent)
+
+/// Called when the firing pin fails to auth the shooter
+/datum/component/dialogue_system/contractor_gun/proc/on_auth_failed(datum/source, mob/user)
+	SIGNAL_HANDLER
+	emit_sound_from_list(unathorized_user_poisoned)

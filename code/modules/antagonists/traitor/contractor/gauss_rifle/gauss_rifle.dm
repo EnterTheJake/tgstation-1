@@ -21,6 +21,7 @@
 		/obj/item/ammo_casing/energy/gauss,
 		/obj/item/ammo_casing/energy/gauss/gyro,
 	)
+	pin = /obj/item/firing_pin/implant/cybersun
 	force = 11
 	fire_delay = 4
 	fire_sound = 'sound/items/weapons/thermalpistol.ogg'
@@ -29,7 +30,7 @@
 	var/atom/movable/screen/gauss_ammo_display/ammo_display
 	var/overheated = FALSE
 	var/overheat_duration = 8 SECONDS
-	var/antimatter_charging = FALSE
+	var/darkmatter_charging = FALSE
 
 /obj/item/gun/energy/gauss_rifle/Initialize(mapload)
 	. = ..()
@@ -121,12 +122,12 @@
 	return current_ammo?.select_name || "normal"
 
 /obj/item/gun/energy/gauss_rifle/proc/get_scope_icon_state(mode_prefix)
-	if(mode_prefix == "antimatter")
-		return antimatter_charging ? "antimatter_scope_hollow_shooting" : "antimatter_scope_hollow"
+	if(mode_prefix == "darkmatter")
+		return darkmatter_charging ? "darkmatter_scope_hollow_shooting" : "darkmatter_scope_hollow"
 	return "[mode_prefix]_scope_hollow"
 
-/obj/item/gun/energy/gauss_rifle/proc/set_antimatter_charging(charging)
-	antimatter_charging = charging
+/obj/item/gun/energy/gauss_rifle/proc/set_darkmatter_charging(charging)
+	darkmatter_charging = charging
 	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_SCOPE_REFRESH)
 
 /obj/item/gun/energy/gauss_rifle/proc/emit_ammo_signal()
@@ -146,6 +147,7 @@
 		if(installed.type == casing_path)
 			balloon_alert(user, "already installed!")
 			return FALSE
+	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_AMMOTYPE_UNLOCKED, casing_path)
 	var/obj/item/ammo_casing/energy/new_casing = new casing_path(src)
 	ammo_type += new_casing
 	balloon_alert(user, "[new_casing.select_name] installed")
@@ -290,11 +292,11 @@
 		In other words, it switches people off like a light switch for a moment, possibly rendering them completely helpless with enough generated power or repeat exposure. \n\
 		Do not overuse on targets intended to be taken in alive."
 
-/obj/item/ammo_box/magazine/gauss/antimatter
-	name = "Raijin Horizon Antimatter Gauss Magazine"
-	icon_state = "anti-matter"
-	ammo_type = /obj/item/ammo_casing/energy/gauss/antimatter
-	pattern_desc = "The projectile contains a translocated microscopic antimatter sliver into which the additional kinetic energy is diverted into upon impact with a surface. \n\
+/obj/item/ammo_box/magazine/gauss/darkmatter
+	name = "Raijin Horizon Darkmatter Gauss Magazine"
+	icon_state = "dark-matter"
+	ammo_type = /obj/item/ammo_casing/energy/gauss/darkmatter
+	pattern_desc = "The projectile contains a translocated microscopic darkmatter sliver into which the additional kinetic energy is diverted into upon impact with a surface. \n\
 		This destabilization creates what is effectively a localized eruption of energy, blossoming outwards in a flash of light. \n\
 		Against flesh or steel, the effect is often devastating and gruesome, leading this round to be viewed less as a weapon of war and more as a weapon of terror. \n\
 		Cybersun is not above using this round when the situation calls for either need."

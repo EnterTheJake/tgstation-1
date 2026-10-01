@@ -326,7 +326,6 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 	if(!storage)
 		return
 	storage.hide_contents(usr)
-	SEND_SIGNAL(storage.parent, COMSIG_CLOSEBUTTON_PRESSED, usr)
 	return TRUE
 
 /atom/movable/screen/drop

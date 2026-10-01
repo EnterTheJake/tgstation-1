@@ -82,6 +82,7 @@
 	return default_pin_auth
 
 /obj/item/firing_pin/proc/auth_fail(mob/living/user)
+	SEND_SIGNAL(gun, COMSIG_FIRING_PIN_AUTH_FAILED, user)
 	if(user)
 		balloon_alert(user, fail_message)
 	if(selfdestruct)
@@ -91,7 +92,6 @@
 		explosion(src, devastation_range = -1, light_impact_range = 2, flash_range = 3)
 		if(gun)
 			qdel(gun)
-
 
 /obj/item/firing_pin/magic
 	name = "magic crystal shard"
@@ -139,7 +139,17 @@
 	icon_state = "firing_pin_pindi"
 	req_implant = /obj/item/implant/weapons_auth
 
+/obj/item/firing_pin/implant/cybersun
+	name = "cybersun firing pin"
+	icon_state = "firing_pin_pindi"
+	req_implant = /obj/item/implant/explosive/contractor
+	pin_removable = FALSE
 
+/obj/item/firing_pin/implant/cybersun/auth_fail(mob/living/user)
+	if(!ishuman(user))
+		return ..()
+	user.reagents.add_reagent(/datum/reagent/toxin/spewium, 500)
+	return ..()
 
 // Honk pin, clown's joke item.
 // Can replace other pins. Replace a pin in cap's laser for extra fun!

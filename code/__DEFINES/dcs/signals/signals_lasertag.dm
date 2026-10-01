@@ -11,3 +11,6 @@
 #define LASERTAG_TEAM_RED "red"
 ///Blue Lasertag team
 #define LASERTAG_TEAM_BLUE "blue"
+
+/// Sent when the firing pin fails an auth
+#define COMSIG_FIRING_PIN_AUTH_FAILED "firing_pin_auth_failed"

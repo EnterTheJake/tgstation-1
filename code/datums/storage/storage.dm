@@ -1134,15 +1134,15 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if(to_hide.active_storage == src)
 		to_hide.active_storage = null
 
-	if(!LAZYLEN(is_using) && ismovable(real_location))
-		var/atom/movable/movable_loc = real_location
-		movable_loc.lose_active_storage(src)
-
 	if (!LAZYLEN(storage_interfaces) || isnull(storage_interfaces[to_hide]))
 		return TRUE
 
 	if(LAZYLEN(is_using))
 		is_using -= to_hide
+
+	if(!LAZYLEN(is_using) && ismovable(real_location))
+		var/atom/movable/movable_loc = real_location
+		movable_loc.lose_active_storage(src)
 
 	if(to_hide.client)
 		to_hide.client.screen -= storage_interfaces[to_hide].list_ui_elements()

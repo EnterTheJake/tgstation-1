@@ -1,8 +1,8 @@
-/obj/item/ammo_casing/energy/gauss/antimatter
-	name = "antimatter gauss round"
-	icon_state = "antimatter"
-	projectile_type = /obj/projectile/bullet/gauss/antimatter
-	select_name = "antimatter"
+/obj/item/ammo_casing/energy/gauss/darkmatter
+	name = "darkmatter gauss round"
+	icon_state = "darkmatter"
+	projectile_type = /obj/projectile/bullet/gauss/darkmatter
+	select_name = "darkmatter"
 	e_cost = GAUSS_NANITES(15)
 	// The channel stays long at any range. This round has no hip fired version.
 	charge_time = 4 SECONDS
@@ -11,45 +11,45 @@
 	scope_only = TRUE
 	charged_cooldown_time = 5 MINUTES
 	charge_alert = "charging..."
-	charge_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/antimatter_charging.ogg'
-	fire_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/antimatter_fired.ogg'
-	/// How long the rifle stays overheated after it translocates a sliver of antimatter.
-	var/antimatter_overheat = 15 SECONDS
+	charge_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_charging.ogg'
+	fire_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_fired.ogg'
+	/// How long the rifle stays overheated after it translocates a sliver of darkmatter.
+	var/darkmatter_overheat = 15 SECONDS
 	/// Purple recolor of the voltaic heart lightning overlay. The shooter wears it while charging.
 	var/mutable_appearance/charge_overlay
 
-/obj/item/ammo_casing/energy/gauss/antimatter/on_charge_started(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
+/obj/item/ammo_casing/energy/gauss/darkmatter/on_charge_started(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
 	charge_overlay = mutable_appearance('icons/effects/effects.dmi', "lightning")
 	charge_overlay.color = COLOR_PURPLE
 	user.add_overlay(charge_overlay)
-	rifle.set_antimatter_charging(TRUE)
+	rifle.set_darkmatter_charging(TRUE)
 
-/obj/item/ammo_casing/energy/gauss/antimatter/on_charge_ended(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
+/obj/item/ammo_casing/energy/gauss/darkmatter/on_charge_ended(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
 	if(!QDELETED(user))
 		user.cut_overlay(charge_overlay)
 	charge_overlay = null
 	if(!QDELETED(rifle))
-		rifle.set_antimatter_charging(FALSE)
+		rifle.set_darkmatter_charging(FALSE)
 
-/obj/item/ammo_casing/energy/gauss/antimatter/on_empowered_fire(mob/living/user)
+/obj/item/ammo_casing/energy/gauss/darkmatter/on_empowered_fire(mob/living/user)
 	. = ..()
 	var/obj/item/gun/energy/gauss_rifle/rifle = astype(loc)
 	if(isnull(rifle))
 		return
-	rifle.overheat(antimatter_overheat)
+	rifle.overheat(darkmatter_overheat)
 	// The translocation scavenges every nanite left in the magazine. It always leaves the magazine dry.
 	rifle.cell?.use(rifle.cell.charge, force = TRUE)
 
-/obj/projectile/bullet/gauss/antimatter
-	name = "antimatter gauss round"
-	icon_state = "antimatter_projectile"
+/obj/projectile/bullet/gauss/darkmatter
+	name = "darkmatter gauss round"
+	icon_state = "darkmatter_projectile"
 	damage = 0
 	armour_penetration = 100
 	speed = 3
 	range = 30
 	hitsound = null
 	hitscan = TRUE
-	tracer_type = /obj/effect/projectile/tracer/gauss_antimatter
+	tracer_type = /obj/effect/projectile/tracer/gauss_darkmatter
 	tracer_use_pixel_scale = TRUE
 	embed_type = null
 	projectile_phasing = PASSTABLE | PASSGLASS | PASSGRILLE | PASSCLOSEDTURF | PASSMACHINE | PASSSTRUCTURE | PASSDOORS
@@ -57,10 +57,10 @@
 	phasing_ignore_direct_target = TRUE
 
 /// The channel is the only firing mode of this round. Empowerment adds nothing.
-/obj/projectile/bullet/gauss/antimatter/empower(charge_ratio, atom/target)
+/obj/projectile/bullet/gauss/darkmatter/empower(charge_ratio, atom/target)
 	return
 
-/obj/projectile/bullet/gauss/antimatter/fire(fire_angle, atom/direct_target)
+/obj/projectile/bullet/gauss/darkmatter/fire(fire_angle, atom/direct_target)
 	var/turf/starting = get_turf(src)
 	if(isnum(fire_angle))
 		set_angle(fire_angle)
@@ -74,11 +74,11 @@
 	var/end_x = clamp(round(starting.x + sin(angle) * range), 1, world.maxx)
 	var/end_y = clamp(round(starting.y + cos(angle) * range), 1, world.maxy)
 	var/turf/end_turf = locate(end_x, end_y, starting.z)
-	new /datum/antimatter_discharge(get_line(starting, end_turf), firer, angle2dir_cardinal(angle))
+	new /datum/darkmatter_discharge(get_line(starting, end_turf), firer, angle2dir_cardinal(angle))
 
 	return ..()
 
-/datum/antimatter_discharge
+/datum/darkmatter_discharge
 	var/list/turf/beam_turfs
 	var/datum/weakref/firer_ref
 	var/beam_dir
@@ -91,7 +91,7 @@
 	/// How long the narrowed vision lasts after the beam catches a victim.
 	var/vision_narrow_duration = 15 SECONDS
 	var/pull_radius = 1
-	/// Delay from firing to discharge, synced to the frame the gauss_antimatter tracer's effect lands.
+	/// Delay from firing to discharge, synced to the frame the gauss_darkmatter tracer's effect lands.
 	var/discharge_delay = 0.8 SECONDS
 	var/beam_lifetime = 2 SECONDS
 	var/pulse_interval = 0.3 SECONDS
@@ -101,7 +101,7 @@
 	var/list/struck_victims
 	var/list/knockback_cooldowns
 
-/datum/antimatter_discharge/New(list/turf/path, mob/firer, dir)
+/datum/darkmatter_discharge/New(list/turf/path, mob/firer, dir)
 	beam_turfs = path
 	firer_ref = WEAKREF(firer)
 	beam_dir = dir
@@ -110,7 +110,7 @@
 	knockback_cooldowns = list()
 	addtimer(CALLBACK(src, PROC_REF(discharge)), discharge_delay, TIMER_CLIENT_TIME)
 
-/datum/antimatter_discharge/proc/discharge()
+/datum/darkmatter_discharge/proc/discharge()
 	discharging = TRUE
 	var/turf/origin = length(beam_turfs) ? beam_turfs[1] : null
 	var/turf/endpoint = length(beam_turfs) ? beam_turfs[length(beam_turfs)] : null
@@ -121,14 +121,14 @@
 		for(var/mob/living/bystander in view(1, beam_turf))
 			bystander.flash_act(1)
 	if(endpoint)
-		new /obj/effect/temp_visual/antimatter_anomaly(endpoint)
+		new /obj/effect/temp_visual/darkmatter_anomaly(endpoint)
 		new /obj/effect/temp_visual/circle_wave/gravity(endpoint)
 		playsound(endpoint, 'sound/effects/magic/cosmic_energy.ogg', 60, TRUE)
 	pulse_beam()
 	addtimer(CALLBACK(src, PROC_REF(end_discharge)), beam_lifetime)
 
 /// Rings the beam with gravity motes on the tiles beside it, each drifting inward onto the beam.
-/datum/antimatter_discharge/proc/spawn_pull_field()
+/datum/darkmatter_discharge/proc/spawn_pull_field()
 	var/list/turf/zone = list()
 	for(var/turf/beam_turf as anything in beam_turfs)
 		for(var/step_dir in GLOB.cardinals)
@@ -139,15 +139,15 @@
 		var/turf/sink = get_closest_beam_turf(zone_turf)
 		if(!sink || sink == zone_turf)
 			continue
-		new /obj/effect/temp_visual/antimatter_field(zone_turf, dir_to_gravity(get_dir(zone_turf, sink)))
+		new /obj/effect/temp_visual/darkmatter_field(zone_turf, dir_to_gravity(get_dir(zone_turf, sink)))
 
-/datum/antimatter_discharge/proc/dir_to_gravity(dir)
+/datum/darkmatter_discharge/proc/dir_to_gravity(dir)
 	// Particle x runs opposite screen x, so east/west are flipped here.
 	var/dx = (dir & EAST) ? -1.5 : ((dir & WEST) ? 1.5 : 0)
 	var/dy = (dir & NORTH) ? 1.5 : ((dir & SOUTH) ? -1.5 : 0)
 	return list(dx, dy)
 
-/datum/antimatter_discharge/proc/pulse_beam()
+/datum/darkmatter_discharge/proc/pulse_beam()
 	if(!discharging)
 		return
 	var/mob/firer = firer_ref?.resolve()
@@ -167,7 +167,7 @@
 				process_victim(victim, firer)
 	addtimer(CALLBACK(src, PROC_REF(pulse_beam)), pulse_interval)
 
-/datum/antimatter_discharge/proc/get_closest_beam_turf(atom/to_atom)
+/datum/darkmatter_discharge/proc/get_closest_beam_turf(atom/to_atom)
 	var/turf/closest
 	var/closest_dist = INFINITY
 	for(var/turf/beam_turf as anything in beam_turfs)
@@ -177,7 +177,7 @@
 			closest = beam_turf
 	return closest
 
-/datum/antimatter_discharge/proc/process_victim(mob/living/victim, mob/firer)
+/datum/darkmatter_discharge/proc/process_victim(mob/living/victim, mob/firer)
 	if(!(victim in struck_victims))
 		struck_victims += victim
 		strike_victim(victim)
@@ -191,11 +191,11 @@
 	var/throw_dir = (end_turf && get_turf(victim) != end_turf) ? get_dir(victim, end_turf) : beam_dir
 	victim.safe_throw_at(get_edge_target_turf(victim, throw_dir), length(beam_turfs), 5, firer, force = MOVE_FORCE_EXTREMELY_STRONG)
 
-/datum/antimatter_discharge/proc/strike_victim(mob/living/victim)
+/datum/darkmatter_discharge/proc/strike_victim(mob/living/victim)
 	if(QDELETED(victim) || victim.stat == DEAD)
 		return
 	if(victim.has_status_effect(/datum/status_effect/frail/super))
-		victim.investigate_log("was gibbed by an antimatter gauss round while Super Frail.", INVESTIGATE_DEATHS)
+		victim.investigate_log("was gibbed by an darkmatter gauss round while Super Frail.", INVESTIGATE_DEATHS)
 		victim.gib()
 		return
 	var/dealt_damage = iscarbon(victim) ? damage : damage * inorganic_damage_mult
@@ -216,15 +216,15 @@
  * Glasses cannot correct it, because the flash damages the eyes directly. The effect uses a grouped
  * status rather than a timed one, so a timer must remove it.
  */
-/datum/antimatter_discharge/proc/narrow_vision(mob/living/victim)
-	victim.assign_nearsightedness(GAUSS_ANTIMATTER_TRAIT, 2, FALSE)
-	addtimer(CALLBACK(victim, TYPE_PROC_REF(/mob/living, remove_status_effect), /datum/status_effect/grouped/nearsighted, GAUSS_ANTIMATTER_TRAIT), vision_narrow_duration)
+/datum/darkmatter_discharge/proc/narrow_vision(mob/living/victim)
+	victim.assign_nearsightedness(GAUSS_DARKMATTER_TRAIT, 2, FALSE)
+	addtimer(CALLBACK(victim, TYPE_PROC_REF(/mob/living, remove_status_effect), /datum/status_effect/grouped/nearsighted, GAUSS_DARKMATTER_TRAIT), vision_narrow_duration)
 
-/datum/antimatter_discharge/proc/end_discharge()
+/datum/darkmatter_discharge/proc/end_discharge()
 	discharging = FALSE
 	qdel(src)
 
-/datum/antimatter_discharge/Destroy()
+/datum/darkmatter_discharge/Destroy()
 	beam_turfs = null
 	struck_victims = null
 	knockback_cooldowns = null
@@ -232,25 +232,25 @@
 	return ..()
 
 /// One pull-zone tile: emits a single burst of gravity motes that stream toward the beam.
-/obj/effect/temp_visual/antimatter_field
+/obj/effect/temp_visual/darkmatter_field
 	icon = null
 	icon_state = null
 	duration = 1.5 SECONDS
 	randomdir = FALSE
 
-/obj/effect/temp_visual/antimatter_field/Initialize(mapload, list/pull_gravity)
+/obj/effect/temp_visual/darkmatter_field/Initialize(mapload, list/pull_gravity)
 	. = ..()
-	particles = new /particles/antimatter_pull
+	particles = new /particles/darkmatter_pull
 	if(pull_gravity)
 		particles.gravity = pull_gravity
 	addtimer(CALLBACK(src, PROC_REF(stop_spawning)), 0.2 SECONDS)
 
-/obj/effect/temp_visual/antimatter_field/proc/stop_spawning()
+/obj/effect/temp_visual/darkmatter_field/proc/stop_spawning()
 	if(particles)
 		particles.spawning = 0
 
 /// The beam's terminus, wearing the gravitational anomaly's wibbly warp.
-/obj/effect/temp_visual/antimatter_anomaly
+/obj/effect/temp_visual/darkmatter_anomaly
 	icon = 'icons/effects/effects.dmi'
 	icon_state = "shield2"
 	duration = 2 SECONDS
@@ -258,11 +258,11 @@
 	color = COLOR_PURPLE
 	randomdir = FALSE
 
-/obj/effect/temp_visual/antimatter_anomaly/Initialize(mapload)
+/obj/effect/temp_visual/darkmatter_anomaly/Initialize(mapload)
 	. = ..()
 	apply_wibbly_filters(src)
 
-/particles/antimatter_pull
+/particles/darkmatter_pull
 	icon = 'icons/effects/particles/generic.dmi'
 	icon_state = "cross"
 	width = 64
