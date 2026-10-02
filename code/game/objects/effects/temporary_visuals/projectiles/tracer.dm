@@ -133,13 +133,13 @@
 	return ..()
 
 
-// GAUSS ANTIMATTER
-/obj/effect/projectile/tracer/gauss_antimatter
+// GAUSS DARKMATTER
+/obj/effect/projectile/tracer/gauss_darkmatter
 	parent_type = /obj/effect/projectile/tracer/segmented
-	icon = 'icons/obj/weapons/guns/antimatter_beam.dmi'
-	mid_icon_state = "antimatter-mid"
-	start_icon_state = "antimatter-start"
-	end_icon_state = "antimatter-end"
+	icon = 'icons/obj/weapons/guns/darkmatter_beam.dmi'
+	mid_icon_state = "darkmatter-mid"
+	start_icon_state = "darkmatter-start"
+	end_icon_state = "darkmatter-end"
 	delete_in = 2.1 SECONDS
 
 // BEAM RIFLE

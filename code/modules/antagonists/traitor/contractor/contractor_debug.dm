@@ -9,10 +9,10 @@
 		/obj/item/ammo_casing/energy/gauss/gyro,
 		/obj/item/ammo_casing/energy/gauss/emp,
 		/obj/item/ammo_casing/energy/gauss/thermite,
-		/obj/item/ammo_casing/energy/gauss/antimatter,
+		/obj/item/ammo_casing/energy/gauss/darkmatter,
 	)
 
-/// Refills the magazine after every shot, including the antimatter round that drains it.
+/// Refills the magazine after every shot, including the darkmatter round that drains it.
 /obj/item/gun/energy/gauss_rifle/debug/handle_chamber()
 	. = ..()
 	if(isnull(cell))

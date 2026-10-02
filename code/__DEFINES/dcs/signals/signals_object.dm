@@ -123,6 +123,10 @@
 
 ///from base of obj/item/equipped(): (mob/equipper, slot)
 #define COMSIG_ITEM_EQUIPPED "item_equip"
+/// Sent when a mob tries to quick equip an item to the best possible slot
+#define COMSIG_BEST_SLOT_EQUIP "item_best_slot_equip"
+	/// If the equip has been handled by the signal
+	#define BEST_SLOT_EQUIP_HANDLED (1<<0)
 ///From base of obj/item/on_equipped() (mob/equipped, slot)
 #define COMSIG_ITEM_POST_EQUIPPED "item_post_equipped"
 	/// This will make the on_equipped proc return FALSE.

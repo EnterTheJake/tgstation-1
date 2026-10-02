@@ -13,6 +13,7 @@
 	righthand_file = 'icons/mob/inhands/equipment/toolbox_righthand.dmi'
 	w_class = WEIGHT_CLASS_NORMAL
 	storage_type = /datum/storage/contractor_gun_case
+	slot_flags = ITEM_SLOT_SUITSTORE
 	/// Whether the case lid is currently open.
 	var/case_opened = FALSE
 	/// Whether the case has been unlocked from its default inert mode.
@@ -26,12 +27,8 @@
 	offset.Translate(-8, 0)
 	transform = offset
 	register_context()
-	// We drive open/close through right click ourselves, so drop the storage's own right-click-to-open
-	// handler that would otherwise fire a stray "closed!" balloon while the case is locked.
-	atom_storage.UnregisterSignal(src, COMSIG_ATOM_ATTACK_HAND_SECONDARY)
 	RegisterSignal(atom_storage, COMSIG_STORAGE_STORED_ITEM, PROC_REF(on_storage_updated))
 	RegisterSignal(atom_storage, COMSIG_STORAGE_REMOVED_ITEM, PROC_REF(on_storage_updated))
-	RegisterSignal(src, COMSIG_CLOSEBUTTON_PRESSED, PROC_REF(on_storage_hidden))
 	RegisterSignal(src, COMSIG_ITEM_PRE_STORAGE_INSERTION, PROC_REF(before_storage_attempt))
 	atom_storage.set_locked(STORAGE_FULLY_LOCKED)
 	update_processing()
@@ -47,80 +44,28 @@
 		UnregisterSignal(atom_storage, list(COMSIG_STORAGE_STORED_ITEM, COMSIG_STORAGE_REMOVED_ITEM))
 	return ..()
 
+/obj/item/storage/contractor_gun_case/become_active_storage(datum/storage/source)
+	. = ..()
+	case_opened = TRUE
+	update_appearance()
+
+/obj/item/storage/contractor_gun_case/lose_active_storage(datum/storage/source)
+	. = ..()
+	case_opened = FALSE
+	update_appearance()
+
 /obj/item/storage/contractor_gun_case/PopulateContents()
 	new /obj/item/gun/energy/gauss_rifle(src)
-	new /obj/item/stock_parts/power_store/gauss_nanites(src)
 	new /obj/item/storage/pouch/contractor_cell_pouch(src)
-
-/obj/item/storage/contractor_gun_case/attack_hand(mob/user, list/modifiers)
-	if(loc.atom_storage)
-		return ..()
-	if(interaction_locked(user))
-		return TRUE
-
-	// Open case: left click browses its contents.
-	if(case_opened)
-		atom_storage.open_storage(user)
-		return TRUE
-
-	// Closed case: left click picks it up.
-	if(loc != user && user.can_perform_action(src, FORBID_TELEKINESIS_REACH | ALLOW_RESTING))
-		user.put_in_hands(src)
-	return TRUE
-
-/obj/item/storage/contractor_gun_case/attack_self(mob/user, modifiers)
-	if(interaction_locked(user))
-		return TRUE
-
-	// Already in hand, so left click can only browse the contents of an open case.
-	if(case_opened)
-		atom_storage.open_storage(user)
-	return TRUE
-
-/obj/item/storage/contractor_gun_case/attack_hand_secondary(mob/user, list/modifiers)
-	. = ..()
-	if(. == SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN)
-		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
-
-	if(interaction_locked(user))
-		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
-
-	toggle_case(user)
-	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
-
-/obj/item/storage/contractor_gun_case/attack_self_secondary(mob/user, modifiers)
-	. = ..()
-	if(.)
-		return .
-
-	if(interaction_locked(user))
-		return TRUE
-
-	toggle_case(user)
-	return TRUE
-
-/// Runs the case through its unlock -> open -> close cycle, playing the unlock animation on the first step. Bound to right click.
-/obj/item/storage/contractor_gun_case/proc/toggle_case(mob/user)
-	if(!case_unlocked)
-		unlock_case()
-		return
-	if(!case_opened)
-		open_case(user)
-		return
-	close_case()
 
 /obj/item/storage/contractor_gun_case/add_context(atom/source, list/context, obj/item/held_item, mob/user)
 	. = ..()
-	context[SCREENTIP_CONTEXT_LMB] = case_opened ? "Open inventory" : "Pick up"
-	context[SCREENTIP_CONTEXT_RMB] = case_opened ? "Close case" : (case_unlocked ? "Open case" : "Unlock case")
 	context[SCREENTIP_CONTEXT_ALT_LMB] = case_unlocked ? "Lock case" : "Unlock case"
 	return CONTEXTUAL_SCREENTIP_SET
 
 /obj/item/storage/contractor_gun_case/click_alt(mob/user)
 	if(interaction_locked(user))
 		return CLICK_ACTION_BLOCKING
-	if(case_opened)
-		return
 	if(case_unlocked)
 		lock_case()
 		balloon_alert(user, "case locked")
@@ -138,11 +83,21 @@
 
 	icon_state = case_unlocked ? "case_idle" : "case_off"
 
+/// Unlocks the case, allowing access
 /obj/item/storage/contractor_gun_case/proc/unlock_case()
 	case_unlocked = TRUE
+	atom_storage.set_locked(STORAGE_NOT_LOCKED)
 	w_class = CONTRACTOR_CASE_OPEN_WEIGHT_CLASS
 	COOLDOWN_START(src, opening_cooldown, CONTRACTOR_CASE_OPENING_DELAY)
 	flick("case_opening", src)
+	update_appearance()
+
+/// Locks the case, preventing access
+/obj/item/storage/contractor_gun_case/proc/lock_case()
+	case_opened = FALSE
+	case_unlocked = FALSE
+	w_class = initial(w_class)
+	atom_storage.set_locked(STORAGE_FULLY_LOCKED)
 	update_appearance()
 
 /obj/item/storage/contractor_gun_case/proc/interaction_locked(mob/user)
@@ -151,13 +106,6 @@
 	if(user)
 		balloon_alert(user, "wait...")
 	return TRUE
-
-/obj/item/storage/contractor_gun_case/proc/lock_case()
-	case_unlocked = FALSE
-	case_opened = FALSE
-	w_class = initial(w_class)
-	atom_storage.set_locked(STORAGE_FULLY_LOCKED)
-	update_appearance()
 
 /obj/item/storage/contractor_gun_case/process(seconds_per_tick)
 	var/list/cells = get_charging_cells()
@@ -219,18 +167,9 @@
 	update_processing()
 	update_appearance()
 
-/// Closes the case when you close the storage view
-/obj/item/storage/contractor_gun_case/proc/on_storage_hidden(datum/source, mob/closer)
-	SIGNAL_HANDLER
-	var/mob/living/guy_who_has_the_box = get(loc, /mob)
-	if(guy_who_has_the_box != closer) // Ghost grief prevention
-		return
-	close_case()
-
 /// Locks and closes the case, so that it's less jank when trying to store the suitcase in your backpack
 /obj/item/storage/contractor_gun_case/proc/before_storage_attempt()
 	SIGNAL_HANDLER
-	close_case()
 	lock_case()
 
 /obj/item/storage/contractor_gun_case/proc/update_processing()
@@ -239,16 +178,29 @@
 		return
 	STOP_PROCESSING(SSobj, src)
 
+/obj/item/storage/contractor_gun_case/equipped(mob/user, slot, initial)
+	. = ..()
+	UnregisterSignal(user, COMSIG_BEST_SLOT_EQUIP)
+	if(slot & ITEM_SLOT_SUITSTORE)
+		RegisterSignal(user, COMSIG_BEST_SLOT_EQUIP, PROC_REF(on_try_quick_equip))
+
+/obj/item/storage/contractor_gun_case/proc/on_try_quick_equip(mob/equipper, obj/item/equipping_item)
+	SIGNAL_HANDLER
+	if(!istype(equipping_item, /obj/item/gun/energy/gauss_rifle) && !istype(equipping_item, /obj/item/storage/pouch/contractor_cell_pouch))
+		return
+	if(atom_storage.attempt_insert(equipping_item, equipper))
+		return BEST_SLOT_EQUIP_HANDLED
+
 /datum/storage/contractor_gun_case
-	max_slots = 5
+	max_slots = 2
 	max_specific_storage = WEIGHT_CLASS_BULKY
-	max_total_storage = WEIGHT_CLASS_BULKY + WEIGHT_CLASS_NORMAL * 3
+	max_total_storage = WEIGHT_CLASS_BULKY * 2
 	animated = FALSE
 	click_alt_open = FALSE
 
 /datum/storage/contractor_gun_case/New(atom/parent, max_slots, max_specific_storage, max_total_storage, rustle_sound, remove_rustle_sound)
 	. = ..()
-	set_holdable(list(/obj/item/gun/energy/gauss_rifle, /obj/item/stock_parts/power_store/gauss_nanites))
+	set_holdable(list(/obj/item/gun/energy/gauss_rifle, /obj/item/storage/pouch/contractor_cell_pouch))
 
 /datum/storage/contractor_gun_case/can_insert(obj/item/to_insert, mob/user, messages = TRUE, force = STORAGE_NOT_LOCKED)
 	. = ..()

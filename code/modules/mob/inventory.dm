@@ -567,14 +567,14 @@
 /**
  * Auto equip the passed in item the appropriate slot based on equipment priority
  *
- * puts the item "W" into an appropriate slot in a human's inventory
+ * puts the item "item_to_equip" into an appropriate slot in a human's inventory
  *
  * returns 0 if it cannot, 1 if successful
  */
-/mob/proc/equip_to_appropriate_slot(obj/item/W, qdel_on_fail = FALSE, indirect_action = FALSE)
-	if(!istype(W))
+/mob/proc/equip_to_appropriate_slot(obj/item/item_to_equip, qdel_on_fail = FALSE, indirect_action = FALSE)
+	if(!istype(item_to_equip))
 		return FALSE
-	var/slot_priority = W.slot_equipment_priority
+	var/slot_priority = item_to_equip.slot_equipment_priority
 
 	if(!slot_priority)
 		slot_priority = list( \
@@ -589,15 +589,17 @@
 		)
 
 	for(var/slot in slot_priority)
-		if(equip_to_slot_if_possible(W, slot, disable_warning = TRUE, redraw_mob = TRUE, indirect_action = indirect_action))
+		if(equip_to_slot_if_possible(item_to_equip, slot, disable_warning = TRUE, redraw_mob = TRUE, indirect_action = indirect_action))
 			return TRUE
 
 	if(qdel_on_fail)
-		qdel(W)
+		qdel(item_to_equip)
 	return FALSE
 
 /// Tries to equip an item, store it in open storage, or in next best storage
 /obj/item/proc/equip_to_best_slot(mob/user)
+	if(SEND_SIGNAL(user, COMSIG_BEST_SLOT_EQUIP, src) & BEST_SLOT_EQUIP_HANDLED)
+		return TRUE
 	if(user.equip_to_appropriate_slot(src))
 		user.update_held_items()
 		return TRUE
@@ -651,12 +653,12 @@ GAME_VERB_HIDDEN(/mob, quick_equip, "quick-equip")
 
 ///proc extender of [/mob/verb/quick_equip] used to make the verb queuable if the server is overloaded
 /mob/proc/execute_quick_equip()
-	var/obj/item/I = get_active_held_item()
-	if(!I)
+	var/obj/item/held_item = get_active_held_item()
+	if(!held_item)
 		to_chat(src, span_warning("You are not holding anything to equip!"))
 		return
-	if(!QDELETED(I))
-		I.equip_to_best_slot(src)
+	if(!QDELETED(held_item))
+		held_item.equip_to_best_slot(src)
 
 //used in code for items usable by both carbon and drones, this gives the proper back slot for each mob.(defibrillator, backpack watertank, ...)
 /mob/proc/getBackSlot()
