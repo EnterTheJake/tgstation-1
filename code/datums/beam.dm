@@ -434,8 +434,8 @@
 	override_target_pixel_y = null,
 	beam_layer = ABOVE_ALL_MOB_LAYER,
 	alpha = 255,
-	icon_state_variants = 1
-	random_icon_state = TRUE
+	icon_state_variants = 1,
+	random_icon_state = TRUE,
 	)
 	. = ..()
 	src.icon_state_variants = icon_state_variants

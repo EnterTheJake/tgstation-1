@@ -95,6 +95,7 @@
 	if(overheated)
 		return
 	overheated = TRUE
+	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_OVERHEATED)
 	do_sparks(3, FALSE, src)
 	playsound(src, 'sound/effects/wounds/sizzle1.ogg', 50, TRUE)
 	if(!(SEND_SIGNAL(src, COMSIG_PARTICLE_DRIFT_RESUME) & PARTICLE_DRIFT_RESUMED))

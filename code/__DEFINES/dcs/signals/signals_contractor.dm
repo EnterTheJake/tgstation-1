@@ -15,6 +15,9 @@
 /// Sent from /obj/item/gun/energy/gauss_rifle/unlock_ammo_type when a new ammo type is installed
 #define COMSIG_GAUSS_RIFLE_AMMOTYPE_UNLOCKED "gauss_rifle_ammotype_unlocked"
 
+/// Called when the gauss rifle overheats
+#define COMSIG_GAUSS_RIFLE_OVERHEATED "gauss_rifle_overheated"
+
 //---- Contractor Bomb signals
 /// Called when a wire on the contractor bomb is cut
 #define COMSIG_CONTRACTOR_BOMB_WIRE_CUT "contractor_bomb_wire_cut"

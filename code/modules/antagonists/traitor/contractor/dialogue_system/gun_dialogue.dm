@@ -13,6 +13,8 @@
 	var/list/mode_unlocked
 	var/list/unathorized_user
 	var/list/unathorized_user_poisoned
+	var/list/deconstruction
+	var/list/overheated
 
 /datum/component/dialogue_system/contractor_gun/setup_sound_lists()
 	. = ..()
@@ -165,7 +167,7 @@
 //				new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre1_take2.ogg'),
 //				new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre2_take2.ogg'),
 //				new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/giga_drillu_breakaaaaaaaaaa/charge_up_gyre3_take2.ogg'),
-//			), XANTODO: These lines are meant to be rare I think
+//			), // XANTODO: Sounds played when empowered shot
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_2_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_gyre/mode_swap_gyre_3_take2.ogg'),
@@ -204,67 +206,77 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/unathorized_user_poisoned/unauthorized_user_poison_2_take_stitched1.ogg'),
 	)
 
-/* // XANTODO : Start implementing the lines
+	deconstruction = list( // Gun put through the deconstructor
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/oblivion/oblivion_2_take1_destroyed.ogg'),
+	)
 
+	overheated = list( // Plays line when the gun overheats
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown2_take2.ogg'),
+	)
 
-	activated_bomb_implant = list(
+// XANTODO : Start implementing the lines
+
+/*
+	activated_bomb_implant = list( // Suicide self-destruct implant
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_3_take1.ogg'),
 	)
 
-	activation = list(
+	activation = list( // First time holding the gun, presumably you took it out of the box into your hands
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_2_take3.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_3_take3.ogg'),
 	)
 
-	apocalypse = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_ash_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blade_blocks_near_gun_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blade_take4.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blob_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_cosmic_stargazer_beam_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_cosmic_stargazer_beam_take4.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_cosmic_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_darkmatter_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_flesh_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_flesh_worm_spotted.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_lock_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_moon_take5.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_narsie_ritual_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_narsie_ritual_user_is_cultist_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_narsie_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_nuclear_detonation_nanotrasen_rare_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_resonance_cascade_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_revolution_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_rust_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_singularity_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_tesla_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_void_take1.ogg'),
+	apocalypse = list( // Heretic stuff
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_ash_take3.ogg'), // Ash ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blade_blocks_near_gun_take2.ogg'), // Bullet blocked by blade heretic knife
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blade_take4.ogg'), // Blade Ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blob_take1.ogg'), // Blob reaches critical mass
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_cosmic_stargazer_beam_take1.ogg'), // Witnessing a gazer laser
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_cosmic_stargazer_beam_take4.ogg'), // Witnessing a gazer laser
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_cosmic_take2.ogg'), // Cosmic ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_darkmatter_take1.ogg'), // Dark singularity announcement
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_flesh_take2.ogg'), // Flesh ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_flesh_worm_spotted.ogg'), // First time you see the worm
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_lock_take1.ogg'), // Lock ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_moon_take5.ogg'), // Moon ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_narsie_ritual_take1.ogg'), // Cultists began the ritual
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_narsie_ritual_user_is_cultist_take1.ogg'), // Began the ritual as a cultist
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_narsie_take1.ogg'), // Narsie successfully summoned
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_nuclear_detonation_nanotrasen_rare_take1.ogg'), // Any Nuke going off
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_resonance_cascade_take1.ogg'), // Resonance cascade
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_revolution_take2.ogg'), // Revs winning
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_rust_take1.ogg'), // Rust ascension
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_singularity_take1.ogg'), // Singulo spawned
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_tesla_take1.ogg'), // Tesla spawned
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_void_take1.ogg'), // Void ascension
 	)
 
-	bomb_activation = list(
+	bomb_activation = list( // Activate the bomb via the UI
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_activation/bomb_activation_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_activation/bomb_activation_2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_activation/bomb_activation_3_take2.ogg'),
 	)
 
-	bomb_defused = list(
+	bomb_defused = list( // Bomb was disarmed (Not from the UI). NOTE: The gun doesnt give a fuck if the contractor disables the bomb
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_defused/bomb_defused_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_defused/bomb_defused_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_defused/bomb_defused_knows_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_defused/bomb_defused_knows_take1.ogg'), // SPEFICIALLY Gun has met the bomb
 	)
 
-	bomb_detonated = list(
+	bomb_detonated = list( // Bomb went off
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_3_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows1_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows2_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows3_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows1_take3.ogg'), // Gun met bomb
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows2_take3.ogg'), // Gun met bomb
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows3_take3.ogg'), // Gun met bomb
 	)
 
-	box_take_in_out = list(
+	box_take_in_out = list( // Taking the gun out of the suitcase / Putting it into the suitcase
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_3_take3.ogg'),
@@ -273,50 +285,50 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_3_take2.ogg'),
 	)
 
-	contractor_borg = list(
-		greetings = list(
+	contractor_borg = list( // Cubie lines
+		greetings = list( // Borg summoned
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/greetings/cube_greet1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/greetings/cube_greet2_take3.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/greetings/cube_greet3_take1.ogg'),
 		),
-		vore_contractor = list(
+		vore_contractor = list( // Borg ate the contractor
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_contractor/cube_carries_contractor1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_contractor/cube_carries_contractor2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_contractor/cube_carries_contractor3_take2.ogg'),
 		),
-		vore_crew = list(
+		vore_crew = list( // Borg ate non-contractor
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_crew/cube_carries_victim1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_crew/cube_carries_victim2_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_crew/cube_carries_victim3_take1.ogg'),
 		),
-		vore_critical_contractor = list(
+		vore_critical_contractor = list( // Cubie ate the contractor who's in crit
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_critical_contractor/cube_carries_contractor_dying1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_critical_contractor/cube_carries_contractor_dying2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_critical_contractor/cube_carries_contractor_dying3_take1.ogg'),
 		),
 	)
 
-	empty_mag = list(
+	empty_mag = list( // Every time you try to shoot with an empty magazines, plays the lines in order. Small cooldown. Resets when you reload
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_3_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_4_take2.ogg'),
 	)
 
-	fps_arrived = list(
+	fps_arrived = list( // IRS pirates have arrived. Not yet implemented so for now XANTODO ARTURTODO zzzzzzzzzzz
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_3_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_4_take1.ogg'),
 	)
 
-	gun_smack = list(
+	gun_smack = list( // Melee-ing someone with the gun
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_2_take3.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_3_take1.ogg'),
 	)
 
-	idle_on_floor = list(
+	idle_on_floor = list( // Gun starts coping when you leave it alone. Follows order, resets when picked up.
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_3_take3.ogg'),
@@ -325,83 +337,96 @@
 	)
 
 	mode_swap_dark_matter = list(
-		charging = list(
+		charging = list( // Start winding up the shot
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/charging/charge_up1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/charging/charge_up2_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/charging/charge_up3_take3.ogg'),
 		),
-		dark_matter_singulo_conjured = list(
+		dark_matter_singulo_conjured = list( // When you shoot a singulo and turn it into a dark matter. :)
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/dark_matter_singulo_conjured/wtf_have_you_done.ogg'),
 		),
-		disappointment = list(
+
+	/* NOT YET IMPLEMENTED
+	When you try to shoot the darkmatter shot without the scope, the gun gets increasingly mad at you for your utter stupidity
+	With every hipfire failure, it progresses through hip_fire_fail
+	On the 5th failure, you get hit by "steve_has_had_enough_of_your_bs" and you can no longer shoot the darkmatter
+
+	Spamming the gun while blocked will remove the block and hit you with "reluctant_concession"
+
+	Fail AGAIN after you got blocked then unblocked. You get "disappointment"
+	*/
+
+		disappointment = list( // Not yet implemented.
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/disappointment/darkmatter_disappointment_take1.ogg'),
 		),
-		hip_fire_fail = list(
+		hip_fire_fail = list( // Not yet implemented
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire3_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire4_take1.ogg'),
 		),
-		reluctant_concession = list(
+		reluctant_concession = list( // Not yet implemented
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/reluctant_concession/mode_swap_dark_allow_take2.ogg'),
 		),
-		steve_has_had_enough_of_your_bs = list(
+		steve_has_had_enough_of_your_bs = list( // Not yet implemented
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/steve_has_had_enough_of_your_bs/darkmatter_stevesaysnope_take1.ogg'),
 		),
 	)
 
-	moon_conversion = list(
-		contractor_converted = list(
+	moon_conversion = list( // While acting as a moonatic, all other lines are blocked. The only lines that can play are these ones:
+		contractor_converted = list( // Converted to a moonatic. Either via their ascension event or hit by the amulet
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/contractor_converted/apocalypse_moon_afflicted_take1.ogg'),
 		),
-		moon_contractor_dies = list(
+		moon_contractor_dies = list( // Dies as a moonatic, after this the lines go back to normal
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_contractor_dies/user_died_moon1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_contractor_dies/user_died_moon2_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_contractor_dies/user_died_moon3_take1.ogg'),
 		),
-		moon_darkmatter = list(
+
+		moon_darkmatter = list( // Swap sound
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_darkmatter/ammo_swap_darkmatter_moon_take1.ogg'),
 		),
-		moon_emp = list(
+		moon_emp = list( // Swap sound
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_emp/ammo_swap_emp_moon_take2.ogg'),
 		),
-		moon_gyre = list(
+		moon_gyre = list( // Swap sound
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_gyre/ammo_swap_gyre_moon_take3.ogg'),
 		),
-		moon_idle = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_idle/idle_moon_take1.ogg'),
+		moon_thermite = list( // Swap sound
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_thermite/ammo_swap_thermal_moon_take3.ogg'),
 		),
-		moon_normal = list(
+		moon_normal = list( // Swap sound
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_normal/ammo_swap_standard_moon_take2.ogg'),
 		),
-		moon_out_of_ammo = list(
+
+		moon_idle = list( // Bored on the floor
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_idle/idle_moon_take1.ogg'),
+		),
+		moon_out_of_ammo = list( // Randomized + Repeatable
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_out_of_ammo/empty_mag_moon1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_out_of_ammo/empty_mag_moon2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_out_of_ammo/empty_mag_moon3_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_out_of_ammo/empty_mag_moon4_take1.ogg'),
 		),
-		moon_pickup = list(
+		moon_pickup = list( // Equipping the gun
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_pickup/on_pickup_moon1_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_pickup/on_pickup_moon2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_pickup/on_pickup_moon3_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_pickup/on_pickup_moon4_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_pickup/on_pickup_moon5_take2.ogg'),
 		),
-		moon_reloaded = list(
+		moon_reloaded = list( // Insert a new cell
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_reloaded/reloaded_moon1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_reloaded/reloaded_moon2_take1.ogg'),
 		),
-		moon_thermite = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_thermite/ammo_swap_thermal_moon_take3.ogg'),
-		),
-		moon_user_shot = list(
+		moon_user_shot = list( // Getting shot by any bullet
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_user_shot/user_shot_moon1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_user_shot/user_shot_moon2_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/moon_conversion/moon_user_shot/user_shot_moon3_take2.ogg'),
 		),
 	)
 
-	nope = list(
+	nope = list( // Trying to fire a round when it's not off cooldown yet or if the mode is blocked
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail3_take2.ogg'),
@@ -409,40 +434,30 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_repeated.ogg'),
 	)
 
-	oblivion = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/oblivion/oblivion_2_take1_destroyed.ogg'),
-	)
-
-	overheated = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown2_take2.ogg'),
-	)
-
-	pointblank_shot = list(
+	pointblank_shot = list( // When you land a shot on someone and they're 1-2 tiles away from you
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take2.ogg'), // Died from the shot
 	)
 
-	pointblank_shot_scoped = list(
+	pointblank_shot_scoped = list( // Same as above but scoped in
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot_scoped/pointblank_shot_scoped_take2.ogg'),
 	)
 
-	reloaded = list(
+	reloaded = list( // New cell inserted
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_3_take2.ogg'),
 	)
 
-	scope_activated = list(
+	scope_activated = list( // First time you ever scoped in. Only 1 of these lines will ever play (RNJesus decides)
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_3_take2.ogg'),
 	)
 
-	speaker = list(
+	speaker = list( // Not yet implemented
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_3.ogg'),
@@ -454,22 +469,23 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_on_new_user_2_take1.ogg'),
 	)
 
-	success_and_failure = list(
+	success_and_failure = list( // Plays a line when the round ends. Based on if the contractor succeded all objectives, or failed.
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_2_take2.ogg'),
 	)
 
-	user_paid = list(
+	// kidnapped_sounds_by_rank will take priority. If there are no special lines to the person we kidnapped, we fall back to "user_paid" which is our standard basically
+	user_paid = list( // Successfully kidnapped someone
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_2_take4.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_3_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_5_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_first_time.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_first_time.ogg'), // First kidnapping, non-repeatable the rest are RNG
 	)
 
-	user_shot = list(
+	user_shot = list( // Getting hit by any bullet
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_3_take2.ogg'),
@@ -477,13 +493,12 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_5_take1.ogg'),
 	)
 
-	user_died = list(
+	user_died = list( // Contractor has died (while in view of the gun)
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_3_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_4_take2.ogg'),
 	)
-
 */
 
 
@@ -521,6 +536,8 @@
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_MODE_CHANGED, PROC_REF(on_mode_changed))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_AMMOTYPE_UNLOCKED, PROC_REF(on_mode_unlocked))
 	RegisterSignal(parent, COMSIG_FIRING_PIN_AUTH_FAILED, PROC_REF(on_auth_failed))
+	RegisterSignal(parent, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY, PROC_REF(on_destructive_analysis))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_OVERHEATED, PROC_REF(on_gun_overheat))
 
 /// Helper proc, plays a sound from a given sound pool.
 /datum/component/dialogue_system/contractor_gun/proc/emit_sound_from_list(list/sound_list)
@@ -566,9 +583,9 @@
 		sound_pool = unathorized_user
 	emit_sound_from_list(sound_pool)
 
-/datum/component/dialogue_system/contractor_gun/on_dropped(obj/item/source, mob/user)
+/datum/component/dialogue_system/contractor_gun/on_dropped(obj/item/source, mob/living/dropper)
 	_unregister_holder()
-	if(!locate(/obj/item/implant/explosive/contractor) in taker.implants) // No implant found?
+	if(!locate(/obj/item/implant/explosive/contractor) in dropper.implants) // No implant found?
 		return // Parent call plays a line "hey you forgot me"
 	return ..()
 
@@ -592,3 +609,13 @@
 /datum/component/dialogue_system/contractor_gun/proc/on_auth_failed(datum/source, mob/user)
 	SIGNAL_HANDLER
 	emit_sound_from_list(unathorized_user_poisoned)
+
+/// Plays when the bomb is killed by a deconstructive analyzer
+/datum/component/dialogue_system/contractor_gun/proc/on_destructive_analysis()
+	SIGNAL_HANDLER
+	emit_sound_from_list(deconstruction)
+
+/datum/component/dialogue_system/contractor_gun/proc/on_gun_overheat()
+	SIGNAL_HANDLER
+	emit_sound_from_list(overheated)
+
