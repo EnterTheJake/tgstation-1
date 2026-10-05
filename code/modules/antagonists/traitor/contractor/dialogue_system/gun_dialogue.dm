@@ -4,6 +4,8 @@
 	signals_to_unregister = list(COMSIG_ITEM_PICKUP, COMSIG_ITEM_DROPPED, COMSIG_GAUSS_RIFLE_MODE_CHANGED, COMSIG_CONTRACTOR_KIDNAPPED)
 	/// Weakref to the mob currently holding the parent, used to register/unregister kidnap signals.
 	var/datum/weakref/current_holder_ref
+	/// Weakref to the contractor. This is the person we care about in more unique cases than the everyday spessman
+	var/datum/weakref/contractor_ref
 
 	//---- Gun has a lot of lines, means we got a lot of lists for different situations. Buncha snowflake
 	/// Job-title keyed kidnapped sound pools (e.g. JOB_HEAD_OF_PERSONNEL => list(...)).
@@ -17,12 +19,18 @@
 	var/list/overheated
 	var/list/reloaded
 	var/list/activated_bomb_implant
+	var/list/box_take_out
+	var/list/box_put_in
 
 	/// Tracker that remembers how many times we've played the "empty mag" line. Plays it sequentially and resets on shot
 	var/empty_mag_annoyance = 0
 	/// Cooldown so we can't just zoom through all the empty mag lines
 	COOLDOWN_DECLARE(empty_mag_cooldown)
 	var/list/empty_mag
+
+	/// Tracks if gun has greeted the contractor yet. One time event
+	var/first_greeting = FALSE
+	var/list/activation
 
 /datum/component/dialogue_system/contractor_gun/setup_sound_lists()
 	. = ..()
@@ -237,7 +245,23 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_4_take2.ogg'),
 	)
 
+	activation = list( // First time holding the gun, presumably you took it out of the box into your hands
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_2_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_3_take3.ogg'),
+	)
 
+	box_take_out = list( // Taking the gun out of the suitcase
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_3_take2.ogg'),
+	)
+
+	box_put_in = list( // Putting the gun into the suitcase
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_3_take3.ogg'),
+	)
 
 // XANTODO : Start implementing the lines
 
@@ -248,12 +272,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_2_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_3_take1.ogg'),
-	)
-
-	activation = list( // First time holding the gun, presumably you took it out of the box into your hands
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_2_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activation/activation_3_take3.ogg'),
 	)
 
 	apocalypse = list( // Heretic stuff
@@ -299,15 +317,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows1_take3.ogg'), // Gun met bomb
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows2_take3.ogg'), // Gun met bomb
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/bomb_detonated/bomb_detonated_knows3_take3.ogg'), // Gun met bomb
-	)
-
-	box_take_in_out = list( // Taking the gun out of the suitcase / Putting it into the suitcase
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_3_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_taken_out_3_take2.ogg'),
 	)
 
 	contractor_borg = list( // Cubie lines
@@ -545,6 +554,10 @@
 
 /datum/component/dialogue_system/contractor_gun/RegisterWithParent()
 	. = ..()
+	RegisterSignal(parent, COMSIG_ITEM_PICKUP, PROC_REF(on_pickup))
+	RegisterSignal(parent, COMSIG_ITEM_DROPPED, PROC_REF(on_dropped))
+	RegisterSignal(parent, COMSIG_ITEM_EQUIPPED, PROC_REF(on_equipped))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_CASE_LOCKED, PROC_REF(on_stored_in_chargecase))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_MODE_CHANGED, PROC_REF(on_mode_changed))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_AMMOTYPE_UNLOCKED, PROC_REF(on_mode_unlocked))
 	RegisterSignal(parent, COMSIG_FIRING_PIN_AUTH_FAILED, PROC_REF(on_auth_failed))
@@ -581,13 +594,38 @@
 	SIGNAL_HANDLER
 	emit_sound_from_list(mode_unlocked[casing_path])
 
-/datum/component/dialogue_system/contractor_gun/on_pickup(obj/item/source, mob/taker)
+/datum/component/dialogue_system/contractor_gun/proc/on_equipped(datum/source, mob/living/equipper, slot)
+	SIGNAL_HANDLER
+	if(!isliving(equipper))
+		return
+	if(slot & ITEM_SLOT_HANDS)
+		if(!first_greeting && (equipper == contractor_ref?.resolve()))
+			first_greeting = TRUE
+			emit_sound_from_list(activation)
+			return
+		emit_sound_from_list(pickup_sounds)
+
+/// Plays a line when you lock the suitcase with the gun inside
+/datum/component/dialogue_system/contractor_gun/proc/on_stored_in_chargecase(datum/source)
+	SIGNAL_HANDLER
+	emit_sound_from_list(box_put_in)
+
+/datum/component/dialogue_system/contractor_gun/proc/on_pickup(obj/item/source, mob/living/taker)
+	SIGNAL_HANDLER
 	_unregister_holder()
+	if(!isliving(taker))
+		return
+	if(!contractor_ref)
+		if(locate(/obj/item/implant/explosive/contractor) in taker.implants)
+			contractor_ref = WEAKREF(taker) // Here is where we meet our hero for the first time (Assumedly)
+	var/atom/atom_parent = parent
+	if(!isturf(atom_parent.loc))
+		return
 	current_holder_ref = WEAKREF(taker)
 	RegisterSignal(taker, COMSIG_CONTRACTOR_KIDNAPPED, PROC_REF(on_kidnapped))
-	return ..()
+	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_pickup_line), taker), 0.1 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
 
-/datum/component/dialogue_system/contractor_gun/try_play_pickup_line(mob/living/taker)
+/datum/component/dialogue_system/contractor_gun/proc/try_play_pickup_line(mob/living/taker)
 	if(!isliving(taker))
 		return
 	if(!taker?.is_holding(parent))
@@ -597,11 +635,26 @@
 		sound_pool = unathorized_user
 	emit_sound_from_list(sound_pool)
 
-/datum/component/dialogue_system/contractor_gun/on_dropped(obj/item/source, mob/living/dropper)
+/datum/component/dialogue_system/contractor_gun/proc/on_dropped(obj/item/source, mob/living/user)
+	SIGNAL_HANDLER
 	_unregister_holder()
-	if(!locate(/obj/item/implant/explosive/contractor) in dropper.implants) // No implant found?
+	if(!isliving(user))
+		return
+	var/atom/atom_parent = parent
+	if(!isturf(atom_parent.loc))
+		return
+	if(!locate(/obj/item/implant/explosive/contractor) in user.implants) // No implant found?
 		return // Parent call plays a line "hey you forgot me"
-	return ..()
+	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_dropped_line), user), 5 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
+
+/datum/component/dialogue_system/contractor_gun/proc/try_play_dropped_line(mob/user)
+	drop_line_timerid = null
+	var/atom/atom_parent = parent
+	if(!isturf(atom_parent.loc))
+		return
+
+	var/datum/dialogue_sound/sound = pick_available_sound(dropped_sounds, user, atom_parent)
+	sound?.play(user, atom_parent)
 
 /// Called when the contractor successfully kidnaps a target.
 /datum/component/dialogue_system/contractor_gun/proc/on_kidnapped(mob/source, mob/living/victim)
@@ -632,7 +685,7 @@
 /// Plays when the gun ends up overheating
 /datum/component/dialogue_system/contractor_gun/proc/on_gun_overheat()
 	SIGNAL_HANDLER
-	emit_sound_from_list(overheated)
+	emit_sound_from_list(overheated) //XANTODO: Make this a delayed play so that it has time for the bullet sound to end
 
 /// Plays when the gun is given a cell that allows it to reach max battery
 /datum/component/dialogue_system/contractor_gun/proc/on_cell_refilled()

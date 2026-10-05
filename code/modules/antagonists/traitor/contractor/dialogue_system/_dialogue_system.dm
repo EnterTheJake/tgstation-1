@@ -274,40 +274,7 @@
 	return pick_weight(weighted_sounds)
 
 /datum/component/dialogue_system/RegisterWithParent()
-	if(length(pickup_sounds))
-		RegisterSignal(parent, COMSIG_ITEM_PICKUP, PROC_REF(on_pickup))
-	if(length(dropped_sounds))
-		RegisterSignal(parent, COMSIG_ITEM_DROPPED, PROC_REF(on_dropped))
+	return
 
 /datum/component/dialogue_system/UnregisterFromParent()
 	UnregisterSignal(parent, signals_to_unregister)
-
-/datum/component/dialogue_system/proc/on_pickup(obj/item/source, mob/taker)
-	SIGNAL_HANDLER
-	var/atom/atom_parent = parent
-	if(!isturf(atom_parent.loc))
-		return
-	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_pickup_line), taker), 0.1 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
-
-/datum/component/dialogue_system/proc/try_play_pickup_line(mob/taker)
-	if(!taker?.is_holding(parent))
-		return
-	var/datum/dialogue_sound/sound = pick_available_sound(pickup_sounds, taker, parent)
-	sound?.play(taker, parent)
-
-/datum/component/dialogue_system/proc/on_dropped(obj/item/source, mob/user)
-	SIGNAL_HANDLER
-	var/atom/atom_parent = parent
-
-	if(!isturf(atom_parent.loc))
-		return
-	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_dropped_line), user), 5 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
-
-/datum/component/dialogue_system/proc/try_play_dropped_line(mob/user)
-	drop_line_timerid = null
-	var/atom/atom_parent = parent
-	if(!isturf(atom_parent.loc))
-		return
-
-	var/datum/dialogue_sound/sound = pick_available_sound(dropped_sounds, user, atom_parent)
-	sound?.play(user, atom_parent)
