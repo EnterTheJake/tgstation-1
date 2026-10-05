@@ -229,6 +229,7 @@
 	return !user.contains(src)
 
 /obj/item/gun/proc/shoot_with_empty_chamber(mob/living/user as mob|obj)
+	SEND_SIGNAL(src, COMSIG_GUN_FIRED_EMPTY_CHAMBER)
 	balloon_alert_to_hearers("*click*")
 	playsound(src, dry_fire_sound, dry_fire_sound_volume, TRUE)
 

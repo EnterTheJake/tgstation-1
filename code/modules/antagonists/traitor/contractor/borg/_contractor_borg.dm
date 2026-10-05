@@ -70,7 +70,6 @@
 
 	refresh_overlay_planes()
 
-	sight_mode = BORGTHERM
 	update_sight()
 
 /mob/living/silicon/robot/model/contractor/make_laws()

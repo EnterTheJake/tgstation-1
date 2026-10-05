@@ -8,7 +8,8 @@
 	desc = "A proprietary Cybersun case for securing and maintaining a Raijin Horizon rifle package."
 	icon = 'code/modules/antagonists/traitor/contractor/icons/contractor_gun_case.dmi'
 	icon_state = "case_idle"
-	inhand_icon_state = "infiltrator_case"
+	worn_icon = 'code/modules/antagonists/traitor/contractor/icons/guncase_worn.dmi'
+	worn_icon_state = "guncase_closed"
 	lefthand_file = 'icons/mob/inhands/equipment/toolbox_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/toolbox_righthand.dmi'
 	w_class = WEIGHT_CLASS_NORMAL
@@ -22,6 +23,7 @@
 	COOLDOWN_DECLARE(opening_cooldown)
 
 /obj/item/storage/contractor_gun_case/Initialize(mapload)
+	AddElement(/datum/element/update_icon_updates_onmob)
 	. = ..()
 	var/matrix/offset = matrix()
 	offset.Translate(-8, 0)
@@ -37,6 +39,13 @@
 /obj/item/storage/contractor_gun_case/update_overlays()
 	. = ..()
 	. += emissive_appearance(icon, "[icon_state]_emissive", src, alpha = alpha)
+
+/obj/item/storage/contractor_gun_case/worn_overlays(mutable_appearance/standing, isinhands, icon_file, bodyshape)
+	. = ..()
+	if(isinhands)
+		return
+	if(case_opened)
+		. += emissive_appearance(worn_icon, "emissive_open", src)
 
 /obj/item/storage/contractor_gun_case/Destroy()
 	STOP_PROCESSING(SSobj, src)
@@ -79,9 +88,11 @@
 	. = ..()
 	if(case_opened)
 		icon_state = get_stored_gun() ? "case_open" : "case_open_empty"
+		worn_icon_state = "guncase_open"
 		return
 
 	icon_state = case_unlocked ? "case_idle" : "case_off"
+	worn_icon_state = "guncase_closed"
 
 /// Unlocks the case, allowing access
 /obj/item/storage/contractor_gun_case/proc/unlock_case()

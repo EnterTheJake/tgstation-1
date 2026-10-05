@@ -232,6 +232,8 @@
 	target_gun.emit_ammo_signal()
 	playsound(target_gun, 'sound/items/weapons/kinetic_reload.ogg', 60, TRUE)
 	balloon_alert(user, "cell recharged")
+	if(target_gun.cell.charge >= target_gun.cell.maxcharge)
+		SEND_SIGNAL(target_gun, COMSIG_GAUSS_RIFLE_CELL_REFILLED)
 	return TRUE
 
 /obj/item/stock_parts/power_store/gauss_nanites/update_icon_state()

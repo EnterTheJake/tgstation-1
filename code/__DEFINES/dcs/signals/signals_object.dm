@@ -327,6 +327,8 @@
 // /obj/item/implant signals
 ///from base of /obj/item/implant/proc/activate(): ()
 #define COMSIG_IMPLANT_ACTIVATED "implant_activated"
+/// called when an explosive implant is triggered + confirmed
+#define COMSIG_EXPLOSIVE_IMPLANT_MANUALLY_TRIGGERED "explosive_implant_manually_activated"
 ///from base of /obj/item/implant/proc/implant(): (list/args)
 #define COMSIG_IMPLANT_IMPLANTING "implant_implanting"
 	#define COMPONENT_STOP_IMPLANTING (1<<0)
@@ -395,6 +397,8 @@
 	#define MAX_BONUS_SPREAD_INDEX 2
 ///called in /obj/item/gun/process_fire (user, target, params, zone_override)
 #define COMSIG_GUN_FIRED "gun_fired"
+/// Called by /obj/item/gun/shoot_with_empty_chamber
+#define COMSIG_GUN_FIRED_EMPTY_CHAMBER "gun_fired_empty_chamber"
 ///called in /obj/item/gun/process_chamber (src)
 #define COMSIG_GUN_CHAMBER_PROCESSED "gun_chamber_processed"
 ///called in /obj/item/gun/ballistic/process_chamber (casing)

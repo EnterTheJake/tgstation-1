@@ -170,10 +170,6 @@
 		if("toggleThrusters")
 			cyborg.toggle_ionpulse()
 
-		if("toggleThermals")
-			cyborg.toggle_thermals()
-			return TRUE
-
 		if("lampIntensity")
 			cyborg.lamp_intensity = params["ref"]
 			cyborg.toggle_headlamp(FALSE, TRUE)

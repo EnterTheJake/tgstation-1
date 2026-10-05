@@ -15,6 +15,14 @@
 	var/list/unathorized_user_poisoned
 	var/list/deconstruction
 	var/list/overheated
+	var/list/reloaded
+	var/list/activated_bomb_implant
+
+	/// Tracker that remembers how many times we've played the "empty mag" line. Plays it sequentially and resets on shot
+	var/empty_mag_annoyance = 0
+	/// Cooldown so we can't just zoom through all the empty mag lines
+	COOLDOWN_DECLARE(empty_mag_cooldown)
+	var/list/empty_mag
 
 /datum/component/dialogue_system/contractor_gun/setup_sound_lists()
 	. = ..()
@@ -216,9 +224,26 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/overheated/cooldown2_take2.ogg'),
 	)
 
+	reloaded = list( // New cell inserted
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_3_take2.ogg'),
+	)
+
+	empty_mag = list( // Every time you try to shoot with an empty magazines, plays the lines in order. Small cooldown. Resets when you reload
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_4_take2.ogg'),
+	)
+
+
+
 // XANTODO : Start implementing the lines
 
 /*
+
+	// XANTODO: COMSIG_EXPLOSIVE_IMPLANT_MANUALLY_TRIGGERED needs to be registered on however we decide to track the contractor
 	activated_bomb_implant = list( // Suicide self-destruct implant
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_2_take2.ogg'),
@@ -306,13 +331,6 @@
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_critical_contractor/cube_carries_contractor_dying2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/contractor_borg/vore_critical_contractor/cube_carries_contractor_dying3_take1.ogg'),
 		),
-	)
-
-	empty_mag = list( // Every time you try to shoot with an empty magazines, plays the lines in order. Small cooldown. Resets when you reload
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_3_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/empty_mag/empty_mag_4_take2.ogg'),
 	)
 
 	fps_arrived = list( // IRS pirates have arrived. Not yet implemented so for now XANTODO ARTURTODO zzzzzzzzzzz
@@ -445,12 +463,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot_scoped/pointblank_shot_scoped_take2.ogg'),
 	)
 
-	reloaded = list( // New cell inserted
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/reloaded/reloaded_3_take2.ogg'),
-	)
-
 	scope_activated = list( // First time you ever scoped in. Only 1 of these lines will ever play (RNJesus decides)
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_1_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_2_take1.ogg'),
@@ -538,6 +550,8 @@
 	RegisterSignal(parent, COMSIG_FIRING_PIN_AUTH_FAILED, PROC_REF(on_auth_failed))
 	RegisterSignal(parent, COMSIG_DESTRUCTIVE_ANALYZER_DESTROY, PROC_REF(on_destructive_analysis))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_OVERHEATED, PROC_REF(on_gun_overheat))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_CELL_REFILLED, PROC_REF(on_cell_refilled))
+	RegisterSignal(parent, COMSIG_GUN_FIRED_EMPTY_CHAMBER, PROC_REF(on_shoot_empty))
 
 /// Helper proc, plays a sound from a given sound pool.
 /datum/component/dialogue_system/contractor_gun/proc/emit_sound_from_list(list/sound_list)
@@ -615,7 +629,28 @@
 	SIGNAL_HANDLER
 	emit_sound_from_list(deconstruction)
 
+/// Plays when the gun ends up overheating
 /datum/component/dialogue_system/contractor_gun/proc/on_gun_overheat()
 	SIGNAL_HANDLER
 	emit_sound_from_list(overheated)
+
+/// Plays when the gun is given a cell that allows it to reach max battery
+/datum/component/dialogue_system/contractor_gun/proc/on_cell_refilled()
+	SIGNAL_HANDLER
+	empty_mag_annoyance = 0
+	emit_sound_from_list(reloaded)
+
+/// Plays when the user tries to shoot the gun while the cell is completely empty. Goes through the list in order
+/datum/component/dialogue_system/contractor_gun/proc/on_shoot_empty()
+	SIGNAL_HANDLER
+	if(!COOLDOWN_FINISHED(src, empty_mag_cooldown))
+		return
+	empty_mag_annoyance++
+	if(empty_mag_annoyance > length(empty_mag)) // Ran out of lines, will reset the var to 0 when the gun is reloaded
+		return
+	var/datum/dialogue_sound/sound = empty_mag[empty_mag_annoyance]
+	var/line_duration = rustg_sound_length(sound.sound_path)
+	sound?.play(location = parent)
+	COOLDOWN_START(src, empty_mag_cooldown, (5 SECONDS + line_duration))
+// XANTODO: Make it where when you put the gun in the gun case it resets `empty_mag_annoyance` back to 0 as well (Since it recharges the gun)
 

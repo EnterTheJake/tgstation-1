@@ -49,14 +49,12 @@
 	return ..()
 
 /datum/status_effect/frail/super/proc/adjust_physiology(mult)
-	var/mob/living/carbon/human/human_owner = owner
-	var/datum/physiology/physiology = human_owner.physiology
-	physiology.brute_mod *= mult
-	physiology.burn_mod *= mult
-	physiology.tox_mod *= mult
-	physiology.oxy_mod *= mult
-	physiology.stamina_mod *= mult
-	physiology.brain_mod *= mult
+	MODIFY_PHYSIOLOGY(owner, BRUTE, mult)
+	MODIFY_PHYSIOLOGY(owner, BURN, mult)
+	MODIFY_PHYSIOLOGY(owner, TOX, mult)
+	MODIFY_PHYSIOLOGY(owner, OXY, mult)
+	MODIFY_PHYSIOLOGY(owner, STAMINA, mult)
+	MODIFY_PHYSIOLOGY(owner, BRAIN, mult)
 
 /atom/movable/screen/alert/status_effect/frail/super
 	name = "Super Frail"

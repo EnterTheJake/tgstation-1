@@ -429,7 +429,7 @@
 	var/mob/living/silicon/robot/model/contractor/drone = new(spawn_turf)
 	var/drone_name = "[pick(GLOB.last_names)] Retrieval Unit"
 	drone.mmi?.name = "[initial(drone.mmi.name)]: [drone_name]"
-	drone.mmi?.brain?.name = "[drone_name]'s brain"
+	drone.mmi?.set_name("[drone_name]'s brain")
 	drone.real_name = drone.name
 	drone.PossessByPlayer(our_client.key)
 	var/datum/mind/drone_mind = drone.mind
