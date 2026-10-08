@@ -1056,7 +1056,6 @@ GLOBAL_LIST_INIT(unsafe_dropoff_areas, subtypesof(/area/station) - dangerous_dro
 
 /// Returns an AREA TYPE to use as a dropoff from the list of possible area types given.
 /datum/objective/contract/proc/pick_dropoff(list/possible_areas = list(), allow_outdoors = FALSE)
-	var/area/dropoff_area
 	var/list/area/pickable_area_types = list()
 	for(var/area/area as anything in possible_areas)
 		pickable_area_types += typesof(area)

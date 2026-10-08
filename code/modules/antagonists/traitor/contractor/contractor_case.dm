@@ -106,8 +106,8 @@
 /// Locks the case, preventing access
 /obj/item/storage/contractor_gun_case/proc/lock_case()
 	/// Notify everything in the box that the case is getting locked
-	for(var/anything in contents)
-		SEND_SIGNAL(anything, COMSIG_CONTRACTOR_CASE_LOCKED)
+	for(var/obj/thing in get_all_contents())
+		SEND_SIGNAL(thing, COMSIG_CONTRACTOR_CASE_LOCKED)
 	case_opened = FALSE
 	case_unlocked = FALSE
 	w_class = initial(w_class)
