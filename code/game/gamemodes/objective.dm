@@ -1054,21 +1054,22 @@ GLOBAL_LIST_INIT(unsafe_dropoff_areas, subtypesof(/area/station) - dangerous_dro
 	dropoffs[CONTRACTOR_DROPOFF_UNSAFE] = pick_dropoff(GLOB.unsafe_dropoff_areas)
 	dropoffs[CONTRACTOR_DROPOFF_DANGEROUS] = pick_dropoff(GLOB.dangerous_dropoff_areas)
 
+/// Returns an AREA TYPE to use as a dropoff from the list of possible area types given.
 /datum/objective/contract/proc/pick_dropoff(list/possible_areas = list(), allow_outdoors = FALSE)
 	var/area/dropoff_area
-	var/list/area/pickable_areas = list()
+	var/list/area/pickable_area_types = list()
 	for(var/area/area as anything in possible_areas)
-		pickable_areas += typesof(area)
+		pickable_area_types += typesof(area)
 
-	while (!dropoff_area && length(pickable_areas))
-		var/area/candidate_area = pick(pickable_areas)
-		pickable_areas -= candidate_area
+	while (length(pickable_area_types))
+		var/area/candidate_area_type = pick_n_take(pickable_area_types)
 		// Only pick area types that are actually instantiated on the current map.
-		if(!GLOB.areas_by_type[candidate_area])
+		var/area/candidate_area = GLOB.areas_by_type[candidate_area_type]
+		if(!candidate_area?.has_contained_turfs())
 			continue
-		if((allow_outdoors || (is_path_in_list(candidate_area, GLOB.the_station_areas) && !candidate_area::outdoors)))
-			dropoff_area = candidate_area
-	return dropoff_area
+		if((allow_outdoors || (is_path_in_list(candidate_area_type, GLOB.the_station_areas) && !candidate_area_type::outdoors)))
+			return candidate_area_type
+	CRASH("Couldn't find a valid dropoff area!!!")
 
 // Check if both the contractor and contract target are at the dropoff point.
 /datum/objective/contract/proc/dropoff_check(mob/user, mob/target, dropoff_type = CONTRACTOR_DROPOFF_SAFE)
@@ -1083,7 +1084,7 @@ GLOBAL_LIST_INIT(unsafe_dropoff_areas, subtypesof(/area/station) - dangerous_dro
 		CRASH("Invalid dropoff type passed to dropoff_check: " + dropoff_type)
 
 	var/list/valid_dropoff_area = dropoffs[dropoff_type]
-	if(ispath(user_area.type, valid_dropoff_area) && ispath(target_area.type, valid_dropoff_area))
+	if(istype(user_area, valid_dropoff_area) && istype(target_area, valid_dropoff_area))
 		return TRUE
 	return FALSE
 
