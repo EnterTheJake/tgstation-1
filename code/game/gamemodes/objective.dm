@@ -1067,7 +1067,7 @@ GLOBAL_LIST_INIT(unsafe_dropoff_areas, subtypesof(/area/station) - dangerous_dro
 		var/area/candidate_area = GLOB.areas_by_type[candidate_area_type]
 		if(!candidate_area?.has_contained_turfs())
 			continue
-		if((allow_outdoors || (is_path_in_list(candidate_area_type, GLOB.the_station_areas) && !candidate_area_type::outdoors)))
+		if((allow_outdoors || ((candidate_area_type in GLOB.the_station_areas) && !candidate_area_type::outdoors)))
 			return candidate_area_type
 	CRASH("Couldn't find a valid dropoff area!!!")
 
