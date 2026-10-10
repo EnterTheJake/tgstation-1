@@ -15,14 +15,24 @@
 	var/mob/living/carbon/human/owner = null
 	/// If the bomb has been attached to a clown, it gains permanent trauma
 	var/clown_bomb = FALSE
+	/// The contractor state tracking this bomb in its detonator UI
+	var/datum/contractor_state/controlling_state
 	/// Is the bomb counting down?
 	var/active = FALSE
+	/// Set once the bomb is committed to exploding, so nothing can defuse it or start a second explosion
+	var/detonating = FALSE
 	/// If the bomb has been attached and got disarmed
 	var/disarmed = FALSE
 	///How long it takes for a grenade to explode after being armed
 	var/det_time = 10 MINUTES
 	/// The timer for the bomb.
-	var/detonation_timer
+	COOLDOWN_DECLARE(detonation_timer)
+	/// Timer id for the grace period after the victim leaves the station
+	var/off_station_timer
+	/// Is the victim away from the station right now?
+	var/off_station = FALSE
+	/// How many times the victim has left the station
+	var/off_station_trips = 0
 	/// What sound do we make as we beep down the timer?
 	var/beepsound = 'sound/items/timer.ogg'
 	/// When do we beep next?
@@ -133,10 +143,14 @@
 	to_chat(world, "[modified_cable.name] time remover cable")
 
 /obj/item/contractor_bomb/Destroy()
+	if(owner)
+		actually_explode()
+	STOP_PROCESSING(SSobj, src)
+	controlling_state?.bomb_implants -= src
+	controlling_state = null
 	cable_list = null
 	cable_icons = null
 	bomb_overlay_appearance = null
-	owner = null
 	QDEL_NULL(bomb_overlay_atom)
 	return ..()
 
@@ -180,30 +194,64 @@
 		playsound(get_turf(src), beepsound, volume, FALSE)
 		COOLDOWN_START(src, next_beep, 1 SECONDS)
 
-	if(active && ((detonation_timer <= world.time)))
+	if(COOLDOWN_FINISHED(src, detonation_timer))
 		active = FALSE
 		update_appearance()
 		pre_explosion()
 		return PROCESS_KILL
 
 /// Plants the bomb on our victim and adds it to the contractor's bomb UI
-/obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/controlling_state)
+/obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/state)
 	owner = victim
+	controlling_state = state
 	if(owner.job == JOB_CLOWN)
 		clown_bomb = TRUE
 	forceMove(victim.get_bodypart(BODY_ZONE_CHEST))
-	RegisterSignal(victim, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
-	RegisterSignal(victim, COMSIG_CARBON_PRE_SET_SPECIES, PROC_REF(on_attempt_species_swap))
+	register_owner_signals()
 	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_ATTACHED_TO, victim)
 	victim.vis_contents += bomb_overlay_atom
 	victim.add_overlay(bomb_overlay_appearance)
 	START_PROCESSING(SSobj, src) // Just because it processes doesn't strictly mean it's armed. Our bomb has idle voice lines
 
-	if(isnull(controlling_state))
+	if(isnull(state))
 		arm()
 		return
 
-	controlling_state.bomb_implants += src
+	state.bomb_implants += src
+
+/// Hooks everything the bomb needs from its victim
+/obj/item/contractor_bomb/proc/register_owner_signals()
+	RegisterSignal(owner, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
+	RegisterSignal(owner, COMSIG_SPECIES_GAIN, PROC_REF(on_species_gained))
+	RegisterSignal(owner, COMSIG_CARBON_REMOVE_LIMB, PROC_REF(on_owner_limb_removed))
+	RegisterSignal(owner, COMSIG_CARBON_POST_ATTACH_LIMB, PROC_REF(on_owner_limb_attached))
+	RegisterSignals(owner, list(COMSIG_MOB_MIND_TRANSFERRED_INTO, COMSIG_MOB_MIND_TRANSFERRED_OUT_OF), PROC_REF(on_mind_swapped))
+	RegisterSignal(owner, COMSIG_QDELETING, PROC_REF(on_owner_deleted))
+	RegisterSignal(owner, COMSIG_MOVABLE_Z_CHANGED, PROC_REF(on_owner_z_changed))
+	RegisterSignal(owner, COMSIG_LIVING_PRE_SELF_TRANSFORM, PROC_REF(on_self_transform))
+
+/// Lets go of the victim: unhooks signals and removes the visuals
+/obj/item/contractor_bomb/proc/detach_from_owner()
+	var/mob/living/carbon/human/victim = owner
+	if(isnull(victim))
+		return
+	UnregisterSignal(victim, list(
+		COMSIG_ATOM_ITEM_INTERACTION,
+		COMSIG_SPECIES_GAIN,
+		COMSIG_CARBON_REMOVE_LIMB,
+		COMSIG_CARBON_POST_ATTACH_LIMB,
+		COMSIG_MOB_MIND_TRANSFERRED_INTO,
+		COMSIG_MOB_MIND_TRANSFERRED_OUT_OF,
+		COMSIG_QDELETING,
+		COMSIG_MOVABLE_Z_CHANGED,
+		COMSIG_LIVING_PRE_SELF_TRANSFORM,
+	))
+	deltimer(off_station_timer)
+	off_station_timer = null
+	victim.vis_contents -= bomb_overlay_atom
+	victim.cut_overlay(bomb_overlay_appearance)
+	owner = null
+	SEND_SIGNAL(src, COMSIG_CONTRACTOR_BOMB_DETACHED, victim)
 
 /// Lets you install a nuclear core if the victim is clicked on with the core/container while the bomb is glued on
 /obj/item/contractor_bomb/proc/on_item_interact(atom/source, mob/living/user, obj/item/tool, list/modifiers)
@@ -220,14 +268,6 @@
 
 	else
 		return NONE
-
-/// Attempting to race swap to strip off the bomb will backfire on you
-/obj/item/contractor_bomb/proc/on_attempt_species_swap(datum/source, force) // XANTODO: Figure out how to block monkeyize() idk
-	SIGNAL_HANDLER
-	if(disarmed && !owner)
-		return FALSE
-	pre_explosion()
-	return TRUE
 
 /// Installs the nuke core into the bomb after a do_after
 /obj/item/contractor_bomb/proc/install_core(mob/living/user, obj/item/nuke_core/core, atom/target)
@@ -273,24 +313,27 @@
 	bomb_target.vis_contents += bomb_overlay_atom
 	bomb_target.add_overlay(bomb_overlay_appearance)
 	to_chat(user, span_notice("You plant the bomb. Timer counting down from [det_time]."))
-	detonation_timer = world.time + det_time
+	COOLDOWN_START(src, detonation_timer, det_time)
 	COOLDOWN_START(src, next_beep, 0.1 SECONDS)
 	START_PROCESSING(SSobj, src)
-	RegisterSignal(bomb_target, COMSIG_ATOM_ITEM_INTERACTION, PROC_REF(on_item_interact))
-	RegisterSignal(bomb_target, COMSIG_CARBON_PRE_SET_SPECIES, PROC_REF(on_attempt_species_swap))
+	register_owner_signals()
 	return TRUE
 // XANTODO: SECOND REMINDER THIS WHOLE PROC IS PLACEHOLDER JUST FOR TESTING SHIT OUT DO NOT LEAVE THIS IN
 // DON'T LEAVE THIS IN  ^^^^^^^^^^^^^^^^^^^^^
 
 /// Sticking a fork in the bomb has very interesting results
 /obj/item/contractor_bomb/proc/get_forked()
+	upgrade_explosion()
+	SEND_SIGNAL(src, COMSIG_FORK_STUCK_IN_BOMB)
+
+/// Makes the blast bigger and drops the fuse to 30 seconds
+/obj/item/contractor_bomb/proc/upgrade_explosion()
 	upgraded_explosion = TRUE
 	ex_dev = max(5, ex_dev)
 	ex_heavy = max(10, ex_heavy)
 	ex_light = max(20, ex_light)
 	ex_flame = max(20, ex_flame)
-	detonation_timer = world.time + 30 SECONDS
-	SEND_SIGNAL(src, COMSIG_FORK_STUCK_IN_BOMB)
+	COOLDOWN_START(src, detonation_timer, 30 SECONDS)
 
 /// Sticking a plutonium core will make the bomb end the round
 /obj/item/contractor_bomb/proc/transfer_core(obj/item/nuke_core/core)
@@ -319,12 +362,7 @@
 		return
 	// Arms the bomb and gives you the negative effects of cutting a bomb wire. It effectively means you still have 2 explosive cables but only need to hit 1 to explode
 	arm()
-	upgraded_explosion = TRUE
-	ex_dev = max(5, ex_dev)
-	ex_heavy = max(10, ex_heavy)
-	ex_light = max(20, ex_light)
-	ex_flame = max(20, ex_flame)
-	detonation_timer = world.time + 30 SECONDS
+	upgrade_explosion()
 	defusal_loop(defuser)
 
 /// Shows the radial menu, performs the cut on the selected wire
@@ -348,12 +386,7 @@
 		if(upgraded_explosion)
 			return // The signal sent to the dialogue system handles the exploding
 		else
-			upgraded_explosion = TRUE
-			ex_dev = max(5, ex_dev)
-			ex_heavy = max(10, ex_heavy)
-			ex_light = max(20, ex_light)
-			ex_flame = max(20, ex_flame)
-			detonation_timer = world.time + 30 SECONDS // No math here, you can either benefit or suffer from this
+			upgrade_explosion() // No math here, you can either benefit or suffer from this
 
 	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_DEFUSIVE)
 		//XANTODO DEBUG
@@ -361,12 +394,12 @@
 		defuse()
 
 	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_TIME_ADDER)
-		detonation_timer += 2 MINUTES
+		COOLDOWN_START(src, detonation_timer, COOLDOWN_TIMELEFT(src, detonation_timer) + 2 MINUTES)
 		//XANTODO DEBUG
 		to_chat(world, "delay cable cut")
 
 	if(chosen_wire.wire_flags & CONTRACTOR_WIRE_TIME_REDUCER)
-		detonation_timer = max((world.time + 30 SECONDS), (detonation_timer - 2 MINUTES)) // Tries to reduce the timer by 2 minutes but minimum 30 second fuse remaining
+		COOLDOWN_START(src, detonation_timer, max(30 SECONDS, COOLDOWN_TIMELEFT(src, detonation_timer) - 2 MINUTES)) // Tries to reduce the timer by 2 minutes but minimum 30 second fuse remaining
 		//XANTODO DEBUG
 		to_chat(world, "speedup cable cut")
 
@@ -380,19 +413,20 @@
 
 /// Called when the bomb is defused
 /obj/item/contractor_bomb/proc/defuse()
+	if(detonating)
+		return
 	active = FALSE
-	detonation_timer = null
+	COOLDOWN_RESET(src, detonation_timer)
 	COOLDOWN_RESET(src, next_beep)
-	owner.vis_contents -= bomb_overlay_atom
-	owner.updateappearance(UPDATE_OVERLAYS)
-	owner.temporarilyRemoveItemFromInventory(src, TRUE)
-	owner = null
+	detach_from_owner()
 	forceMove(get_turf(src))
 	disarmed = TRUE
 	update_appearance(UPDATE_ICON)
 
 /// Checks if there are any special conditions, plays a voiceline if any match and then explode afterwards
 /obj/item/contractor_bomb/proc/pre_explosion()
+	if(detonating || isnull(owner))
+		return
 	var/obj/item/organ/heart/cybernetic/anomalock/funny_organ = locate(/obj/item/organ/heart/cybernetic/anomalock) in owner.organs
 	if(funny_organ?.core)
 		explosion_flags |= CONTRACTOR_EXPLOSION_ENERGYBALL
@@ -405,48 +439,60 @@
 
 /// Primes the bomb to explode after a certain delay
 /obj/item/contractor_bomb/proc/delayed_explosion(delay_time)
-	SIGNAL_HANDLER
 	if(isnull(delay_time))
 		CRASH("Attempted to call a delayed explosion without passing a valid delay_time")
+	if(detonating)
+		return
+	detonating = TRUE
 	active = FALSE
-	detonation_timer = null
+	COOLDOWN_RESET(src, detonation_timer)
 	COOLDOWN_RESET(src, next_beep)
 	STOP_PROCESSING(SSobj, src)
 	// We typically delay the bomb to play a voiceline. The 0.2 is just a small safety so the line isnt abruptly cut off
-	addtimer(CALLBACK(src, PROC_REF(actually_explode), TRUE), delay_time + 0.2 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(actually_explode)), delay_time + 0.2 SECONDS)
 
 /// Does the kaboom, deletes what it has to, spawns the energy ball if needed
 /obj/item/contractor_bomb/proc/actually_explode()
+	var/mob/living/carbon/human/victim = owner
+	if(isnull(victim))
+		return
+	detonating = TRUE
+	detach_from_owner()
+	// gibbing deletes the chest, and the chest would delete us a second time
+	forceMove(get_turf(victim))
+
 	// Voltaic organ makes an energy ball when it detonates
-	var/obj/item/organ/heart/cybernetic/anomalock/funny_organ = locate(/obj/item/organ/heart/cybernetic/anomalock) in owner.organs
+	var/obj/item/organ/heart/cybernetic/anomalock/funny_organ = locate(/obj/item/organ/heart/cybernetic/anomalock) in victim.organs
 	if(funny_organ?.core)
-		new /obj/energy_ball(src)
+		new /obj/energy_ball(get_turf(src))
 
 	// Delete our victim's brain, ensures they are gone for good
-	var/obj/item/organ/brain/to_delete = locate(/obj/item/organ/brain) in owner.organs
+	var/obj/item/organ/brain/to_delete = locate(/obj/item/organ/brain) in victim.organs
 	if(to_delete)
-		to_delete.Remove(owner)
+		to_delete.Remove(victim)
 		qdel(to_delete)
 
 	explosion(src, ex_dev, ex_heavy, ex_light, ex_flame, ignorecap = (explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR))
-	qdel(src)
+	if(!QDELETED(victim))
+		victim.gib(DROP_ALL_REMAINS) // prevents a changeling in a bomb-suit from cheesing
+	if(!QDELETED(src))
+		qdel(src)
 
 /obj/item/contractor_bomb/proc/seconds_remaining()
 	if(active)
-		. = max(0, round((detonation_timer - world.time) / 10))
-	else
-		. = det_time
+		return round(COOLDOWN_TIMELEFT(src, detonation_timer) / 10, 1)
+	return det_time
 
 /// Arms the bomb, starting the countdown to detonation. Cannot be disarmed once armed.
 /obj/item/contractor_bomb/proc/arm()
-	if(active)
+	if(active || detonating)
 		return FALSE
 	active = TRUE
-	detonation_timer = world.time + det_time
+	COOLDOWN_START(src, detonation_timer, det_time)
 	COOLDOWN_START(src, next_beep, 0.1 SECONDS)
 	if(!isnull(owner))
-		owner.investigate_log("had their contractor bomb implant remotely armed.", INVESTIGATE_DEATHS)
-		message_admins("[ADMIN_LOOKUPFLW(owner)]'s contractor bomb implant was remotely armed at [ADMIN_VERBOSEJMP(owner)].")
+		owner.investigate_log("had their contractor bomb implant armed.", INVESTIGATE_DEATHS)
+		message_admins("[ADMIN_LOOKUPFLW(owner)]'s contractor bomb implant was armed at [ADMIN_VERBOSEJMP(owner)].")
 	return TRUE
 
 /// Builds a base64 mugshot of the owner for the detonation suite UI, cached after first use.
@@ -468,7 +514,7 @@
 		"ref" = REF(src),
 		"armed" = active,
 		"nuclear" = (explosion_flags & CONTRACTOR_EXPLOSION_NUCLEAR),
-		"time_left" = active ? max(0, detonation_timer - world.time) : 0,
+		"time_left" = active ? COOLDOWN_TIMELEFT(src, detonation_timer) : 0,
 		"fuse_length" = det_time,
 		"mugshot" = get_mugshot(),
 	)

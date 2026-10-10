@@ -220,6 +220,11 @@
 /// From /datum/status_effect/shapechange_mob/after_unchange(): (mob/living/caster)
 #define COMSIG_LIVING_UNSHAPESHIFTED "living_unshapeshifted"
 
+/// From changeling transform powers and the magic mirror, right before the user changes their own species
+#define COMSIG_LIVING_PRE_SELF_TRANSFORM "living_pre_self_transform"
+	/// Return to stop the transformation
+	#define COMPONENT_BLOCK_SELF_TRANSFORM (1<<0)
+
 ///From /obj/effect/rune/convert/do_sacrifice() : (list/invokers)
 #define COMSIG_LIVING_CULT_SACRIFICED "living_cult_sacrificed"
 	/// Return to stop the sac from occurring

@@ -216,6 +216,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/mirror/broken, 28)
 		change_race(race_changer) // try again
 		return
 
+	if(new_race_path != race_changer.dna.species.type && (SEND_SIGNAL(race_changer, COMSIG_LIVING_PRE_SELF_TRANSFORM) & COMPONENT_BLOCK_SELF_TRANSFORM))
+		return
 	on_species_change(race_changer, newrace)
 	race_changer.set_species(new_race_path, icon_update = FALSE)
 	if(HAS_TRAIT(race_changer, TRAIT_USES_SKINTONES))

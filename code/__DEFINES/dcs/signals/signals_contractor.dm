@@ -39,6 +39,9 @@
 /// Called when the contractor bomb is attached to a mob
 #define COMSIG_CONTRACTOR_BOMB_ATTACHED_TO "contractor_bomb_attached_to"
 
+/// Called when the bomb lets go of its victim, defused or about to explode: (mob/living/carbon/human/victim)
+#define COMSIG_CONTRACTOR_BOMB_DETACHED "contractor_bomb_detached"
+
 /// Called when a fork is stuck into the bomb
 #define COMSIG_FORK_STUCK_IN_BOMB "contractor_bomb_got_forked"
 

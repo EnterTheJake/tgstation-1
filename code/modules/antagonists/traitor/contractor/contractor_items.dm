@@ -130,7 +130,7 @@
 		if("arm")
 			var/datum/contractor_state/contractor_state = get_contractor_state()
 			var/obj/item/contractor_bomb/bomb = locate(params["ref"]) in contractor_state?.bomb_implants
-			if(QDELETED(bomb) || bomb.active)
+			if(QDELETED(bomb) || bomb.active || bomb.detonating)
 				return TRUE
 			SEND_SIGNAL(bomb, COMSIG_CONTRACTOR_UI_BOMB_ARMED)
 			bomb.arm()
@@ -140,7 +140,7 @@
 			var/datum/contractor_state/contractor_state = get_contractor_state()
 			var/obj/item/contractor_bomb/bomb = locate(params["ref"]) in contractor_state?.bomb_implants
 			// Can only be defused before it's armed - once the fuse is running there's no calling it off.
-			if(QDELETED(bomb) || bomb.active || QDELETED(bomb.owner))
+			if(QDELETED(bomb) || bomb.active || bomb.detonating || QDELETED(bomb.owner))
 				return TRUE
 			SEND_SIGNAL(bomb, COMSIG_CONTRACTOR_UI_BOMB_DEFUSED)
 			contractor_state.bomb_implants -= bomb

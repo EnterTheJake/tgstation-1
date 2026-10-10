@@ -404,3 +404,5 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define CONTRACTOR_EXPLOSION_ENERGYBALL (1<<1)
 /// Blows up, admin style
 #define ADMIN_SHENANIGANS (1<<2) //XANTODO // Artur TODO : Make the bomb apply ADMIN_SHENANIGANS to the explosions_flags when an admin hits a button to explode it
+/// The victim tried to get rid of the bomb (changed body, swapped minds, pulled it out, left the station too often)
+#define CONTRACTOR_EXPLOSION_TAMPERED (1<<3)

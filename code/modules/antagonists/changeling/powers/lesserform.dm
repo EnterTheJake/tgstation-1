@@ -23,6 +23,8 @@
 /datum/action/changeling/lesserform/sting_action(mob/living/carbon/human/user)
 	if(!user || HAS_TRAIT(user, TRAIT_NO_TRANSFORM))
 		return FALSE
+	if(SEND_SIGNAL(user, COMSIG_LIVING_PRE_SELF_TRANSFORM) & COMPONENT_BLOCK_SELF_TRANSFORM)
+		return FALSE
 	..()
 	return ismonkey(user) ? unmonkey(user) : become_monkey(user)
 

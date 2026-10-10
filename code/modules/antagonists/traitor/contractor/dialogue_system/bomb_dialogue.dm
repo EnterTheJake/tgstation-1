@@ -454,6 +454,7 @@
 /datum/component/dialogue_system/contractor_bomb/RegisterWithParent()
 	. = ..()
 	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_ATTACHED_TO, PROC_REF(on_bomb_attached))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_DETACHED, PROC_REF(on_bomb_detached))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_BOMB_WIRE_CUT, PROC_REF(on_wire_cut))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_UI_BOMB_ARMED, PROC_REF(on_bomb_ui_armed))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_UI_BOMB_DEFUSED, PROC_REF(on_bomb_ui_neutralized))
@@ -481,20 +482,30 @@
 	RegisterSignal(victim, COMSIG_ATOM_SURGERY_STARTED, PROC_REF(on_surgery_started))
 	RegisterSignal(victim, COMSIG_MOB_STATCHANGE, PROC_REF(on_victim_stat_change))
 
+/// Stops listening to the victim once the bomb lets go of them
+/datum/component/dialogue_system/contractor_bomb/proc/on_bomb_detached(datum/source, mob/living/carbon/human/victim)
+	SIGNAL_HANDLER
+	UnregisterSignal(victim, list(COMSIG_ATOM_SURGERY_STARTED, COMSIG_MOB_STATCHANGE))
+	bomb_wearer = null
+
 /// Helper proc, plays a sound from a given sound pool. If explodes is TRUE, will blow up the bomb after a delay
 /datum/component/dialogue_system/contractor_bomb/proc/emit_sound_from_list(list/sound_list, explodes = FALSE, obj/item/contractor_bomb/about_to_explode)
-	if(!length(sound_list))
+	if(explodes)
+		if(isnull(about_to_explode))
+			CRASH("Sound helper tried to explode but no bomb was passed to actually explode")
+		if(about_to_explode.detonating)
+			return
+	var/datum/dialogue_sound/sound = length(sound_list) ? pick_available_sound(sound_list, parent, parent) : null
+	if(isnull(sound))
+		if(explodes)
+			about_to_explode.delayed_explosion(0)
 		return
-	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
 	sound_list -= sound
-	sound?.play(location = parent)
+	sound.play(location = parent)
 	var/line_duration = rustg_sound_length(sound.sound_path)
 	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
-	if(!explodes)
-		return
-	if(isnull(about_to_explode))
-		CRASH("Sound helper tried to explode but no bomb was passed to actually explode")
-	about_to_explode.delayed_explosion(line_duration)
+	if(explodes)
+		about_to_explode.delayed_explosion(line_duration)
 
 /// Helper proc, checks if the victim is a clown or a felinid for the special voice lines
 /datum/component/dialogue_system/contractor_bomb/proc/has_special_line(sound_pool)

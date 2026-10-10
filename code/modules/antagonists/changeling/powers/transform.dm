@@ -176,6 +176,8 @@
 
 	if(!chosen_prof)
 		return
+	if(chosen_prof.dna.species.type != user.dna.species.type && (SEND_SIGNAL(user, COMSIG_LIVING_PRE_SELF_TRANSFORM) & COMPONENT_BLOCK_SELF_TRANSFORM))
+		return FALSE
 	..()
 	changeling.transform(user, chosen_prof)
 	SEND_SIGNAL(user, COMSIG_CHANGELING_TRANSFORM)

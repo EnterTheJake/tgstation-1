@@ -22,6 +22,8 @@
 
 /datum/action/changeling/headcrab/sting_action(mob/living/user)
 	set waitfor = FALSE
+	if(SEND_SIGNAL(user, COMSIG_LIVING_PRE_SELF_TRANSFORM) & COMPONENT_BLOCK_SELF_TRANSFORM)
+		return FALSE
 	var/confirm = tgui_alert(user, "Are we sure we wish to destroy our body and create a headslug?", "Last Resort", list("Yes", "No"))
 	if(active || confirm != "Yes")
 		return
