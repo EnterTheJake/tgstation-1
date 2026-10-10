@@ -66,6 +66,7 @@
 	log_countermeasure(source, "they left the station (trip [off_station_trips] of [OFF_STATION_MAX_TRIPS]), grace period started")
 	off_station_timer = addtimer(CALLBACK(src, PROC_REF(arm_for_leaving)), OFF_STATION_GRACE, TIMER_STOPPABLE)
 	to_chat(source, span_userdanger("Your implant chirps: you left the station. Get back in [DisplayTimeText(OFF_STATION_GRACE)] or it arms. Leaving [OFF_STATION_MAX_TRIPS - off_station_trips + 1] more times sets it off."))
+	source.balloon_alert(source, "return to the station!")
 
 /obj/item/contractor_bomb/proc/arm_for_leaving()
 	off_station_timer = null
