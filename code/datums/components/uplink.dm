@@ -88,6 +88,7 @@
 	else
 		uplink_handler = uplink_handler_override
 	RegisterSignal(uplink_handler, COMSIG_UPLINK_HANDLER_ON_UPDATE, PROC_REF(handle_uplink_handler_update))
+	RegisterSignal(uplink_handler, COMSIG_UPLINK_HANDLER_BRICKED, PROC_REF(on_handler_bricked))
 	if(!lockable)
 		active = TRUE
 		locked = FALSE
@@ -97,6 +98,12 @@
 /datum/component/uplink/proc/handle_uplink_handler_update()
 	SIGNAL_HANDLER
 	SStgui.update_uis(src)
+
+/// Closes any open window and removes the uplink, leaving the item it was hidden in untouched
+/datum/component/uplink/proc/on_handler_bricked()
+	SIGNAL_HANDLER
+	SStgui.close_uis(src)
+	qdel(src)
 
 /datum/component/uplink/InheritComponent(datum/component/uplink/uplink)
 	lockable |= uplink.lockable
