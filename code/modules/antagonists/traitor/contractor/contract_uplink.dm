@@ -38,7 +38,7 @@
 	// Set up the hub before ..() opens the UI, else the first static data has no contracts and payouts read 0.
 	if(!isnull(traitor_user?.uplink_handler) && isnull(traitor_user.uplink_handler.contractor_state))
 		handler.add_uplink(src, user)
-		traitor_user.uplink_handler.contractor_state = new()
+		traitor_user.uplink_handler.contractor_state = new(traitor_user.owner)
 		user.playsound_local(user, 'sound/music/antag/contractstartup.ogg', 100, FALSE)
 	return ..()
 
@@ -131,7 +131,7 @@
 		return
 
 	if(isnull(traitor.uplink_handler.contractor_state))
-		traitor.uplink_handler.contractor_state = new()
+		traitor.uplink_handler.contractor_state = new(traitor.owner)
 
 	switch(action)
 		if("contract_accept")

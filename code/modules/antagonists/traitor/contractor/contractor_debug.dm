@@ -70,7 +70,7 @@ ADMIN_VERB(spawn_contractor_bomb_victim, R_DEBUG|R_SPAWN, "Spawn Contractor Bomb
 		to_chat(user, span_warning("You have no uplink handler to store the contractor state on - give yourself an uplink first."))
 		return
 	if(isnull(traitor.uplink_handler.contractor_state))
-		traitor.uplink_handler.contractor_state = new()
+		traitor.uplink_handler.contractor_state = new(traitor.owner)
 	var/datum/contractor_state/contractor_state = traitor.uplink_handler.contractor_state
 
 	if(!(locate(/obj/item/implant/explosive/contractor) in contractor.implants))
