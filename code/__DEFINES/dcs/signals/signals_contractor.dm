@@ -21,10 +21,16 @@
 /// Called when the gauss rifle has it's internal cell maxed out via a nanite cell
 #define COMSIG_GAUSS_RIFLE_CELL_REFILLED "gauss_rifle_cell_refilled"
 
+/// Called when the gauss rifle processes on the floor
+#define COMSIG_GAUSS_RIFLE_IDLE_PROCESS "gauss_rifle_idle_process"
+
 //---- Contractor Case Signals
 
 /// Called when the gun briefcase is locked
 #define COMSIG_CONTRACTOR_CASE_LOCKED "contractor_briefcase_locked"
+
+/// Called when the gun briefcase is unlocked
+#define COMSIG_CONTRACTOR_CASE_UNLOCKED "contractor_briefcase_unlocked"
 
 //---- Contractor Bomb signals
 /// Called when a wire on the contractor bomb is cut

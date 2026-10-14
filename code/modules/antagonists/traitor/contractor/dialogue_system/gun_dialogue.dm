@@ -18,9 +18,16 @@
 	var/list/deconstruction
 	var/list/overheated
 	var/list/reloaded
-	var/list/activated_bomb_implant
 	var/list/box_take_out
 	var/list/box_put_in
+	var/list/gun_smack
+	var/list/scope_activated
+
+	/// Time since last idle complaint
+	COOLDOWN_DECLARE(lonely_cooldown)
+	/// Sequential tracker for how long we've spent on the floor
+	var/im_so_lonely = 0
+	var/list/idle_on_floor
 
 	/// Tracker that remembers how many times we've played the "empty mag" line. Plays it sequentially and resets on shot
 	var/empty_mag_annoyance = 0
@@ -28,8 +35,14 @@
 	COOLDOWN_DECLARE(empty_mag_cooldown)
 	var/list/empty_mag
 
+	//---- Lines that care about the actual contractor
+	var/list/user_died
+	/// Cooldown because yelling after every shot gets annoying fast
+	COOLDOWN_DECLARE(shot_cooldown)
+	var/list/user_shot
 	/// Tracks if gun has greeted the contractor yet. One time event
 	var/first_greeting = FALSE
+	/// greeting lines
 	var/list/activation
 
 /datum/component/dialogue_system/contractor_gun/setup_sound_lists()
@@ -263,17 +276,45 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/box_take_in_out/box_put_in_3_take3.ogg'),
 	)
 
+	gun_smack = list( // Melee-ing someone with the gun
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_2_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_3_take1.ogg'),
+	)
+
+	user_shot = list( // Getting hit by any bullet
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_4_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_5_take1.ogg'),
+	)
+
+	user_died = list( // Contractor has died (while in view of the gun)
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/activated_bomb_implant_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_4_take2.ogg'),
+	)
+
+	scope_activated = list( // First time you ever scoped in. Only 1 of these lines will ever play (RNJesus decides)
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_3_take2.ogg'),
+	)
+
+	idle_on_floor = list( // Gun starts coping when you leave it alone. Follows order, resets when picked up.
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_3_take3.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_4_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_long_time_take2.ogg'),
+	)
+
 // XANTODO : Start implementing the lines
 
 /*
-
-	// XANTODO: COMSIG_EXPLOSIVE_IMPLANT_MANUALLY_TRIGGERED needs to be registered on however we decide to track the contractor
-	activated_bomb_implant = list( // Suicide self-destruct implant
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/activated_bomb_implant/activated_bomb_implant_3_take1.ogg'),
-	)
-
 	apocalypse = list( // Heretic stuff
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_ash_take3.ogg'), // Ash ascension
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/apocalypse/apocalypse_blade_blocks_near_gun_take2.ogg'), // Bullet blocked by blade heretic knife
@@ -347,20 +388,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_2_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_3_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/fps_arrived/fps_arrived_4_take1.ogg'),
-	)
-
-	gun_smack = list( // Melee-ing someone with the gun
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_2_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/gun_smack/gun_smack_3_take1.ogg'),
-	)
-
-	idle_on_floor = list( // Gun starts coping when you leave it alone. Follows order, resets when picked up.
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_3_take3.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_4_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_long_time_take2.ogg'),
 	)
 
 	mode_swap_dark_matter = list(
@@ -472,12 +499,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot_scoped/pointblank_shot_scoped_take2.ogg'),
 	)
 
-	scope_activated = list( // First time you ever scoped in. Only 1 of these lines will ever play (RNJesus decides)
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/scope_activated/scope_activated_3_take2.ogg'),
-	)
-
 	speaker = list( // Not yet implemented
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_2.ogg'),
@@ -506,20 +527,7 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_first_time.ogg'), // First kidnapping, non-repeatable the rest are RNG
 	)
 
-	user_shot = list( // Getting hit by any bullet
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_3_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_4_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_shot/user_shot_5_take1.ogg'),
-	)
 
-	user_died = list( // Contractor has died (while in view of the gun)
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_3_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_died/user_died_4_take2.ogg'),
-	)
 */
 
 
@@ -551,12 +559,26 @@
 	apply_channel_to_sound_pool_list(assoc_to_values(mode_unlocked))
 	apply_channel_to_sound_list(unathorized_user)
 	apply_channel_to_sound_list(unathorized_user_poisoned)
+	apply_channel_to_sound_list(deconstruction)
+	apply_channel_to_sound_list(overheated)
+	apply_channel_to_sound_list(reloaded)
+	apply_channel_to_sound_list(empty_mag)
+	apply_channel_to_sound_list(activation)
+	apply_channel_to_sound_list(box_take_out)
+	apply_channel_to_sound_list(box_put_in)
+	apply_channel_to_sound_list(gun_smack)
+	apply_channel_to_sound_list(user_shot)
+	apply_channel_to_sound_list(user_died)
+	apply_channel_to_sound_list(scope_activated)
+	apply_channel_to_sound_list(idle_on_floor)
 
 /datum/component/dialogue_system/contractor_gun/RegisterWithParent()
 	. = ..()
 	RegisterSignal(parent, COMSIG_ITEM_PICKUP, PROC_REF(on_pickup))
 	RegisterSignal(parent, COMSIG_ITEM_DROPPED, PROC_REF(on_dropped))
 	RegisterSignal(parent, COMSIG_ITEM_EQUIPPED, PROC_REF(on_equipped))
+	RegisterSignal(parent, COMSIG_ITEM_AFTERATTACK, PROC_REF(on_gun_smack))
+	RegisterSignal(parent, COMSIG_CONTRACTOR_CASE_UNLOCKED, PROC_REF(on_removed_from_chargecase))
 	RegisterSignal(parent, COMSIG_CONTRACTOR_CASE_LOCKED, PROC_REF(on_stored_in_chargecase))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_MODE_CHANGED, PROC_REF(on_mode_changed))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_AMMOTYPE_UNLOCKED, PROC_REF(on_mode_unlocked))
@@ -565,6 +587,8 @@
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_OVERHEATED, PROC_REF(on_gun_overheat))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_CELL_REFILLED, PROC_REF(on_cell_refilled))
 	RegisterSignal(parent, COMSIG_GUN_FIRED_EMPTY_CHAMBER, PROC_REF(on_shoot_empty))
+	RegisterSignal(parent, COMSIG_COMPONENT_SCOPE_ZOOMED, PROC_REF(on_scope))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_IDLE_PROCESS, PROC_REF(play_idle))
 
 /// Helper proc, plays a sound from a given sound pool.
 /datum/component/dialogue_system/contractor_gun/proc/emit_sound_from_list(list/sound_list)
@@ -598,16 +622,35 @@
 	SIGNAL_HANDLER
 	if(!isliving(equipper))
 		return
-	if(slot & ITEM_SLOT_HANDS)
-		if(!first_greeting && (equipper == contractor_ref?.resolve()))
-			first_greeting = TRUE
-			emit_sound_from_list(activation)
-			return
-		emit_sound_from_list(pickup_sounds)
+	if(!(slot & ITEM_SLOT_HANDS))
+		return
+	if(!contractor_ref)
+		meet_my_hero(equipper) // Here is where we meet our hero for the first time (Assumedly)
+	if(equipper != contractor_ref?.resolve())
+		return
+	if(!first_greeting)
+		first_greeting = TRUE
+		emit_sound_from_list(activation)
+		return
+	emit_sound_from_list(pickup_sounds)
+
+/// Plays a line when you smack someone with the gun in melee range
+/datum/component/dialogue_system/contractor_gun/proc/on_gun_smack(obj/item/axe, atom/target, mob/user, list/modifiers)
+	SIGNAL_HANDLER
+	emit_sound_from_list(gun_smack)
+
+/// Plays a line when you take the gun out of the suitcase
+/datum/component/dialogue_system/contractor_gun/proc/on_removed_from_chargecase(obj/item/source, mob/user)
+	SIGNAL_HANDLER
+	if(!first_greeting || !user)
+		return
+	emit_sound_from_list(box_take_out)
 
 /// Plays a line when you lock the suitcase with the gun inside
-/datum/component/dialogue_system/contractor_gun/proc/on_stored_in_chargecase(datum/source)
+/datum/component/dialogue_system/contractor_gun/proc/on_stored_in_chargecase(obj/item/source, mob/user)
 	SIGNAL_HANDLER
+	if(!first_greeting || !user)
+		return
 	emit_sound_from_list(box_put_in)
 
 /datum/component/dialogue_system/contractor_gun/proc/on_pickup(obj/item/source, mob/living/taker)
@@ -616,8 +659,8 @@
 	if(!isliving(taker))
 		return
 	if(!contractor_ref)
-		if(locate(/obj/item/implant/explosive/contractor) in taker.implants)
-			contractor_ref = WEAKREF(taker) // Here is where we meet our hero for the first time (Assumedly)
+		meet_my_hero(taker) // Here is where we meet our hero for the first time (Assumedly)
+	im_so_lonely = 0
 	var/atom/atom_parent = parent
 	if(!isturf(atom_parent.loc))
 		return
@@ -625,13 +668,21 @@
 	RegisterSignal(taker, COMSIG_CONTRACTOR_KIDNAPPED, PROC_REF(on_kidnapped))
 	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_pickup_line), taker), 0.1 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
 
+/// Registers relevant stuff to the person who became the hero for the gun
+/datum/component/dialogue_system/contractor_gun/proc/meet_my_hero(mob/living/hero_of_the_story)
+	if(!locate(/obj/item/implant/contractor) in hero_of_the_story.implants)
+		return
+	contractor_ref = WEAKREF(hero_of_the_story)
+	RegisterSignal(hero_of_the_story, COMSIG_LIVING_DEATH, PROC_REF(on_user_died))
+	RegisterSignal(hero_of_the_story, COMSIG_ATOM_BULLET_ACT, PROC_REF(on_user_shot))
+
 /datum/component/dialogue_system/contractor_gun/proc/try_play_pickup_line(mob/living/taker)
 	if(!isliving(taker))
 		return
 	if(!taker?.is_holding(parent))
 		return
 	var/list/sound_pool = pickup_sounds
-	if(!locate(/obj/item/implant/explosive/contractor) in taker.implants) // No implant found?
+	if(!locate(/obj/item/implant/contractor) in taker.implants) // No implant found?
 		sound_pool = unathorized_user
 	emit_sound_from_list(sound_pool)
 
@@ -640,10 +691,11 @@
 	_unregister_holder()
 	if(!isliving(user))
 		return
+	COOLDOWN_START(src, im_so_lonely, rand(30 SECONDS, 90 SECONDS))
 	var/atom/atom_parent = parent
 	if(!isturf(atom_parent.loc))
 		return
-	if(!locate(/obj/item/implant/explosive/contractor) in user.implants) // No implant found?
+	if(!locate(/obj/item/implant/contractor) in user.implants) // No implant found?
 		return // Parent call plays a line "hey you forgot me"
 	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_dropped_line), user), 5 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
 
@@ -707,3 +759,35 @@
 	COOLDOWN_START(src, empty_mag_cooldown, (5 SECONDS + line_duration))
 // XANTODO: Make it where when you put the gun in the gun case it resets `empty_mag_annoyance` back to 0 as well (Since it recharges the gun)
 
+/// Plays a line when the contractor dies within view of the gun
+/datum/component/dialogue_system/contractor_gun/proc/on_user_died(mob/living/source)
+	SIGNAL_HANDLER
+	emit_sound_from_list(user_died) // XANTODO: Make sure the contractor dies within view of the gun
+
+/// Plays a line when the contractor takes a projectile hit
+/datum/component/dialogue_system/contractor_gun/proc/on_user_shot(datum/source, obj/projectile/shot)
+	SIGNAL_HANDLER
+	if(!COOLDOWN_FINISHED(src, shot_cooldown))
+		return
+	if(shot.damage <= 0)
+		return
+	COOLDOWN_START(src, shot_cooldown, 30 SECONDS)
+	emit_sound_from_list(user_shot)
+
+/datum/component/dialogue_system/contractor_gun/proc/on_scope(datum/source, mob/user)
+	SIGNAL_HANDLER
+	emit_sound_from_list(scope_activated)
+	scope_activated = list() // Empty out the list after so it doesnt play any more lines
+
+/// Plays an idle line whenever it's sitting on the floor for a while
+/datum/component/dialogue_system/contractor_gun/proc/play_idle(datum/source)
+	SIGNAL_HANDLER
+	if(!COOLDOWN_FINISHED(src, im_so_lonely))
+		return
+	im_so_lonely++
+	if(im_so_lonely > length(idle_on_floor))
+		return
+	var/datum/dialogue_sound/sound = idle_on_floor[im_so_lonely]
+	var/line_duration = rustg_sound_length(sound.sound_path)
+	sound?.play(location = parent)
+	COOLDOWN_START(src, im_so_lonely, (25 SECONDS + line_duration))

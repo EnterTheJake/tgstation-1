@@ -142,7 +142,7 @@
 /obj/item/firing_pin/implant/cybersun
 	name = "cybersun firing pin"
 	icon_state = "firing_pin_pindi"
-	req_implant = /obj/item/implant/explosive/contractor
+	req_implant = /obj/item/implant/contractor
 	pin_removable = FALSE
 
 /obj/item/firing_pin/implant/cybersun/auth_fail(mob/living/user)

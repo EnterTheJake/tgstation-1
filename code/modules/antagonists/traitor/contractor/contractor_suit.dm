@@ -85,7 +85,7 @@
 /obj/item/mod/control/pre_equipped/contractor/toggle_activate(mob/user, force_deactivate = FALSE)
 	if(!wearer)
 		return FALSE
-	if(!force_deactivate && !(locate(/obj/item/implant/explosive/contractor) in wearer.implants))
+	if(!force_deactivate && !(locate(/obj/item/implant/contractor) in wearer.implants))
 		balloon_alert(user, "access insufficient!")
 		playsound(src, 'sound/machines/scanner/scanbuzz.ogg', 25, TRUE, SILENCED_SOUND_EXTRARANGE)
 		return FALSE
