@@ -142,8 +142,10 @@
 /obj/item/firing_pin/implant/cybersun
 	name = "cybersun firing pin"
 	icon_state = "firing_pin_pindi"
-	req_implant = /obj/item/implant/contractor
 	pin_removable = FALSE
+
+/obj/item/firing_pin/implant/cybersun/pin_auth(mob/living/user)
+	return HAS_TRAIT(user, TRAIT_CONTRACTOR_IMPLANT)
 
 /obj/item/firing_pin/implant/cybersun/auth_fail(mob/living/user)
 	if(!ishuman(user))

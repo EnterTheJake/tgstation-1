@@ -166,7 +166,6 @@
 	. = ..()
 	. += "The Raijin Horizon Gauss Rifle is slow to fire but fires a high velocity, high impact, high penetration round."
 	. += "Has an implant restricted firing pin similar to nuclear operatives, and can only be fired by users with the Cybersun authorization implant. "
-	. += "This implant is injected upon picking up the gun for the first time."
 	. += "The case contains the gun and a spare nanite cell, and ships loaded with the standard and gyre patterns."
 	. += "Applying a purchased magazine to the gun teaches its fabricator that pattern, adding the round to the fire selector."
 	. += "Scoping in and holding the shot spins the selected round up into an empowered version of itself."

@@ -73,9 +73,8 @@ ADMIN_VERB(spawn_contractor_bomb_victim, R_DEBUG|R_SPAWN, "Spawn Contractor Bomb
 		traitor.uplink_handler.contractor_state = new(traitor.owner)
 	var/datum/contractor_state/contractor_state = traitor.uplink_handler.contractor_state
 
-	if(!(locate(/obj/item/implant/contractor) in contractor.implants))
-		var/obj/item/implant/contractor/detonator_implant = new()
-		detonator_implant.implant(contractor)
+	var/obj/item/organ/brain/contractor_brain = contractor.get_organ_slot(ORGAN_SLOT_BRAIN)
+	contractor_brain.AddComponent(/datum/component/cybersun_authorization)
 
 	var/mob/living/carbon/human/victim = new(get_turf(contractor))
 	var/choices = tgui_input_checkboxes(user, "What kind of victim?", "Victim spawner", list("Changeling", "Clown", "Felinid"), min_checked = 0)

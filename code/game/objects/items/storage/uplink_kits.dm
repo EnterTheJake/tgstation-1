@@ -905,7 +905,7 @@
 	illustration = null
 
 /obj/item/storage/box/syndicate/contract_kit/PopulateContents()
-	new /obj/item/implanter/contractor(src)
+	new /obj/item/cybersun_authorizer(src)
 	new /obj/item/mod/control/pre_equipped/contractor(src)
 	new /obj/item/clothing/under/chameleon(src)
 	new /obj/item/clothing/mask/chameleon(src)

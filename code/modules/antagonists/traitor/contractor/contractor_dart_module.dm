@@ -256,7 +256,7 @@ GLOBAL_LIST_EMPTY(camera_dart_audio_logs)
 	if(!isliving(target))
 		return
 	var/mob/living/victim = target
-	var/obj/item/implant/contractor/camera_dart/new_implant = new()
+	var/obj/item/implant/camera_dart/new_implant = new()
 	if(isliving(firer))
 		new_implant.tracker_ref = WEAKREF(firer)
 	new_implant.implant(victim, null, TRUE, TRUE)
@@ -264,10 +264,11 @@ GLOBAL_LIST_EMPTY(camera_dart_audio_logs)
 /// A microscopic surveillance implant fired by the camera dart.
 /// Silently embeds in the victim, relaying heard speech to the contractor. After
 /// 10-15 minutes the foreign body begins causing occasional itching.
-/obj/item/implant/contractor/camera_dart
+/obj/item/implant/camera_dart
 	name = "camera implant"
 	desc = "A microscopic surveillance microimplant."
 	actions_types = null
+	hidden_implant = TRUE
 	implant_flags = NONE
 	implant_info = "A microscopic surveillance device embedded by a specialized dart. \
 		Relays ambient audio and allows remote tracking. Causes mild localized \
@@ -279,7 +280,7 @@ GLOBAL_LIST_EMPTY(camera_dart_audio_logs)
 	/// Timer ID for the initial itch delay
 	var/itch_timer_id
 
-/obj/item/implant/contractor/camera_dart/implant(mob/living/target, mob/user, silent = FALSE, force = FALSE)
+/obj/item/implant/camera_dart/implant(mob/living/target, mob/user, silent = FALSE, force = FALSE)
 	. = ..()
 	if(!.)
 		return
@@ -287,14 +288,14 @@ GLOBAL_LIST_EMPTY(camera_dart_audio_logs)
 	// Begin itching after 10-15 minutes of implantation
 	itch_timer_id = addtimer(CALLBACK(src, PROC_REF(do_itch)), rand(10 MINUTES, 15 MINUTES), TIMER_STOPPABLE|TIMER_DELETE_ME)
 
-/obj/item/implant/contractor/camera_dart/removed(mob/living/source, silent, special)
+/obj/item/implant/camera_dart/removed(mob/living/source, silent, special)
 	UnregisterSignal(source, COMSIG_MOVABLE_HEAR)
 	if(itch_timer_id)
 		deltimer(itch_timer_id)
 		itch_timer_id = null
 	return ..()
 
-/obj/item/implant/contractor/camera_dart/proc/relay_hearing(datum/source, list/hearing_args)
+/obj/item/implant/camera_dart/proc/relay_hearing(datum/source, list/hearing_args)
 	SIGNAL_HANDLER
 	var/mob/living/tracker = tracker_ref?.resolve()
 	if(isnull(tracker))
@@ -305,7 +306,7 @@ GLOBAL_LIST_EMPTY(camera_dart_audio_logs)
 	add_camera_dart_audio_entry(tracker, imp_in, message)
 
 /// Called after the initial delay, then repeats periodically to simulate foreign-body irritation.
-/obj/item/implant/contractor/camera_dart/proc/do_itch()
+/obj/item/implant/camera_dart/proc/do_itch()
 	itch_timer_id = null
 	if(QDELETED(src) || !imp_in)
 		return
