@@ -8,19 +8,22 @@
 		and cash payouts. Upon purchase, you'll be granted your own contract uplink embedded within the supplied \
 		tablet computer. Additionally, you'll be granted standard contractor gear to help with your mission - \
 		comes supplied with the tablet, specialised space suit, chameleon jumpsuit and mask, agent card, \
-		and a specialised contractor baton."
+		and a specialised contractor baton. Buying this permanently shuts down your standard uplink, \
+		and any unspent telecrystals are handed back as raw crystals."
 	item = /obj/item/storage/box/syndicate/contract_kit
 	category = /datum/uplink_category/contractor
 	cost = 20
 	purchasable_from = UPLINK_TRAITORS
 	population_minimum = TRAITOR_POPULATION_LOWPOP
-	lock_other_purchases = TRUE
 
 /datum/uplink_item/bundles_tc/contract_kit/purchase(mob/user, datum/uplink_handler/uplink_handler, atom/movable/source)
 	. = ..()
 	for(var/uplink_items in subtypesof(/datum/uplink_item/contractor))
 		var/datum/uplink_item/uplink_item = new uplink_items
 		uplink_handler.extra_purchasable += uplink_item
+	if(uplink_handler.telecrystals > 0)
+		uplink_handler.purchase_raw_tc(user, uplink_handler.telecrystals, source)
+	SEND_SIGNAL(uplink_handler, COMSIG_UPLINK_HANDLER_BRICKED)
 
 /datum/uplink_item/contractor
 	restricted = TRUE

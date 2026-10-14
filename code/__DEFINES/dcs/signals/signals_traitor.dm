@@ -1,5 +1,7 @@
 /// Called whenever the uplink handler receives any sort of update. Used by uplinks to update their UI. No arguments passed
 #define COMSIG_UPLINK_HANDLER_ON_UPDATE "uplink_handler_on_update"
+/// Called when the uplink handler's account is shut down for good. Every uplink component sharing it deletes itself. No arguments passed
+#define COMSIG_UPLINK_HANDLER_BRICKED "uplink_handler_bricked"
 
 /// Called when a device a traitor has planted effects someone's mood. Pass the mind of the viewer.
 #define COMSIG_DEMORALISING_EVENT "traitor_demoralise_event"
