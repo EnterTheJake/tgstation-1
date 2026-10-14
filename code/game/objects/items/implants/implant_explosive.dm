@@ -71,7 +71,6 @@
 		popup = FALSE
 		if(response != "Yes")
 			return FALSE
-		SEND_SIGNAL(imp_in, COMSIG_EXPLOSIVE_IMPLANT_MANUALLY_TRIGGERED)
 	if(cause == "death" && HAS_TRAIT(imp_in, TRAIT_PREVENT_IMPLANT_AUTO_EXPLOSION))
 		return FALSE
 	if(announce_activation)

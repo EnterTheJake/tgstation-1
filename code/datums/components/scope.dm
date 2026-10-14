@@ -167,6 +167,7 @@
 /datum/component/scope/proc/zoom(mob/user)
 	if(isnull(user.client))
 		return
+	SEND_SIGNAL(parent, COMSIG_COMPONENT_SCOPE_ZOOMED, user)
 	if(HAS_TRAIT(user, TRAIT_USER_SCOPED))
 		user.balloon_alert(user, "already zoomed!")
 		return

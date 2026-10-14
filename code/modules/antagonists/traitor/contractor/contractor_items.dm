@@ -70,48 +70,48 @@
 // Contractor implant
 /obj/item/implanter/contractor
 	name = "implanter (Cybersun)"
-	imp_type = /obj/item/implant/explosive/contractor
+	imp_type = /obj/item/implant/contractor
 
-/obj/item/implant/explosive/contractor
+/obj/item/implant/contractor
 	name = "Cybersun implant"
 	actions_types = list(/datum/action/item_action/contractor_detonator)
 	hidden_implant = TRUE
 
-/obj/item/implant/explosive/contractor/implant(mob/living/target, mob/user, silent = FALSE, force = FALSE)
+/obj/item/implant/contractor/implant(mob/living/target, mob/user, silent = FALSE, force = FALSE)
 	. = ..()
 	if(!.)
 		return
 	ADD_TRAIT(target, TRAIT_CONTRACTOR_IMPLANT, IMPLANT_TRAIT)
 	refresh_contractor_cloak_visibility(target)
 
-/obj/item/implant/explosive/contractor/removed(mob/living/source, silent, special)
+/obj/item/implant/contractor/removed(mob/living/source, silent, special)
 	REMOVE_TRAIT(source, TRAIT_CONTRACTOR_IMPLANT, IMPLANT_TRAIT)
 	refresh_contractor_cloak_visibility(source)
 	return ..()
 
 /// Opens the remote detonation suite instead of self-detonating like a normal explosive implant.
-/obj/item/implant/explosive/contractor/ui_action_click(mob/user, actiontype)
+/obj/item/implant/contractor/ui_action_click(mob/user, actiontype)
 	if(istype(actiontype, /datum/action/item_action/contractor_detonator))
 		ui_interact(imp_in)
 		return
 	return ..()
 
 /// Resolves the contractor state (and its tracked bomb implants) belonging to the implantee.
-/obj/item/implant/explosive/contractor/proc/get_contractor_state()
+/obj/item/implant/contractor/proc/get_contractor_state()
 	var/datum/antagonist/traitor/traitor = imp_in?.mind?.has_antag_datum(/datum/antagonist/traitor)
 	return traitor?.uplink_handler?.contractor_state
 
-/obj/item/implant/explosive/contractor/ui_state(mob/user)
+/obj/item/implant/contractor/ui_state(mob/user)
 	return GLOB.conscious_state
 
-/obj/item/implant/explosive/contractor/ui_interact(mob/user, datum/tgui/ui)
+/obj/item/implant/contractor/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "BombImplantDetonator")
 		ui.set_autoupdate(TRUE)
 		ui.open()
 
-/obj/item/implant/explosive/contractor/ui_data(mob/user)
+/obj/item/implant/contractor/ui_data(mob/user)
 	var/list/data = list()
 	var/list/bombs = list()
 	var/datum/contractor_state/state = get_contractor_state()
@@ -122,7 +122,7 @@
 	data["bombs"] = bombs
 	return data
 
-/obj/item/implant/explosive/contractor/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+/obj/item/implant/contractor/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
 	if(.)
 		return

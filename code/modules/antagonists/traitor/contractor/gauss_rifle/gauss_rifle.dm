@@ -42,6 +42,7 @@
 	var/matrix/offset = matrix()
 	offset.Translate(-16, 0)
 	transform = offset
+	START_PROCESSING(SSobj, src)
 
 /obj/item/gun/energy/gauss_rifle/Destroy()
 	QDEL_NULL(ammo_display)
@@ -55,6 +56,12 @@
 /obj/item/gun/energy/gauss_rifle/dropped(mob/user, silent = FALSE)
 	ammo_display?.hide_from_owner()
 	return ..()
+
+/obj/item/gun/energy/gauss_rifle/process(seconds_per_tick)
+	. = ..()
+	if(!isturf(loc))
+		return
+	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_IDLE_PROCESS)
 
 /obj/item/gun/energy/gauss_rifle/handle_chamber()
 	var/obj/item/ammo_casing/energy/gauss/spent_round = astype(chambered)

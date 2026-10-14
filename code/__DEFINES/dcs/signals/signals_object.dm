@@ -327,8 +327,6 @@
 // /obj/item/implant signals
 ///from base of /obj/item/implant/proc/activate(): ()
 #define COMSIG_IMPLANT_ACTIVATED "implant_activated"
-/// called when an explosive implant is triggered + confirmed
-#define COMSIG_EXPLOSIVE_IMPLANT_MANUALLY_TRIGGERED "explosive_implant_manually_activated"
 ///from base of /obj/item/implant/proc/implant(): (list/args)
 #define COMSIG_IMPLANT_IMPLANTING "implant_implanting"
 	#define COMPONENT_STOP_IMPLANTING (1<<0)

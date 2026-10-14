@@ -1,7 +1,5 @@
 #define CONTRACTOR_CASE_RECHARGE_RATE (0.1 * STANDARD_CELL_CHARGE)
 #define CONTRACTOR_CASE_OPENING_DELAY (2.8 SECONDS)
-/// Weight class the case takes on while open, large enough that it can't be stuffed into bags.
-#define CONTRACTOR_CASE_OPEN_WEIGHT_CLASS WEIGHT_CLASS_HUGE
 
 /obj/item/storage/contractor_gun_case
 	name = "contractor gun case"
@@ -12,7 +10,6 @@
 	worn_icon_state = "guncase_closed"
 	lefthand_file = 'icons/mob/inhands/equipment/toolbox_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/toolbox_righthand.dmi'
-	w_class = WEIGHT_CLASS_NORMAL
 	storage_type = /datum/storage/contractor_gun_case
 	slot_flags = ITEM_SLOT_SUITSTORE
 	/// Whether the case lid is currently open.
@@ -76,11 +73,11 @@
 	if(interaction_locked(user))
 		return CLICK_ACTION_BLOCKING
 	if(case_unlocked)
-		lock_case()
+		lock_case(user)
 		balloon_alert(user, "case locked")
 		return CLICK_ACTION_SUCCESS
 
-	unlock_case()
+	unlock_case(user)
 	balloon_alert(user, "case unlocked")
 	return CLICK_ACTION_SUCCESS
 
@@ -95,22 +92,23 @@
 	worn_icon_state = "guncase_closed"
 
 /// Unlocks the case, allowing access
-/obj/item/storage/contractor_gun_case/proc/unlock_case()
+/obj/item/storage/contractor_gun_case/proc/unlock_case(mob/user)
+	/// Notify everything in the box that the case is getting unlocked
+	for(var/obj/thing in get_all_contents())
+		SEND_SIGNAL(thing, COMSIG_CONTRACTOR_CASE_UNLOCKED, user)
 	case_unlocked = TRUE
 	atom_storage.set_locked(STORAGE_NOT_LOCKED)
-	w_class = CONTRACTOR_CASE_OPEN_WEIGHT_CLASS
 	COOLDOWN_START(src, opening_cooldown, CONTRACTOR_CASE_OPENING_DELAY)
 	flick("case_opening", src)
 	update_appearance()
 
 /// Locks the case, preventing access
-/obj/item/storage/contractor_gun_case/proc/lock_case()
+/obj/item/storage/contractor_gun_case/proc/lock_case(mob/user)
 	/// Notify everything in the box that the case is getting locked
 	for(var/obj/thing in get_all_contents())
-		SEND_SIGNAL(thing, COMSIG_CONTRACTOR_CASE_LOCKED)
+		SEND_SIGNAL(thing, COMSIG_CONTRACTOR_CASE_LOCKED, user)
 	case_opened = FALSE
 	case_unlocked = FALSE
-	w_class = initial(w_class)
 	atom_storage.set_locked(STORAGE_FULLY_LOCKED)
 	update_appearance()
 
@@ -182,9 +180,9 @@
 	update_appearance()
 
 /// Locks and closes the case, so that it's less jank when trying to store the suitcase in your backpack
-/obj/item/storage/contractor_gun_case/proc/before_storage_attempt()
+/obj/item/storage/contractor_gun_case/proc/before_storage_attempt(obj/item/source, atom/target_storage, mob/user, force, messages)
 	SIGNAL_HANDLER
-	lock_case()
+	lock_case(user)
 
 /obj/item/storage/contractor_gun_case/proc/update_processing()
 	if(length(get_charging_cells()))
@@ -211,6 +209,7 @@
 	max_total_storage = WEIGHT_CLASS_BULKY * 2
 	animated = FALSE
 	click_alt_open = FALSE
+	allow_big_nesting = TRUE // So we can put the pouch back in
 
 /datum/storage/contractor_gun_case/New(atom/parent, max_slots, max_specific_storage, max_total_storage, rustle_sound, remove_rustle_sound)
 	. = ..()
@@ -242,4 +241,3 @@
 
 #undef CONTRACTOR_CASE_RECHARGE_RATE
 #undef CONTRACTOR_CASE_OPENING_DELAY
-#undef CONTRACTOR_CASE_OPEN_WEIGHT_CLASS
