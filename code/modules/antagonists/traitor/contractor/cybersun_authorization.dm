@@ -131,15 +131,29 @@
 	w_class = WEIGHT_CLASS_SMALL
 
 /obj/item/cybersun_authorizer/attack_self(mob/user)
-	if(!iscarbon(user))
+	authorize(user, user)
+
+/obj/item/cybersun_authorizer/attack(mob/living/target, mob/user)
+	if(target == user)
+		return authorize(user, user)
+	if(!iscarbon(target))
+		return ..()
+	target.visible_message(span_warning("[user] is attempting to inject [target] with [src]."))
+	if(!do_after(user, 5 SECONDS, target))
+		return TRUE
+	authorize(target, user)
+	return TRUE
+
+/obj/item/cybersun_authorizer/proc/authorize(mob/living/target, mob/user)
+	if(!iscarbon(target))
 		return
-	if(HAS_TRAIT(user, TRAIT_CONTRACTOR_IMPLANT))
+	if(HAS_TRAIT(target, TRAIT_CONTRACTOR_IMPLANT))
 		balloon_alert(user, "already authorized!")
 		return
-	var/obj/item/organ/brain/brain = user.get_organ_slot(ORGAN_SLOT_BRAIN)
+	var/obj/item/organ/brain/brain = target.get_organ_slot(ORGAN_SLOT_BRAIN)
 	if(!brain)
 		balloon_alert(user, "no brain!")
 		return
 	brain.AddComponent(/datum/component/cybersun_authorization)
-	to_chat(user, span_notice("You feel a cold prickle behind your eyes as the authorization key takes hold."))
+	to_chat(target, span_notice("You feel a cold prickle behind your eyes as the authorization key takes hold."))
 	qdel(src)
