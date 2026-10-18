@@ -160,7 +160,7 @@
 	return execute_playback(player, location)
 
 /datum/dialogue_sound/proc/emit_sound(mob/player, atom/location)
-	playsound(location, sound_path, volume, vary, channel = channel, volume_preference = volume_preference)
+	playsound(location, sound_path, volume, vary, channel = channel, ignore_walls = FALSE, volume_preference = volume_preference)
 
 /datum/dialogue_sound/local/can_play(mob/player, atom/location)
 	if(!player)
