@@ -33,6 +33,11 @@
 		/obj/item/storage/box/XANDER
 	)
 
+/datum/outfit/contractor_debug/post_equip(mob/living/carbon/human/user, visuals_only)
+	. = ..()
+	var/obj/item/organ/brain/brain = user.get_organ_slot(ORGAN_SLOT_BRAIN)
+	brain.AddComponent(/datum/component/cybersun_authorization)
+
 ADMIN_VERB(make_me_a_contractor, R_DEBUG|R_SPAWN, "Make Me A Contractor", "Dresses your mob in a contractor modsuit (with built in uplink) holding a contract kit box and a contractor gun case, and grants the traitor antag datum.", ADMIN_CATEGORY_DEBUG)
 	var/mob/living/carbon/human/contractor = user.mob
 	if(!ishuman(contractor))
