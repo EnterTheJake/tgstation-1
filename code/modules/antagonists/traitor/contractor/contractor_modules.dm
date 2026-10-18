@@ -108,6 +108,7 @@
 	affect_cyborg = TRUE
 	wait_desc = "still charging!"
 	on_stun_sound = 'sound/items/weapons/contractor_baton/contractorbatonhit.ogg'
+	stun_sound_ignores_walls = FALSE
 	/// Upgrades installed in the baton
 	var/baton_upgrades = NONE
 	/// Baton mode, so that the cuffing module can work when toggled
