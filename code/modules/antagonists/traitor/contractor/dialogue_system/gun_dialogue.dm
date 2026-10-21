@@ -22,6 +22,9 @@
 	var/list/box_put_in
 	var/list/gun_smack
 	var/list/scope_activated
+	var/list/nope
+	var/list/pointblank_shot
+	var/list/pointblank_shot_scoped
 
 	/// Time since last idle complaint
 	COOLDOWN_DECLARE(lonely_cooldown)
@@ -44,6 +47,11 @@
 	var/first_greeting = FALSE
 	/// greeting lines
 	var/list/activation
+
+	///Callback to execute upon roundend to check whether the contractor green or red texted
+	var/datum/callback/greentext_callback
+	var/list/greentext
+	var/list/redtext
 
 /datum/component/dialogue_system/contractor_gun/setup_sound_lists()
 	. = ..()
@@ -312,6 +320,35 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/idle_on_floor/idle_on_floor_long_time_take2.ogg'),
 	)
 
+	nope = list( // Trying to fire a round when it's not off cooldown yet or if the mode is blocked
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_repeated.ogg'),
+	)
+
+	pointblank_shot = list( // When you land a shot on someone and they're 1-2 tiles away from you
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_2_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take2.ogg'), // Died from the shot
+	)
+
+	pointblank_shot_scoped = list( // Same as above but scoped in
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot_scoped/pointblank_shot_scoped_take2.ogg'),
+	)
+
+	// Plays a line when the round ends. Based on if the contractor succeded all objectives, or failed.
+	greentext = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_1_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_2_take2.ogg'),
+	)
+	redtext = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_2_take2.ogg'),
+	)
+
 // XANTODO : Start implementing the lines
 
 /*
@@ -480,25 +517,6 @@
 		),
 	)
 
-	nope = list( // Trying to fire a round when it's not off cooldown yet or if the mode is blocked
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail3_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_fail4_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/nope/mode_swap_dark_repeated.ogg'),
-	)
-
-	pointblank_shot = list( // When you land a shot on someone and they're 1-2 tiles away from you
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot/pointblank_shot_3_take2.ogg'), // Died from the shot
-	)
-
-	pointblank_shot_scoped = list( // Same as above but scoped in
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/pointblank_shot_scoped/pointblank_shot_scoped_take2.ogg'),
-	)
-
 	speaker = list( // Not yet implemented
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_off_2.ogg'),
@@ -509,13 +527,6 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_on_3_take2.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_on_new_user_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_on_new_user_2_take1.ogg'),
-	)
-
-	success_and_failure = list( // Plays a line when the round ends. Based on if the contractor succeded all objectives, or failed.
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_2_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_1_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/success_2_take2.ogg'),
 	)
 
 	// kidnapped_sounds_by_rank will take priority. If there are no special lines to the person we kidnapped, we fall back to "user_paid" which is our standard basically
@@ -571,6 +582,11 @@
 	apply_channel_to_sound_list(user_died)
 	apply_channel_to_sound_list(scope_activated)
 	apply_channel_to_sound_list(idle_on_floor)
+	apply_channel_to_sound_list(nope)
+	apply_channel_to_sound_list(pointblank_shot)
+	apply_channel_to_sound_list(pointblank_shot_scoped)
+	apply_channel_to_sound_list(greentext)
+	apply_channel_to_sound_list(redtext)
 
 /datum/component/dialogue_system/contractor_gun/RegisterWithParent()
 	. = ..()
@@ -589,6 +605,8 @@
 	RegisterSignal(parent, COMSIG_GUN_FIRED_EMPTY_CHAMBER, PROC_REF(on_shoot_empty))
 	RegisterSignal(parent, COMSIG_COMPONENT_SCOPE_ZOOMED, PROC_REF(on_scope))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_IDLE_PROCESS, PROC_REF(play_idle))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_OVERHEATED_TRYSHOOT, PROC_REF(try_shoot_overheated))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_SCOPE_KICK, PROC_REF(on_point_blank))
 
 /// Helper proc, plays a sound from a given sound pool.
 /datum/component/dialogue_system/contractor_gun/proc/emit_sound_from_list(list/sound_list)
@@ -600,7 +618,14 @@
 	var/line_duration = rustg_sound_length(sound.sound_path)
 	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
 
+/datum/component/dialogue_system/contractor_gun/Initialize()
+	. = ..()
+	greentext_callback = CALLBACK(src, PROC_REF(check_antag_success))
+	SSticker.OnRoundend(greentext_callback)
+
 /datum/component/dialogue_system/contractor_gun/Destroy(force)
+	LAZYREMOVE(SSticker.round_end_events, greentext_callback)
+	greentext_callback = null
 	_unregister_holder()
 	return ..()
 
@@ -613,6 +638,23 @@
 /datum/component/dialogue_system/contractor_gun/UnregisterFromParent()
 	_unregister_holder()
 	return ..()
+
+/// Plays either a positive/negative line based on wether or not the contractor greentexted
+/datum/component/dialogue_system/contractor_gun/proc/check_antag_success()
+	if(!contractor_ref)
+		return
+	var/mob/living/carbon/human/contractor = contractor_ref.resolve()
+	var/datum/mind/contractor_mind = contractor?.mind
+	if(!contractor_mind)
+		return
+	var/datum/antagonist/traitor/traitor = contractor_mind.has_antag_datum(/datum/antagonist/traitor)
+	var/datum/contractor_state/uplink = traitor?.uplink_handler?.contractor_state
+	if(!uplink)
+		return
+	var/list/sound_pool = redtext
+	if(uplink.contracts_completed > 1) // XANTODO ARTURTODO : Determine how they greentext
+		sound_pool = greentext
+	emit_sound_from_list(sound_pool)
 
 /datum/component/dialogue_system/contractor_gun/proc/on_mode_unlocked(datum/source, obj/item/ammo_casing/energy/casing_path)
 	SIGNAL_HANDLER
@@ -791,3 +833,18 @@
 	var/line_duration = rustg_sound_length(sound.sound_path)
 	sound?.play(location = parent)
 	COOLDOWN_START(src, im_so_lonely, (25 SECONDS + line_duration))
+
+/// Plays a line when you try to shoot the gun while it's overheated
+/datum/component/dialogue_system/contractor_gun/proc/try_shoot_overheated(datum/source)
+	SIGNAL_HANDLER
+	emit_sound_from_list(nope)
+
+/// Plays a line when you shoot someone in point-blank range
+/datum/component/dialogue_system/contractor_gun/proc/on_point_blank(datum/source, mob/living/user, pointblank = FALSE)
+	SIGNAL_HANDLER
+	if(!pointblank) // We only care if we PB
+		return
+	var/list/sound_pool = pointblank_shot
+	if(HAS_TRAIT(user, TRAIT_USER_SCOPED))
+		sound_pool = pointblank_shot_scoped
+	emit_sound_from_list(sound_pool)

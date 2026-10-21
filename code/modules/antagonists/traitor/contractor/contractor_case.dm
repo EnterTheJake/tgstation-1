@@ -104,6 +104,8 @@
 
 /// Locks the case, preventing access
 /obj/item/storage/contractor_gun_case/proc/lock_case(mob/user)
+	if(!case_unlocked) // Already locked, don't bother locking it again
+		return
 	/// Notify everything in the box that the case is getting locked
 	for(var/obj/thing in get_all_contents())
 		SEND_SIGNAL(thing, COMSIG_CONTRACTOR_CASE_LOCKED, user)

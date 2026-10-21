@@ -84,12 +84,13 @@
 
 /obj/item/gun/energy/gauss_rifle/can_shoot()
 	if(overheated)
+		SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_OVERHEATED_TRYSHOOT)
 		return FALSE
 	return ..()
 
 /obj/item/gun/energy/gauss_rifle/shoot_live_shot(mob/living/user, pointblank = FALSE, atom/pbtarget = null, message = TRUE)
 	. = ..()
-	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_SCOPE_KICK, user)
+	SEND_SIGNAL(src, COMSIG_GAUSS_RIFLE_SCOPE_KICK, user, pointblank)
 
 /obj/item/gun/energy/gauss_rifle/shoot_with_empty_chamber(mob/living/user)
 	if(overheated)

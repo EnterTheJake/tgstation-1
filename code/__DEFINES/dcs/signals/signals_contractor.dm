@@ -9,7 +9,10 @@
 /// Called to refresh the gauss rifle scope overlay without triggering mode-change dialogue.
 #define COMSIG_GAUSS_RIFLE_SCOPE_REFRESH "gauss_rifle_scope_refresh"
 
-/// Called when the gauss rifle discharges a live shot. Passes (mob/living/user).
+/// Called when the user tries to shoot the rifle when it's overheated
+#define COMSIG_GAUSS_RIFLE_OVERHEATED_TRYSHOOT "gauss_rifle_overheated_tryshoot"
+
+/// Called when the gauss rifle discharges a live shot. Passes (mob/living/user, pointblank).
 #define COMSIG_GAUSS_RIFLE_SCOPE_KICK "gauss_rifle_scope_kick"
 
 /// Sent from /obj/item/gun/energy/gauss_rifle/unlock_ammo_type when a new ammo type is installed
