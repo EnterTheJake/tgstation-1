@@ -25,6 +25,10 @@
 	var/disarmed = FALSE
 	///How long it takes for a grenade to explode after being armed
 	var/det_time = 10 MINUTES
+	/// How long the contractor has to stay dead or unconscious before a dormant bomb arms itself
+	var/contractor_down_arm_time = 5 MINUTES
+	/// Counts how long the contractor has been down
+	COOLDOWN_DECLARE(contractor_down_timer)
 	/// The timer for the bomb.
 	COOLDOWN_DECLARE(detonation_timer)
 	/// Timer id for the grace period after the victim leaves the station
@@ -164,8 +168,9 @@
 	if(!active)
 		if(disarmed)
 			SEND_SIGNAL(src, COMSIG_CONTRACTOR_DISARMED_PROCESS)
-		else
-			SEND_SIGNAL(src, COMSIG_CONTRACTOR_NOT_YET_ARMED_PROCESS)
+			return
+		SEND_SIGNAL(src, COMSIG_CONTRACTOR_NOT_YET_ARMED_PROCESS)
+		check_contractor_down()
 		return
 
 	for(var/obj/effect/forcefield/cosmic_field/potential_field as anything in GLOB.active_cosmic_fields)
@@ -199,6 +204,16 @@
 		update_appearance()
 		pre_explosion()
 		return PROCESS_KILL
+
+/// Arms a dormant bomb once its contractor has been dead or unconscious for contractor_down_arm_time
+/obj/item/contractor_bomb/proc/check_contractor_down()
+	var/mob/contractor = controlling_state?.owner?.current
+	if(!isnull(contractor) && !IS_UNCONSCIOUS(contractor))
+		COOLDOWN_RESET(src, contractor_down_timer)
+	else if(!COOLDOWN_STARTED(src, contractor_down_timer))
+		COOLDOWN_START(src, contractor_down_timer, contractor_down_arm_time)
+	else if(COOLDOWN_FINISHED(src, contractor_down_timer))
+		arm()
 
 /// Plants the bomb on our victim and adds it to the contractor's bomb UI
 /obj/item/contractor_bomb/proc/attach_to(mob/living/carbon/human/victim, datum/contractor_state/state)

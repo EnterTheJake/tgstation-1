@@ -13,11 +13,11 @@
 	TEST_ASSERT_NULL(pda.GetComponent(/datum/component/uplink), "The PDA still has its uplink after buying the contract kit")
 	TEST_ASSERT(!QDELETED(pda), "Buying the contract kit deleted the PDA the uplink was hidden in")
 
-	var/obj/item/stack/telecrystal/refund = locate() in buyer.held_items
+	var/obj/item/stack/telecrystal/refund = buyer.is_holding_item_of_type(/obj/item/stack/telecrystal)
 	TEST_ASSERT_NOTNULL(refund, "Leftover telecrystals were not handed back")
 	TEST_ASSERT_EQUAL(refund.amount, 5, "Wrong amount of telecrystals handed back")
 
-	var/obj/item/storage/box/syndicate/contract_kit/kit = locate() in buyer.held_items
+	var/obj/item/storage/box/syndicate/contract_kit/kit = buyer.is_holding_item_of_type(/obj/item/storage/box/syndicate/contract_kit)
 	TEST_ASSERT_NOTNULL(kit, "The contract kit did not end up in the buyer's hands")
 	var/obj/item/mod/module/contractor_uplink/contractor_module = locate() in kit.get_all_contents()
 	TEST_ASSERT_NOTNULL(contractor_module, "The contract kit has no contractor uplink module")

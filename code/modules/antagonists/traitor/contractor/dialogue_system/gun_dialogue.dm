@@ -712,7 +712,7 @@
 
 /// Registers relevant stuff to the person who became the hero for the gun
 /datum/component/dialogue_system/contractor_gun/proc/meet_my_hero(mob/living/hero_of_the_story)
-	if(!locate(/obj/item/implant/contractor) in hero_of_the_story.implants)
+	if(!HAS_TRAIT(hero_of_the_story, TRAIT_CONTRACTOR_IMPLANT))
 		return
 	contractor_ref = WEAKREF(hero_of_the_story)
 	RegisterSignal(hero_of_the_story, COMSIG_LIVING_DEATH, PROC_REF(on_user_died))
@@ -724,7 +724,7 @@
 	if(!taker?.is_holding(parent))
 		return
 	var/list/sound_pool = pickup_sounds
-	if(!locate(/obj/item/implant/contractor) in taker.implants) // No implant found?
+	if(!HAS_TRAIT(taker, TRAIT_CONTRACTOR_IMPLANT)) // No implant found?
 		sound_pool = unathorized_user
 	emit_sound_from_list(sound_pool)
 
@@ -737,7 +737,7 @@
 	var/atom/atom_parent = parent
 	if(!isturf(atom_parent.loc))
 		return
-	if(!locate(/obj/item/implant/contractor) in user.implants) // No implant found?
+	if(!HAS_TRAIT(user, TRAIT_CONTRACTOR_IMPLANT)) // No implant found?
 		return // Parent call plays a line "hey you forgot me"
 	drop_line_timerid = addtimer(CALLBACK(src, PROC_REF(try_play_dropped_line), user), 5 SECONDS, TIMER_STOPPABLE | TIMER_UNIQUE | TIMER_OVERRIDE)
 

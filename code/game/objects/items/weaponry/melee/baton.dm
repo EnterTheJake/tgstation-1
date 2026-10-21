@@ -41,6 +41,8 @@
 	var/on_stun_sound = 'sound/effects/woodhit.ogg'
 	/// The volume of the above.
 	var/on_stun_volume = 75
+	/// Does the stun sound ignore walls?
+	var/stun_sound_ignores_walls = TRUE
 	/// Whether the stun attack is logged. Only relevant for abductor batons, which have different modes.
 	var/log_stun_attack = TRUE
 	/// Boolean on whether people with chunky fingers can use this baton.
@@ -239,7 +241,7 @@
 /obj/item/melee/baton/proc/finalize_baton_attack(mob/living/target, mob/living/user, clumsy = FALSE)
 	COOLDOWN_START(src, cooldown_check, cooldown)
 	if(on_stun_sound)
-		playsound(src, on_stun_sound, on_stun_volume, TRUE, -1)
+		playsound(src, on_stun_sound, on_stun_volume, TRUE, -1, ignore_walls = stun_sound_ignores_walls)
 	if(baton_effect(target, user, null, clumsy) && user)
 		set_batoned(target, user, cooldown)
 		log_combat(user, target, "stunned", src.name)

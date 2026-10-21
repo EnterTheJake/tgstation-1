@@ -33,6 +33,11 @@
 		/obj/item/storage/box/XANDER
 	)
 
+/datum/outfit/contractor_debug/post_equip(mob/living/carbon/human/user, visuals_only)
+	. = ..()
+	var/obj/item/organ/brain/brain = user.get_organ_slot(ORGAN_SLOT_BRAIN)
+	brain.AddComponent(/datum/component/cybersun_authorization)
+
 ADMIN_VERB(make_me_a_contractor, R_DEBUG|R_SPAWN, "Make Me A Contractor", "Dresses your mob in a contractor modsuit (with built in uplink) holding a contract kit box and a contractor gun case, and grants the traitor antag datum.", ADMIN_CATEGORY_DEBUG)
 	var/mob/living/carbon/human/contractor = user.mob
 	if(!ishuman(contractor))
@@ -70,12 +75,11 @@ ADMIN_VERB(spawn_contractor_bomb_victim, R_DEBUG|R_SPAWN, "Spawn Contractor Bomb
 		to_chat(user, span_warning("You have no uplink handler to store the contractor state on - give yourself an uplink first."))
 		return
 	if(isnull(traitor.uplink_handler.contractor_state))
-		traitor.uplink_handler.contractor_state = new()
+		traitor.uplink_handler.contractor_state = new(traitor.owner)
 	var/datum/contractor_state/contractor_state = traitor.uplink_handler.contractor_state
 
-	if(!(locate(/obj/item/implant/contractor) in contractor.implants))
-		var/obj/item/implant/contractor/detonator_implant = new()
-		detonator_implant.implant(contractor)
+	var/obj/item/organ/brain/contractor_brain = contractor.get_organ_slot(ORGAN_SLOT_BRAIN)
+	contractor_brain.AddComponent(/datum/component/cybersun_authorization)
 
 	var/mob/living/carbon/human/victim = new(get_turf(contractor))
 	var/choices = tgui_input_checkboxes(user, "What kind of victim?", "Victim spawner", list("Changeling", "Clown", "Felinid"), min_checked = 0)

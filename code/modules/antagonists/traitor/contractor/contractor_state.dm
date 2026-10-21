@@ -1,4 +1,6 @@
 /datum/contractor_state
+	/// The mind of the contractor this state belongs to
+	var/datum/mind/owner
 	///The current contract in progress, and can be null if no contract is in progress.
 	var/datum/syndicate_contract/current_contract
 	///Amount of contracts that have already been completed, for flavor in the UI & round-end logs.
@@ -17,3 +19,6 @@
 	var/datum/weakref/tracked_target_ref
 	/// Weakref to the tracked contract itself, so the minimap can outline its extraction areas.
 	var/datum/weakref/tracked_contract_ref
+
+/datum/contractor_state/New(datum/mind/owner)
+	src.owner = owner
