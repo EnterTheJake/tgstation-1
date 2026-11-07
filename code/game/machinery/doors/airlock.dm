@@ -98,6 +98,12 @@
 	var/aiControlDisabled = AI_WIRE_NORMAL
 	/// If true, this door can't be hacked by the AI
 	var/hackProof = FALSE
+	/// Timer id, active while a contractor doorjack keeps the AI out of this door (and powers it if it had no power)
+	var/doorjack_timer
+	/// If the active doorjack is the one powering this door
+	var/doorjack_powered = FALSE
+	/// What hackProof was before the doorjack, so it can be put back
+	var/doorjack_old_hackproof = FALSE
 	/// Timer id, active when we are actively waiting for the main power to be restored
 	var/main_power_timer = 0
 	/// Paired with main_power_timer. Records its remaining time when something happens to interrupt power regen
@@ -1570,12 +1576,37 @@
 	// We don't set obj_flags EMAGGED because this doesn't permanently destroy a door
 	req_access = list()
 	req_one_access = list()
-	regainMainPower()
-	regainBackupPower()
-	set_electrified(MACHINE_NOT_ELECTRIFIED)
-	unbolt()
+	// Lock the AI out, and don't let it hack back in until the doorjack wears off
 	wires.strictly_cut(WIRE_AI)
+	aiControlDisabled = AI_WIRE_DISABLED
+	if(!doorjack_timer)
+		doorjack_old_hackproof = hackProof
+	hackProof = TRUE
+	// Depowered doors get their own power for a while, so the hack actually lets you through
+	if(!hasPower())
+		update_use_power(NO_POWER_USE)
+		power_change()
+		regainMainPower()
+		regainBackupPower()
+		doorjack_powered = TRUE
+	unbolt()
+	set_electrified(MACHINE_NOT_ELECTRIFIED)
+	doorjack_timer = addtimer(CALLBACK(src, PROC_REF(end_doorjack)), 60 SECONDS, TIMER_UNIQUE|TIMER_OVERRIDE|TIMER_STOPPABLE|TIMER_DELETE_ME)
 	user.balloon_alert(user, "hacked")
+
+/// Timer proc, called 60 seconds after [safely_doorjack]. The AI can hack the door again, and if the doorjack was powering it, it goes back to running off the area and its own wires.
+/obj/machinery/door/airlock/proc/end_doorjack()
+	doorjack_timer = null
+	hackProof = doorjack_old_hackproof
+	if(!doorjack_powered)
+		return
+	doorjack_powered = FALSE
+	update_use_power(initial(use_power))
+	power_change()
+	if(wires.is_cut(WIRE_POWER1) || wires.is_cut(WIRE_POWER2))
+		loseMainPower()
+	if(wires.is_cut(WIRE_BACKUP1) || wires.is_cut(WIRE_BACKUP2))
+		loseBackupPower()
 
 /obj/machinery/door/airlock/attack_alien(mob/living/carbon/alien/adult/user, list/modifiers)
 	if(isElectrified() && shock(user, 100)) //Mmm, fried xeno!
