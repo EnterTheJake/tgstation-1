@@ -24,3 +24,5 @@
 #define CONTRACTOR_GRID_ALPHA_LOW 35
 #define CONTRACTOR_GRID_ALPHA_HIGH 80
 #define CONTRACTOR_WALK_LINGER 3
+#define COMSIG_BORG_CLOAK_DISRUPT "borg_cloak_disrupt"
+#define COMSIG_BORG_CHANGE_POSE "borg_change_pose"

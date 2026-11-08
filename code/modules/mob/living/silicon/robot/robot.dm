@@ -311,20 +311,7 @@
 	cut_overlays()
 	SSvis_overlays.remove_vis_overlay(src, managed_vis_overlays)
 	icon_state = model.cyborg_base_icon
-	if(!IS_UNCONSCIOUS(src) && !IsStun() && !IsParalyzed() && !low_power_mode && !is_empty_shell()) //Not dead, not stunned, not an unpiloted AI shell.
-		if(!eye_lights)
-			eye_lights = new()
-		if(lamp_enabled || lamp_doom)
-			eye_lights.icon_state = "[model.special_light_key ? "[model.special_light_key]" : "[model.cyborg_base_icon]"]_l"
-			set_light_range(max(MINIMUM_USEFUL_LIGHT_RANGE, lamp_intensity))
-			set_light_color(lamp_doom ? COLOR_RED : lamp_color) //Red for doomsday killborgs, borg's choice otherwise
-			SET_PLANE_EXPLICIT(eye_lights, ABOVE_LIGHTING_PLANE, src) //glowy eyes
-		else
-			eye_lights.icon_state = "[model.special_light_key ? "[model.special_light_key]":"[model.cyborg_base_icon]"]_e"
-			eye_lights.color = COLOR_WHITE
-			SET_PLANE_EXPLICIT(eye_lights, ABOVE_GAME_PLANE, src)
-		eye_lights.icon = icon
-		add_overlay(eye_lights)
+	add_eye_overlay()
 
 	var/obj/item/shield_module/shield_module = locate(/obj/item/shield_module) in src
 	if(shield_module && shield_module.active)
@@ -332,13 +319,7 @@
 	else if (shield_module && !shield_module.active)
 		cut_overlay(shield_module.shield_overlay)
 
-	if(opened)
-		if(wiresexposed)
-			add_overlay("ov-opencover +w")
-		else if(cell)
-			add_overlay("ov-opencover +c")
-		else
-			add_overlay("ov-opencover -c")
+	add_panel_overlay()
 
 	if(hat)
 		hat_overlay = hat.build_worn_icon(default_layer = 20, default_icon_file = 'icons/mob/clothing/head/default.dmi')
@@ -347,6 +328,33 @@
 		QDEL_NULL(hat_overlay)
 
 	update_appearance(UPDATE_OVERLAYS)
+
+/mob/living/silicon/robot/proc/add_panel_overlay()
+	if(opened)
+		add_overlay("ov-opencover [get_panel_suffix()]")
+
+/mob/living/silicon/robot/proc/should_show_eye_overlay()
+	return !(IS_UNCONSCIOUS(src) || IsStun() || IsParalyzed() || low_power_mode || is_empty_shell())
+
+/mob/living/silicon/robot/proc/add_eye_overlay()
+	if(!should_show_eye_overlay()) //Not dead, not stunned, not an unpiloted AI shell.
+		return
+	if(!eye_lights)
+		eye_lights = new()
+	if(lamp_enabled || lamp_doom)
+		update_borg_lights()
+		eye_lights.icon_state = "[model.special_light_key ? "[model.special_light_key]" : "[model.cyborg_base_icon]"]_l"
+		SET_PLANE_EXPLICIT(eye_lights, ABOVE_LIGHTING_PLANE, src) //glowy eyes
+	else
+		eye_lights.icon_state = "[model.special_light_key ? "[model.special_light_key]":"[model.cyborg_base_icon]"]_e"
+		eye_lights.color = COLOR_WHITE
+		SET_PLANE_EXPLICIT(eye_lights, ABOVE_GAME_PLANE, src)
+	eye_lights.icon = icon
+	add_overlay(eye_lights)
+
+/mob/living/silicon/robot/proc/update_borg_lights()
+	set_light_range(max(MINIMUM_USEFUL_LIGHT_RANGE, lamp_intensity))
+	set_light_color(lamp_doom ? COLOR_RED : lamp_color)
 
 /mob/living/silicon/robot/proc/update_worn_icons()
 	if(!hat_overlay)
@@ -466,6 +474,9 @@
 	else
 		clear_alert(ALERT_HACKED)
 	set_modularInterface_theme()
+
+/mob/living/silicon/robot/proc/get_panel_suffix()
+	return wiresexposed ? "+w" : (cell ? "+c" : "-c")
 
 /// Special handling for getting hit with a light eater
 /mob/living/silicon/robot/proc/on_light_eater(mob/living/silicon/robot/source, datum/light_eater)

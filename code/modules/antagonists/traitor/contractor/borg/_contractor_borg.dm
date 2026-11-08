@@ -1,3 +1,4 @@
+
 /mob/living/silicon/robot/model/contractor
 	name = "contractor cyborg"
 	set_model = /obj/item/robot_model/contractor
@@ -14,63 +15,47 @@
 	var/chassis_open = FALSE
 	var/ingesting = FALSE
 	var/resisting = FALSE
-	/// Whether we are mid-stride. Controls the walk cycle vs. the static idle pose.
+	/// whether we are mid-walking, we have a separate state during walking
 	var/walking = FALSE
-	/// Whether the cloak is up. Disables the eye and thruster emissives so we don't glow through it.
+	/// whether the cloak is up. Disables the eye and thruster emissives so we don't glow during cloaking
 	var/cloaked = FALSE
-	/// While cloaked, our appearance as shown only to authorized viewers.
+	/// only the contractor can see the borg in invisibility, this is what they see
 	var/image/cloak_image
-	// You might wonder why we're not using overlays. The reason is simple. Can't flick() them
-	var/obj/effect/contractor_eyes/eyes
-	var/obj/effect/contractor_panel/panel
-	var/obj/effect/contractor_disrupt/disrupt
-	var/obj/effect/contractor_eyes_emissive/eyes_emissive
-	var/obj/effect/contractor_disrupt_emissive/disrupt_emissive
-	var/obj/effect/contractor_thrusters_emissive/thrusters_emissive
-	/// The contractor who deployed us. Their bounty board and minimap channel are the ones we use.
-	var/datum/weakref/contractor_ref
-	/// Sealed atmosphere the Holding Chamber keeps around its occupant, reset to station air whenever it is read
-	var/datum/gas_mixture/chamber_air
-	/// Spin-up the shock tether needs before it can fire again once the cloak drops
-	COOLDOWN_DECLARE(taser_spinup)
-	var/static/list/thruster_glow_states = list(
-		"contractor_hover",
-		"contractor_hover_open",
-		"contractor_hover_openup",
-		"contractor_thrusters",
-		"contractor_landing",
+	// you might wonder why we're not using overlays. The reason is simple. Can't flick() them
+	var/static/list/borg_piece_types = list(
+		/obj/effect/contractor_effect/eyes = ABOVE_GAME_PLANE,
+		/obj/effect/contractor_effect/panel = ABOVE_GAME_PLANE,
+		/obj/effect/contractor_effect/disrupt = ABOVE_GAME_PLANE,
+		/obj/effect/contractor_effect/eyes_emissive = EMISSIVE_PLANE,
+		/obj/effect/contractor_effect/disrupt/emissive = EMISSIVE_PLANE,
+		/obj/effect/contractor_effect/thrusters_emissive = EMISSIVE_PLANE,
 	)
+	var/list/borg_overlays
+	/// the contractor that spawned us in, who's minimap and contractor targets we see
+	var/datum/weakref/contractor_ref
+	/// airmix that the victim inside the borg breathes in, so they don't die horribly
+	var/datum/gas_mixture/chamber_air
+	/// delay before you can shoot the taser
+	COOLDOWN_DECLARE(taser_spinup)
+	/// dead eye flash state, toggles between TRUE and false
+	var/dead_eye_flash = FALSE
 
 /mob/living/silicon/robot/model/contractor/Initialize(mapload, datum/ai_laws/innate_laws, mob/living/silicon/master_ai, aisync, lawsync)
 	aisync = FALSE
-	. = ..()
-	has_builtin_flight = TRUE
-	has_thermals = TRUE
 
-	panel = new(null)
-	vis_contents += panel
-
-	eyes = new(null)
-	vis_contents += eyes
-
-	eyes_emissive = new(null)
-	vis_contents += eyes_emissive
-	eyes_emissive.color = GLOB.emissive_color
-
-	thrusters_emissive = new(null)
-	vis_contents += thrusters_emissive
-	thrusters_emissive.color = GLOB.emissive_color
-
-	disrupt = new(null)
-	vis_contents += disrupt
-
-	disrupt_emissive = new(null)
-	vis_contents += disrupt_emissive
-	disrupt_emissive.color = GLOB.emissive_color
+	borg_overlays = list()
+	for(var/overlay_path in borg_piece_types)
+		var/obj/effect/contractor_effect/overlay = new overlay_path(null, src)
+		if(borg_piece_types[overlay_path] == EMISSIVE_PLANE)
+			overlay.color = GLOB.emissive_color
+		borg_overlays[overlay_path] = overlay
+		vis_contents += overlay
 
 	refresh_overlay_planes()
+	. = ..()
 
-	update_sight()
+	has_builtin_flight = TRUE
+	has_thermals = TRUE
 
 /mob/living/silicon/robot/model/contractor/make_laws()
 	laws = new /datum/ai_laws/cybersun_override()
@@ -83,32 +68,21 @@
 	modularInterface.update_icon()
 
 /mob/living/silicon/robot/model/contractor/Destroy()
-	for(var/mob/living/trapped in contents)
-		expel(trapped)
-	vis_contents -= eyes
-	vis_contents -= panel
-	vis_contents -= disrupt
-	vis_contents -= eyes_emissive
-	vis_contents -= disrupt_emissive
-	vis_contents -= thrusters_emissive
-	QDEL_NULL(eyes)
-	QDEL_NULL(panel)
-	QDEL_NULL(disrupt)
-	QDEL_NULL(eyes_emissive)
-	QDEL_NULL(disrupt_emissive)
-	QDEL_NULL(thrusters_emissive)
+	for(var/mob in contents)
+		expel(mob)
+	for(var/path in borg_overlays)
+		var/obj/effect/overlay = borg_overlays[path]
+		vis_contents -= overlay
+		qdel(overlay)
+
 	QDEL_NULL(chamber_air)
 	return ..()
+
 /mob/living/silicon/robot/model/contractor/return_air()
 	var/static/datum/gas_mixture/station_air
 	if(isnull(station_air))
 		station_air = SSair.parse_gas_string(OPENTURF_DEFAULT_ATMOS, /datum/gas_mixture)
-	if(isnull(chamber_air))
-		chamber_air = new
-	chamber_air.copy_from(station_air)
-	var/mob/living/occupant = locate(/mob/living) in contents
-	chamber_air.temperature = occupant?.get_body_temp_normal() || BODYTEMP_NORMAL
-	return chamber_air
+	return station_air
 
 /mob/living/silicon/robot/model/contractor/proc/link_contractor(mob/contractor)
 	var/mob/previous = contractor_ref?.resolve()
@@ -126,6 +100,7 @@
 
 /mob/living/silicon/robot/model/contractor/get_hud_y_offset()
 	return -base_pixel_y
+
 /mob/living/silicon/robot/model/contractor/death(gibbed)
 	for(var/mob/living/trapped in contents)
 		expel(trapped)

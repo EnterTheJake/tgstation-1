@@ -12,8 +12,9 @@
 		UnregisterSignal(src, COMSIG_ATOM_DIR_CHANGE)
 		remove_alt_appearance("contractor_cloak")
 		cloak_image = null
-	refresh_eyes()
-	refresh_thrusters()
+	update_icons()
+	// refresh_eyes()
+	// refresh_thrusters()
 
 /// Mirrors our current appearance onto the authorized-viewers-only cloak image.
 /mob/living/silicon/robot/model/contractor/proc/sync_cloak_image()
