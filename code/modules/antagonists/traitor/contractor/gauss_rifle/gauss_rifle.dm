@@ -266,7 +266,7 @@
 	start_empty = TRUE
 	icon_state = ".50mag"
 	ammo_type = /obj/item/ammo_casing/energy/gauss
-	/// What the pattern does once the rifle knows it. Examine prints this under the shared blurb.
+	/// Blurb for describing the projectile type itself as a additional blurb
 	var/pattern_desc = "The projectile delivers enough kinetic energy into an impacted surface to liquify surrounding organic matter it passes through or render vehicles inoperable if aimed towards an engine block or battery pack."
 
 /obj/item/ammo_box/magazine/gauss/examine(mob/user)

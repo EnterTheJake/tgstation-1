@@ -9,7 +9,6 @@
 	charged_cooldown_time = 1 MINUTES
 	fire_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/gyre_fired.ogg'
 
-/// The charged round homes, so the spin-up needs a mob target rather than a turf.
 /obj/item/ammo_casing/energy/gauss/gyro/get_charge_focus(atom/target, mob/living/user)
 	if(isliving(target))
 		return target
@@ -99,7 +98,6 @@
 	paused = TRUE
 	icon_state = "drill_on"
 	LAZYADD(drilled_turfs, drilled_turf)
-	// hardness is inverted (lower == harder), so harder walls bore slower.
 	var/turf/closed/wall/drilled_wall = istype(drilled_turf, /turf/closed/wall) ? drilled_turf : null
 	var/wall_hardness = drilled_wall ? drilled_wall.hardness : 40
 	var/drill_time = clamp((70 - wall_hardness) * 0.05 SECONDS, 0.4 SECONDS, 4 SECONDS)
@@ -124,16 +122,10 @@
 	victim.Knockdown(charged_knockdown)
 	kick_victim(victim)
 
-/// The discharge dumps its momentum into the victim and throws them clear.
 /obj/projectile/bullet/gauss/gyro/proc/kick_victim(mob/living/victim)
 	var/throw_target = get_edge_target_turf(victim, angle2dir(angle))
 	victim.safe_throw_at(throw_target, impact_throw_distance, 3, firer, force = MOVE_FORCE_STRONG)
 
-/**
- * Earths the stored charge through the victim's hiding spot instead of the body.
- *
- * The victim takes a reduced jolt and loses the locker. Dizziness and confusion follow.
- */
 /obj/projectile/bullet/gauss/gyro/proc/shock_target(mob/living/victim)
 	var/obj/structure/closet/hiding_spot = victim.loc
 	victim.visible_message(

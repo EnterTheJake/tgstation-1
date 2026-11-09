@@ -4,7 +4,6 @@
 	projectile_type = /obj/projectile/bullet/gauss/darkmatter
 	select_name = "darkmatter"
 	e_cost = GAUSS_NANITES(15)
-	// The channel stays long at any range. This round has no hip fired version.
 	charge_time = 4 SECONDS
 	seconds_per_distance = 0
 	max_charge_time = 4 SECONDS
@@ -13,9 +12,9 @@
 	charge_alert = "charging..."
 	charge_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_charging.ogg'
 	fire_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_fired.ogg'
-	/// How long the rifle stays overheated after it translocates a sliver of darkmatter.
+	/// How long the rifle stays overheated after it shoots
 	var/darkmatter_overheat = 15 SECONDS
-	/// Purple recolor of the voltaic heart lightning overlay. The shooter wears it while charging.
+	/// Overlay shown when you're charging the gun
 	var/mutable_appearance/charge_overlay
 
 /obj/item/ammo_casing/energy/gauss/darkmatter/on_charge_started(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
@@ -37,7 +36,6 @@
 	if(isnull(rifle))
 		return
 	rifle.overheat(darkmatter_overheat)
-	// The translocation scavenges every nanite left in the magazine. It always leaves the magazine dry.
 	rifle.cell?.use(rifle.cell.charge, force = TRUE)
 
 /obj/projectile/bullet/gauss/darkmatter
@@ -56,7 +54,6 @@
 	projectile_piercing = PASSMOB
 	phasing_ignore_direct_target = TRUE
 
-/// The channel is the only firing mode of this round. Empowerment adds nothing.
 /obj/projectile/bullet/gauss/darkmatter/empower(charge_ratio, atom/target)
 	return
 
@@ -88,10 +85,10 @@
 	var/wound_bonus = 40
 	/// How long the detonation deafens a victim.
 	var/deafening_duration = 1 MINUTES
-	/// How long the narrowed vision lasts after the beam catches a victim.
+	/// How long near-sightedness lasts after a victim is shot
 	var/vision_narrow_duration = 15 SECONDS
 	var/pull_radius = 1
-	/// Delay from firing to discharge, synced to the frame the gauss_darkmatter tracer's effect lands.
+	/// Delay for the darkmatter discharge after the pre-firing line warning.
 	var/discharge_delay = 0.8 SECONDS
 	var/beam_lifetime = 2 SECONDS
 	var/pulse_interval = 0.3 SECONDS
@@ -127,7 +124,6 @@
 	pulse_beam()
 	addtimer(CALLBACK(src, PROC_REF(end_discharge)), beam_lifetime)
 
-/// Rings the beam with gravity motes on the tiles beside it, each drifting inward onto the beam.
 /datum/darkmatter_discharge/proc/spawn_pull_field()
 	var/list/turf/zone = list()
 	for(var/turf/beam_turf as anything in beam_turfs)
@@ -142,7 +138,6 @@
 		new /obj/effect/temp_visual/darkmatter_field(zone_turf, dir_to_gravity(get_dir(zone_turf, sink)))
 
 /datum/darkmatter_discharge/proc/dir_to_gravity(dir)
-	// Particle x runs opposite screen x, so east/west are flipped here.
 	var/dx = (dir & EAST) ? -1.5 : ((dir & WEST) ? 1.5 : 0)
 	var/dy = (dir & NORTH) ? 1.5 : ((dir & SOUTH) ? -1.5 : 0)
 	return list(dx, dy)
@@ -157,8 +152,6 @@
 			if(victim == firer || (victim in seen))
 				continue
 			seen += victim
-			// Off the beam: nudge one tile onto it (gravity-anomaly style), then strike + throw in the
-			// same pulse if now on it, so the forward launch doesn't lag a tick behind the pull-in.
 			if(!(get_turf(victim) in beam_turfs))
 				var/turf/anchor = get_closest_beam_turf(victim)
 				if(anchor)
@@ -187,7 +180,6 @@
 	if(knockback_cooldowns[victim_ref] && world.time < knockback_cooldowns[victim_ref])
 		return
 	knockback_cooldowns[victim_ref] = world.time + knockback_cooldown
-	// Launch along the line toward the true endpoint (beam_dir is only a cardinal, wrong for diagonal beams).
 	var/throw_dir = (end_turf && get_turf(victim) != end_turf) ? get_dir(victim, end_turf) : beam_dir
 	victim.safe_throw_at(get_edge_target_turf(victim, throw_dir), length(beam_turfs), 5, firer, force = MOVE_FORCE_EXTREMELY_STRONG)
 
@@ -200,22 +192,13 @@
 		return
 	var/dealt_damage = iscarbon(victim) ? damage : damage * inorganic_damage_mult
 	victim.apply_damage(dealt_damage, BRUTE, blocked = 0, forced = TRUE, spread_damage = TRUE, wound_bonus = wound_bonus)
-	// The blast beats standard ear protection. It also narrows the vision of the survivor.
 	victim.soundbang_act(SOUNDBANG_STRONG, stun_pwr = 0, damage_pwr = 5, deafen_pwr = deafening_duration)
 	narrow_vision(victim)
-	// Only frail-quirk holders escalate (to Super Frail, then a gib on the next hit). Everyone else stays
-	// plain Frail forever - the Frail status never counts toward escalation, so it can't stack up to a gib.
 	if(victim.has_quirk(/datum/quirk/frail))
 		victim.apply_status_effect(/datum/status_effect/frail/super)
 	else
 		victim.apply_status_effect(/datum/status_effect/frail)
 
-/**
- * Narrows the field of vision of the victim for a short time after the flash.
- *
- * Glasses cannot correct it, because the flash damages the eyes directly. The effect uses a grouped
- * status rather than a timed one, so a timer must remove it.
- */
 /datum/darkmatter_discharge/proc/narrow_vision(mob/living/victim)
 	victim.assign_nearsightedness(GAUSS_DARKMATTER_TRAIT, 2, FALSE)
 	addtimer(CALLBACK(victim, TYPE_PROC_REF(/mob/living, remove_status_effect), /datum/status_effect/grouped/nearsighted, GAUSS_DARKMATTER_TRAIT), vision_narrow_duration)
@@ -231,7 +214,6 @@
 	firer_ref = null
 	return ..()
 
-/// One pull-zone tile: emits a single burst of gravity motes that stream toward the beam.
 /obj/effect/temp_visual/darkmatter_field
 	icon = null
 	icon_state = null
@@ -249,7 +231,6 @@
 	if(particles)
 		particles.spawning = 0
 
-/// The beam's terminus, wearing the gravitational anomaly's wibbly warp.
 /obj/effect/temp_visual/darkmatter_anomaly
 	icon = 'icons/effects/effects.dmi'
 	icon_state = "shield2"

@@ -16,17 +16,16 @@
 	armour_penetration = 35
 	speed = 2
 	wound_bonus = -10
-	// Only a charged round has enough shell integrity to survive the impact and lodge itself.
+	// Only charged rounds embed
 	embed_type = null
-	// The charge scales the payload, not the range. Distance must not reduce the embed chance.
+	// Range increases damage, can't have falloff
 	embed_falloff_tile = 0
-	/// How much thermite the round applies to the impacted turf.
+	/// How much thermite component is applied to the impacted turf.
 	var/thermite_payload = 25
 	/// How many firestacks the cascade applies to an organic target.
 	var/fire_stacks_applied = 2
 
 /obj/projectile/bullet/gauss/thermite/empower(charge_ratio, atom/target)
-	// A longer spin-up drives the payload harder. It flies faster, burns hotter, and embeds more often.
 	speed = LERP(2, 0.6, charge_ratio)
 	thermite_payload = round(LERP(25, 50, charge_ratio))
 	fire_stacks_applied = round(LERP(2, 6, charge_ratio))
