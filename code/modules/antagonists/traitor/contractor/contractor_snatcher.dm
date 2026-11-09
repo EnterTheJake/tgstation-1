@@ -20,7 +20,9 @@
 	id = "snatcher net"
 	alert_type = /atom/movable/screen/alert/status_effect/snatcher_net
 	duration = -1
-	var/shock_delay = 10 SECONDS
+	var/shock_delay = 7 SECONDS
+	/// How long each shock stuns the victim for, this is what interrupts them trying to break free
+	var/shock_stun = 0.5 SECONDS
 	var/time_to_disabling = 1 MINUTES
 	var/resist_timer = 5 SECONDS
 	var/net_icon = 'code/modules/antagonists/traitor/contractor/icons/net_obj.dmi'
@@ -97,7 +99,8 @@
 	if(QDELETED(owner))
 		return
 	shocking = TRUE
-	owner.electrocute_act(shock_damage = 5, source = src, siemens_coeff = 1, flags = SHOCK_KNOCKDOWN)
+	if(owner.electrocute_act(shock_damage = 5, source = src, siemens_coeff = 1, flags = SHOCK_KNOCKDOWN))
+		owner.Stun(shock_stun)
 	do_sparks(number = 5, cardinal_only = TRUE, source = src)
 	owner.visible_message(span_danger("The snatcher net glows and shocks [owner]!"), span_userdanger("The snatcher net glows and shocks you!"))
 	owner.update_appearance(UPDATE_OVERLAYS)
