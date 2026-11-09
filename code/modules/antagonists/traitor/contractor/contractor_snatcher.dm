@@ -99,7 +99,7 @@
 	if(QDELETED(owner))
 		return
 	shocking = TRUE
-	if(owner.electrocute_act(shock_damage = 5, source = src, siemens_coeff = 1, flags = SHOCK_KNOCKDOWN))
+	if(owner.electrocute_act(shock_damage = 5, source = src, siemens_coeff = 1, flags = SHOCK_KNOCKDOWN | SHOCK_NOGLOVES)) // the net wraps the whole body, gloves won't help
 		owner.Stun(shock_stun)
 	do_sparks(number = 5, cardinal_only = TRUE, source = src)
 	owner.visible_message(span_danger("The snatcher net glows and shocks [owner]!"), span_userdanger("The snatcher net glows and shocks you!"))
