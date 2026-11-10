@@ -7,15 +7,31 @@
 	charge_time = 4 SECONDS
 	seconds_per_distance = 0
 	max_charge_time = 4 SECONDS
-	scope_only = TRUE
 	charged_cooldown_time = 5 MINUTES
 	charge_alert = "charging..."
 	charge_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_charging.ogg'
 	fire_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_fired.ogg'
 	/// How long the rifle stays overheated after it shoots
 	var/darkmatter_overheat = 15 SECONDS
+	/// How far firing it unscoped throws you back
+	var/hip_recoil_range = 10
+	/// How fast firing it unscoped throws you back
+	var/hip_recoil_speed = 5
 	/// Overlay shown when you're charging the gun
 	var/mutable_appearance/charge_overlay
+
+/obj/item/ammo_casing/energy/gauss/darkmatter/fire_casing(atom/target, mob/living/user, params, distro, quiet, zone_override, spread, atom/fired_from)
+	var/hip_fire = !HAS_TRAIT(user, TRAIT_USER_SCOPED)
+	if(hip_fire && !COOLDOWN_FINISHED(src, charged_cooldown))
+		user.balloon_alert(user, "cycling! [DisplayTimeText(COOLDOWN_TIMELEFT(src, charged_cooldown))]")
+		return
+	. = ..()
+	if(!. || !hip_fire)
+		return
+	on_empowered_fire(user)
+	var/recoil_dir = get_dir(target, user) || REVERSE_DIR(user.dir)
+	user.visible_message(span_danger("[user] is blasted backwards by [user.p_their()] own shot!"), span_userdanger("The recoil sends you flying!"))
+	user.throw_at(get_edge_target_turf(user, recoil_dir), hip_recoil_range, hip_recoil_speed, force = MOVE_FORCE_EXTREMELY_STRONG)
 
 /obj/item/ammo_casing/energy/gauss/darkmatter/on_charge_started(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
 	charge_overlay = mutable_appearance('icons/effects/effects.dmi', "lightning")
