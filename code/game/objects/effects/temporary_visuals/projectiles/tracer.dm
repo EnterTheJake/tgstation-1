@@ -77,56 +77,34 @@
 	var/mid_tiles = max(scaling - cap_padding_tiles, 0)
 	var/mid_count = floor(mid_tiles)
 	var/mid_remainder = mid_tiles - mid_count
-	var/cap_dx = round(sin(angle_override) * cap_dist, 1)
-	var/cap_dy = round(cos(angle_override) * cap_dist, 1)
+	var/cap_dx = round(sin_angle * cap_dist, 1)
+	var/cap_dy = round(cos_angle * cap_dist, 1)
 
-	var/obj/effect/projectile/tracer/cap_start = new /obj/effect/projectile/tracer(loc)
-	cap_start.icon = icon
-	cap_start.icon_state = start_icon_state
-	if(use_pixel_scale)
-		cap_start.appearance_flags |= PIXEL_SCALE
-	else
-		cap_start.appearance_flags &= ~PIXEL_SCALE
-	cap_start.apply_vars(angle_override = angle_override, p_x = p_x - cap_dx, p_y = p_y - cap_dy, color_override = color_override)
-
-	var/obj/effect/projectile/tracer/cap_end = new /obj/effect/projectile/tracer(loc)
-	cap_end.icon = icon
-	cap_end.icon_state = end_icon_state
-	if(use_pixel_scale)
-		cap_end.appearance_flags |= PIXEL_SCALE
-	else
-		cap_end.appearance_flags &= ~PIXEL_SCALE
-	cap_end.apply_vars(angle_override = angle_override, p_x = p_x + cap_dx, p_y = p_y + cap_dy, color_override = color_override)
-
-	beam_cap_effects += cap_start
+	spawn_segment(start_icon_state, angle_override, p_x - cap_dx, p_y - cap_dy, color_override)
 	for(var/i in 1 to mid_count)
 		var/mid_dist = -cap_dist + i * ICON_SIZE_ALL
-		var/mid_dx = round(sin_angle * mid_dist, 1)
-		var/mid_dy = round(cos_angle * mid_dist, 1)
-		var/obj/effect/projectile/tracer/mid_segment = new /obj/effect/projectile/tracer(loc)
-		mid_segment.icon = icon
-		mid_segment.icon_state = mid_icon_state
-		if(use_pixel_scale)
-			mid_segment.appearance_flags |= PIXEL_SCALE
-		else
-			mid_segment.appearance_flags &= ~PIXEL_SCALE
-		mid_segment.apply_vars(angle_override = angle_override, p_x = p_x + mid_dx, p_y = p_y + mid_dy, color_override = color_override)
-		beam_cap_effects += mid_segment
+		spawn_segment(mid_icon_state, angle_override, p_x + round(sin_angle * mid_dist, 1), p_y + round(cos_angle * mid_dist, 1), color_override)
 	if(mid_remainder > 0.01)
 		// Place a shortened final mid segment so it touches both the last full mid and the end cap.
 		var/partial_mid_dist = cap_dist - (ICON_SIZE_ALL / 2) - ((ICON_SIZE_ALL * mid_remainder) / 2)
-		var/partial_mid_dx = round(sin_angle * partial_mid_dist, 1)
-		var/partial_mid_dy = round(cos_angle * partial_mid_dist, 1)
-		var/obj/effect/projectile/tracer/partial_mid_segment = new /obj/effect/projectile/tracer(loc)
-		partial_mid_segment.icon = icon
-		partial_mid_segment.icon_state = mid_icon_state
-		if(use_pixel_scale)
-			partial_mid_segment.appearance_flags |= PIXEL_SCALE
-		else
-			partial_mid_segment.appearance_flags &= ~PIXEL_SCALE
-		partial_mid_segment.apply_vars(angle_override = angle_override, p_x = p_x + partial_mid_dx, p_y = p_y + partial_mid_dy, color_override = color_override, scaling = mid_remainder)
-		beam_cap_effects += partial_mid_segment
-	beam_cap_effects += cap_end
+		spawn_segment(mid_icon_state, angle_override, p_x + round(sin_angle * partial_mid_dist, 1), p_y + round(cos_angle * partial_mid_dist, 1), color_override, mid_remainder)
+	spawn_segment(end_icon_state, angle_override, p_x + cap_dx, p_y + cap_dy, color_override)
+
+/// Spawns a piece of the beam on the turf it visually lands on, clients don't render atoms whose turf is out of view even if their pixel offset puts them on screen
+/obj/effect/projectile/tracer/segmented/proc/spawn_segment(segment_icon_state, angle_override, p_x, p_y, color_override, scaling = 1)
+	var/turf/our_turf = get_turf(src)
+	var/tile_x = round(p_x / ICON_SIZE_X, 1)
+	var/tile_y = round(p_y / ICON_SIZE_Y, 1)
+	var/turf/segment_turf = locate(clamp(our_turf.x + tile_x, 1, world.maxx), clamp(our_turf.y + tile_y, 1, world.maxy), our_turf.z)
+	var/obj/effect/projectile/tracer/segment = new /obj/effect/projectile/tracer(segment_turf)
+	segment.icon = icon
+	segment.icon_state = segment_icon_state
+	if(use_pixel_scale)
+		segment.appearance_flags |= PIXEL_SCALE
+	else
+		segment.appearance_flags &= ~PIXEL_SCALE
+	segment.apply_vars(angle_override = angle_override, p_x = p_x - (segment_turf.x - our_turf.x) * ICON_SIZE_X, p_y = p_y - (segment_turf.y - our_turf.y) * ICON_SIZE_Y, color_override = color_override, scaling = scaling)
+	beam_cap_effects += segment
 
 /obj/effect/projectile/tracer/segmented/Destroy()
 	QDEL_LIST(beam_cap_effects)
