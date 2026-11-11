@@ -14,9 +14,9 @@
 	/// How long the rifle stays overheated after it shoots
 	var/darkmatter_overheat = 15 SECONDS
 	/// How far firing it unscoped throws you back
-	var/hip_recoil_range = 10
+	var/hip_recoil_range = 25
 	/// How fast firing it unscoped throws you back
-	var/hip_recoil_speed = 5
+	var/hip_recoil_speed = 7
 	/// Overlay shown when you're charging the gun
 	var/mutable_appearance/charge_overlay
 
