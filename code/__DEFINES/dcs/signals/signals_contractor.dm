@@ -27,6 +27,11 @@
 /// Called when the gauss rifle processes on the floor
 #define COMSIG_GAUSS_RIFLE_IDLE_PROCESS "gauss_rifle_idle_process"
 
+/// Called when the rifle tries to fire a darkmatter round. Passes (mob/living/user, hip_shot), hip_shot is TRUE for an unscoped shot that's about to go off
+#define COMSIG_GAUSS_RIFLE_DARKMATTER_TRIGGER "gauss_rifle_darkmatter_trigger"
+	/// Return to make the rifle refuse to fire the round
+	#define COMPONENT_DARKMATTER_REFUSED (1<<0)
+
 //---- Contractor Case Signals
 
 /// Called when the gun briefcase is locked

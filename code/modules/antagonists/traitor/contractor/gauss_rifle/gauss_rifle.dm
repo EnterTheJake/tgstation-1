@@ -97,6 +97,10 @@
 		balloon_alert(user, "overheated!")
 		playsound(src, 'sound/machines/buzz/buzz-sigh.ogg', 40, TRUE)
 		return
+	var/obj/item/ammo_casing/energy/gauss/darkmatter/darkmatter_round = astype(chambered)
+	if(darkmatter_round?.refused_shot)
+		darkmatter_round.refused_shot = FALSE
+		return
 	return ..()
 
 /obj/item/gun/energy/gauss_rifle/proc/overheat(duration = overheat_duration)

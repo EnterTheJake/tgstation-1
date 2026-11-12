@@ -1,3 +1,10 @@
+/// Still putting up with you hip firing darkmatter
+#define DARKMATTER_STEVE_ANNOYED 0
+/// Had enough, won't fire darkmatter until you pester it into giving in
+#define DARKMATTER_STEVE_REFUSING 1
+/// Gave in, but every hip fire from now on disappoints it
+#define DARKMATTER_STEVE_RESIGNED 2
+
 /// Raijin Horizon Gauss Rifle dialogue component.
 /datum/component/dialogue_system/contractor_gun
 	dupe_mode = COMPONENT_DUPE_UNIQUE
@@ -25,6 +32,24 @@
 	var/list/nope
 	var/list/pointblank_shot
 	var/list/pointblank_shot_scoped
+
+	//---- Darkmatter hip fire lines, these all play in order
+	/// One line per darkmatter hip fire, the gun refuses the shot after these run out
+	var/list/darkmatter_hip_fire
+	/// The gun has had enough of your hip firing
+	var/list/darkmatter_refusal
+	/// Played while you keep pestering the refusing gun, it gives in after these run out
+	var/list/darkmatter_nope
+	/// The gun lets you fire darkmatter again
+	var/list/darkmatter_concession
+	/// Hip firing darkmatter after the gun gave in
+	var/list/darkmatter_disappointment
+	/// How fed up the gun is with your darkmatter hip firing
+	var/darkmatter_mood = DARKMATTER_STEVE_ANNOYED
+	/// How many darkmatter hip fire lines we went through
+	var/darkmatter_hip_fires = 0
+	/// How many nope lines we went through while refusing
+	var/darkmatter_nags = 0
 
 	/// Time since last idle complaint
 	COOLDOWN_DECLARE(lonely_cooldown)
@@ -349,6 +374,23 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/success_and_failure/failure_2_take2.ogg'),
 	)
 
+	darkmatter_hip_fire = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire2_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire3_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire4_take1.ogg'),
+	)
+	darkmatter_refusal = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/steve_has_had_enough_of_your_bs/darkmatter_stevesaysnope_take1.ogg'),
+	)
+	darkmatter_nope = nope.Copy() // Copied because emit_sound_from_list eats lines out of nope when you shoot while overheated
+	darkmatter_concession = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/reluctant_concession/mode_swap_dark_allow_take2.ogg'),
+	)
+	darkmatter_disappointment = list(
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/disappointment/darkmatter_disappointment_take1.ogg'),
+	)
+
 // XANTODO : Start implementing the lines
 
 /*
@@ -437,31 +479,6 @@
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/dark_matter_singulo_conjured/wtf_have_you_done.ogg'),
 		),
 
-	/* NOT YET IMPLEMENTED
-	When you try to shoot the darkmatter shot without the scope, the gun gets increasingly mad at you for your utter stupidity
-	With every hipfire failure, it progresses through hip_fire_fail
-	On the 5th failure, you get hit by "steve_has_had_enough_of_your_bs" and you can no longer shoot the darkmatter
-
-	Spamming the gun while blocked will remove the block and hit you with "reluctant_concession"
-
-	Fail AGAIN after you got blocked then unblocked. You get "disappointment"
-	*/
-
-		disappointment = list( // Not yet implemented.
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/disappointment/darkmatter_disappointment_take1.ogg'),
-		),
-		hip_fire_fail = list( // Not yet implemented
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire2_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire4_take1.ogg'),
-		),
-		reluctant_concession = list( // Not yet implemented
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/reluctant_concession/mode_swap_dark_allow_take2.ogg'),
-		),
-		steve_has_had_enough_of_your_bs = list( // Not yet implemented
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/steve_has_had_enough_of_your_bs/darkmatter_stevesaysnope_take1.ogg'),
-		),
 	)
 
 	moon_conversion = list( // While acting as a moonatic, all other lines are blocked. The only lines that can play are these ones:
@@ -587,6 +604,10 @@
 	apply_channel_to_sound_list(pointblank_shot_scoped)
 	apply_channel_to_sound_list(greentext)
 	apply_channel_to_sound_list(redtext)
+	apply_channel_to_sound_list(darkmatter_hip_fire)
+	apply_channel_to_sound_list(darkmatter_refusal)
+	apply_channel_to_sound_list(darkmatter_concession)
+	apply_channel_to_sound_list(darkmatter_disappointment)
 
 /datum/component/dialogue_system/contractor_gun/RegisterWithParent()
 	. = ..()
@@ -607,6 +628,7 @@
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_IDLE_PROCESS, PROC_REF(play_idle))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_OVERHEATED_TRYSHOOT, PROC_REF(try_shoot_overheated))
 	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_SCOPE_KICK, PROC_REF(on_point_blank))
+	RegisterSignal(parent, COMSIG_GAUSS_RIFLE_DARKMATTER_TRIGGER, PROC_REF(on_darkmatter_trigger))
 
 /// Helper proc, plays a sound from a given sound pool.
 /datum/component/dialogue_system/contractor_gun/proc/emit_sound_from_list(list/sound_list)
@@ -848,3 +870,42 @@
 	if(HAS_TRAIT(user, TRAIT_USER_SCOPED))
 		sound_pool = pointblank_shot_scoped
 	emit_sound_from_list(sound_pool)
+
+/// Hip firing darkmatter gets the gun more and more fed up with you, until it refuses to fire it at all
+/datum/component/dialogue_system/contractor_gun/proc/on_darkmatter_trigger(datum/source, mob/living/user, hip_shot)
+	SIGNAL_HANDLER
+	switch(darkmatter_mood)
+		if(DARKMATTER_STEVE_REFUSING)
+			pester_about_darkmatter()
+			return COMPONENT_DARKMATTER_REFUSED
+		if(DARKMATTER_STEVE_RESIGNED)
+			if(hip_shot)
+				var/datum/dialogue_sound/sound = darkmatter_disappointment[1]
+				sound.play(location = parent)
+			return NONE
+	if(!hip_shot)
+		return NONE
+	if(darkmatter_hip_fires >= length(darkmatter_hip_fire))
+		darkmatter_mood = DARKMATTER_STEVE_REFUSING
+		var/datum/dialogue_sound/sound = darkmatter_refusal[1]
+		sound.play(location = parent)
+		return COMPONENT_DARKMATTER_REFUSED
+	darkmatter_hip_fires++
+	var/datum/dialogue_sound/sound = darkmatter_hip_fire[darkmatter_hip_fires]
+	sound.play(location = parent)
+	return NONE
+
+/// Trying to fire darkmatter while the gun refuses. Only moves on when the line actually plays, so you have to sit through all of them
+/datum/component/dialogue_system/contractor_gun/proc/pester_about_darkmatter()
+	if(darkmatter_nags < length(darkmatter_nope))
+		var/datum/dialogue_sound/sound = darkmatter_nope[darkmatter_nags + 1]
+		if(sound.play(location = parent))
+			darkmatter_nags++
+		return
+	var/datum/dialogue_sound/sound = darkmatter_concession[1]
+	if(sound.play(location = parent))
+		darkmatter_mood = DARKMATTER_STEVE_RESIGNED
+
+#undef DARKMATTER_STEVE_ANNOYED
+#undef DARKMATTER_STEVE_REFUSING
+#undef DARKMATTER_STEVE_RESIGNED

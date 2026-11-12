@@ -17,12 +17,19 @@
 	var/hip_recoil_range = 25
 	/// How fast firing it unscoped throws you back
 	var/hip_recoil_speed = 7
+	/// Set when the gun refused to fire us, so the rifle doesn't treat it as an empty mag
+	var/refused_shot = FALSE
 	/// Overlay shown when you're charging the gun
 	var/mutable_appearance/charge_overlay
 
 /obj/item/ammo_casing/energy/gauss/darkmatter/fire_casing(atom/target, mob/living/user, params, distro, quiet, zone_override, spread, atom/fired_from)
 	var/hip_fire = !HAS_TRAIT(user, TRAIT_USER_SCOPED)
-	if(hip_fire && !COOLDOWN_FINISHED(src, charged_cooldown))
+	var/cooled_down = COOLDOWN_FINISHED(src, charged_cooldown)
+	if(SEND_SIGNAL(loc, COMSIG_GAUSS_RIFLE_DARKMATTER_TRIGGER, user, hip_fire && cooled_down) & COMPONENT_DARKMATTER_REFUSED)
+		refused_shot = TRUE
+		user.balloon_alert(user, "it refuses to fire!")
+		return
+	if(hip_fire && !cooled_down)
 		user.balloon_alert(user, "cycling! [DisplayTimeText(COOLDOWN_TIMELEFT(src, charged_cooldown))]")
 		return
 	. = ..()
