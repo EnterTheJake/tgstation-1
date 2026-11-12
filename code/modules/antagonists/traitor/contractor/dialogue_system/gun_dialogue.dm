@@ -33,7 +33,7 @@
 	var/list/pointblank_shot
 	var/list/pointblank_shot_scoped
 
-	//---- Darkmatter hip fire lines, these all play in order
+	//---- Darkmatter hip fire lines, these all play in order and the shot only goes off if its line gets to play
 	/// One line per darkmatter hip fire, the gun refuses the shot after these run out
 	var/list/darkmatter_hip_fire
 	/// The gun has had enough of your hip firing
@@ -375,20 +375,20 @@
 	)
 
 	darkmatter_hip_fire = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire2_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire3_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire4_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire1_take1.ogg', priority = 1),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire2_take1.ogg', priority = 1),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire3_take1.ogg', priority = 1),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/hip_fire_fail/darkmatter_misfire4_take1.ogg', priority = 1),
 	)
 	darkmatter_refusal = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/steve_has_had_enough_of_your_bs/darkmatter_stevesaysnope_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/steve_has_had_enough_of_your_bs/darkmatter_stevesaysnope_take1.ogg', priority = 1),
 	)
 	darkmatter_nope = nope.Copy() // Copied because emit_sound_from_list eats lines out of nope when you shoot while overheated
 	darkmatter_concession = list(
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/reluctant_concession/mode_swap_dark_allow_take2.ogg'),
 	)
 	darkmatter_disappointment = list(
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/disappointment/darkmatter_disappointment_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/mode_swap_dark_matter/disappointment/darkmatter_disappointment_take1.ogg', priority = 1),
 	)
 
 // XANTODO : Start implementing the lines
@@ -635,8 +635,10 @@
 	if(!length(sound_list))
 		return
 	var/datum/dialogue_sound/sound = pick_available_sound(sound_list, parent, parent)
+	if(isnull(sound))
+		return
 	sound_list -= sound
-	sound?.play(location = parent)
+	sound.play(location = parent)
 	var/line_duration = rustg_sound_length(sound.sound_path)
 	SEND_SIGNAL(parent, COMSIG_DIALOGUE_SOUND_EMITTED, line_duration)
 
@@ -871,7 +873,8 @@
 		sound_pool = pointblank_shot_scoped
 	emit_sound_from_list(sound_pool)
 
-/// Hip firing darkmatter gets the gun more and more fed up with you, until it refuses to fire it at all
+/// Hip firing darkmatter gets the gun more and more fed up with you, until it refuses to fire it at all.
+/// A hip shot only goes off if its line gets to play, so spamming while the gun is still talking does nothing
 /datum/component/dialogue_system/contractor_gun/proc/on_darkmatter_trigger(datum/source, mob/living/user, hip_shot)
 	SIGNAL_HANDLER
 	switch(darkmatter_mood)
@@ -879,20 +882,21 @@
 			pester_about_darkmatter()
 			return COMPONENT_DARKMATTER_REFUSED
 		if(DARKMATTER_STEVE_RESIGNED)
-			if(hip_shot)
-				var/datum/dialogue_sound/sound = darkmatter_disappointment[1]
-				sound.play(location = parent)
-			return NONE
+			if(!hip_shot)
+				return NONE
+			var/datum/dialogue_sound/sound = darkmatter_disappointment[1]
+			return sound.play(location = parent) ? NONE : COMPONENT_DARKMATTER_REFUSED
 	if(!hip_shot)
 		return NONE
 	if(darkmatter_hip_fires >= length(darkmatter_hip_fire))
-		darkmatter_mood = DARKMATTER_STEVE_REFUSING
 		var/datum/dialogue_sound/sound = darkmatter_refusal[1]
-		sound.play(location = parent)
+		if(sound.play(location = parent))
+			darkmatter_mood = DARKMATTER_STEVE_REFUSING
+		return COMPONENT_DARKMATTER_REFUSED
+	var/datum/dialogue_sound/sound = darkmatter_hip_fire[darkmatter_hip_fires + 1]
+	if(!sound.play(location = parent))
 		return COMPONENT_DARKMATTER_REFUSED
 	darkmatter_hip_fires++
-	var/datum/dialogue_sound/sound = darkmatter_hip_fire[darkmatter_hip_fires]
-	sound.play(location = parent)
 	return NONE
 
 /// Trying to fire darkmatter while the gun refuses. Only moves on when the line actually plays, so you have to sit through all of them
