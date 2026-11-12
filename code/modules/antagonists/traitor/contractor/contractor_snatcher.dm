@@ -20,7 +20,11 @@
 	id = "snatcher net"
 	alert_type = /atom/movable/screen/alert/status_effect/snatcher_net
 	duration = -1
-	var/shock_delay = 7 SECONDS
+	/// How long to wait before each shock, the net comes off on its own after the last one.
+	/// The first one comes too fast to tear the net off by hand (resist_timer), only cutting it is quick enough
+	var/list/shock_delays = list(3 SECONDS, 8 SECONDS, 8 SECONDS)
+	/// How many times the net shocked its victim so far
+	var/shocks_done = 0
 	/// How long each shock stuns the victim for, this is what interrupts them trying to break free
 	var/shock_stun = 0.5 SECONDS
 	var/time_to_disabling = 1 MINUTES
@@ -80,7 +84,9 @@
 	new /obj/effect/decal/cleanable/ash(get_turf(owner))
 
 /datum/status_effect/snatcher_net/proc/delayed_shock()
-	shock_timer = addtimer(CALLBACK(src, PROC_REF(shock_victim)), shock_delay, TIMER_STOPPABLE)
+	if(shocks_done >= length(shock_delays))
+		return
+	shock_timer = addtimer(CALLBACK(src, PROC_REF(shock_victim)), shock_delays[shocks_done + 1], TIMER_STOPPABLE)
 
 /datum/status_effect/snatcher_net/proc/emp_act(atom/target, severity, protection)
 	SIGNAL_HANDLER
@@ -99,13 +105,24 @@
 	if(QDELETED(owner))
 		return
 	shocking = TRUE
-	if(owner.electrocute_act(shock_damage = 5, source = src, siemens_coeff = 1, flags = SHOCK_KNOCKDOWN | SHOCK_NOGLOVES)) // the net wraps the whole body, gloves won't help
+	shocks_done++
+	var/shocked = owner.electrocute_act(shock_damage = 5, source = src, siemens_coeff = 1, flags = SHOCK_KNOCKDOWN | SHOCK_NOGLOVES) // the net wraps the whole body, gloves won't help
+	// Borgs shrug off every shock (on_silicon_shocked blocks it), but the net still stuns them
+	if(shocked || iscyborg(owner))
 		owner.Stun(shock_stun)
 	do_sparks(number = 5, cardinal_only = TRUE, source = src)
 	owner.visible_message(span_danger("The snatcher net glows and shocks [owner]!"), span_userdanger("The snatcher net glows and shocks you!"))
 	owner.update_appearance(UPDATE_OVERLAYS)
+	if(shocks_done >= length(shock_delays))
+		// that was the last one, the net burns itself out once the stun wears off
+		addtimer(CALLBACK(src, PROC_REF(burn_out)), shock_stun)
+		return
 	delayed_shock()
 	addtimer(CALLBACK(src, PROC_REF(stop_shocking)), 5 SECONDS)
+
+/// The net is done shocking and falls apart
+/datum/status_effect/snatcher_net/proc/burn_out()
+	qdel(src)
 
 /datum/status_effect/snatcher_net/proc/stop_shocking()
 	shocking = FALSE

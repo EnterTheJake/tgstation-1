@@ -7,6 +7,7 @@
 	default_skin = "contractor"
 	complexity_max = 25
 	armor_type = /datum/armor/mod_theme_contractor
+	siemens_coefficient = 0
 	slowdown_deployed = 0
 	hearing_protection = EAR_PROTECTION_NORMAL
 	variants = list(
