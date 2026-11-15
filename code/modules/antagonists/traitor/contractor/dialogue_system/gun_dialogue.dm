@@ -17,6 +17,11 @@
 	//---- Gun has a lot of lines, means we got a lot of lists for different situations. Buncha snowflake
 	/// Job-title keyed kidnapped sound pools (e.g. JOB_HEAD_OF_PERSONNEL => list(...)).
 	var/list/kidnapped_sounds_by_rank
+	/// Fallback list of sounds for any kidnapee who doesn't have anything special about them whatsoever
+	var/list/user_paid
+	/// Tracks wether this is our first kidnapping, remains TRUE until it happens
+	var/first_kidnapping = TRUE
+	var/list/user_paid_first_time
 	/// Ammo-casing-type keyed mode swap sound pools.
 	var/list/mode_swap_sounds_by_ammo_type
 	var/list/mode_unlocked
@@ -106,64 +111,46 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/on_pickup/on_pickup7_take5.ogg'),
 	)
 
-	// XANTODO: Make it so that there's specific checks to whoever gets kidnapped for stuff like antag and shit
-	kidnapped_sounds_by_rank = list(
+	kidnapped_sounds_by_rank = list( // Special lines if we kidnap people with particular conditions (antag/head/dead)
+		"DEAD" = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_corpse_1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_corpse_2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_corpse_3_take1.ogg'),
+		),
+		"DEAD HEAD" = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_important_corpse_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_important_corpse_2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_important_corpse_3_take4.ogg'),
+		),
 		JOB_CAPTAIN = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/captain/kidnapped_captain_1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/captain/kidnapped_captain_2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/captain/kidnapped_captain_3_take1.ogg'),
 		),
-		JOB_CHIEF_ENGINEER = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/ce/kidnapped_ce_1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/ce/kidnapped_ce_2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/ce/kidnapped_ce_3_take2.ogg'),
+		JOB_HEAD_OF_PERSONNEL = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_2_take1.ogg'), // XANTODO Cant play if Ian is dead
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_3_take3.ogg'), // XANTODO Has to play when you kill Ian
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_4_take1.ogg'),
 		),
-		changeling = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling_4_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling2_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling3_take2.ogg'),
-		),
-		JOB_CLOWN = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/clown/kidnapped_clown_1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/clown/kidnapped_clown_2_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/clown/kidnapped_clown_3_take1.ogg'),
+		JOB_RESEARCH_DIRECTOR = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/rd/kidnapped_rd_1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/rd/kidnapped_rd_2_take1.ogg'),
 		),
 		JOB_CHIEF_MEDICAL_OFFICER = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/cmo/kidnapped_cmo_1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/cmo/kidnapped_cmo_2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/cmo/kidnapped_cmo_3_take2.ogg'),
 		),
-		corpse = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_corpse_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_corpse_2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_corpse_3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_important_corpse_1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_important_corpse_2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/corpse/kidnapped_important_corpse_3_take4.ogg'),
-		),
-		heretic = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_ascended_heretic_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_heretic1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_heretic2_take3.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_heretic3_take2.ogg'),
-		),
-		JOB_HEAD_OF_PERSONNEL = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_2_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_3_take3.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hop/kidnapped_hop_4_take1.ogg'),
+		JOB_CHIEF_ENGINEER = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/ce/kidnapped_ce_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/ce/kidnapped_ce_2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/ce/kidnapped_ce_3_take2.ogg'),
 		),
 		JOB_HEAD_OF_SECURITY = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hos/kidnapped_hos_1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hos/kidnapped_hos_2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/hos/kidnapped_hos_3_take2.ogg'),
-		),
-		JOB_MIME = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_1_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_2_take2.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_3_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_4_take1.ogg'),
 		),
 		JOB_QUARTERMASTER = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/qm/kidnapped_qm_1_take2.ogg'),
@@ -171,22 +158,56 @@
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/qm/kidnapped_qm_3_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/qm/kidnapped_qm_4_take1.ogg'),
 		),
-		JOB_RESEARCH_DIRECTOR = list(
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/rd/kidnapped_rd_1_take1.ogg'),
-			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/rd/kidnapped_rd_2_take1.ogg'),
+		JOB_MIME = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_2_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_3_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/mime/kidnapped_mime_4_take1.ogg'),
 		),
-		spy = list(
+		JOB_CLOWN = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/clown/kidnapped_clown_1_take2.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/clown/kidnapped_clown_2_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/clown/kidnapped_clown_3_take1.ogg'),
+		),
+		/datum/antagonist/changeling = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling_4_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling2_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/changeling/kidnapped_changeling3_take2.ogg'),
+		),
+		/datum/antagonist/heretic = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_heretic1_take1.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_heretic2_take3.ogg'),
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_heretic3_take2.ogg'),
+		),
+		"Ascended Heretic" = list(
+			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/heretic/kidnapped_ascended_heretic_take1.ogg'),
+		),
+		/datum/antagonist/spy = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/spy/kidnapped_spy_1_take3.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/spy/kidnapped_spy_2_take3.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/spy/kidnapped_spy_3_take1.ogg'),
+		),
+		"Dead Spy" = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/spy/kidnapped_spy_dead_take3.ogg'),
 		),
-		traitor = list(
+		/datum/antagonist/traitor = list(
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/traitor/kidnapped_traitor_4_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/traitor/kidnapped_traitor1_take2.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/traitor/kidnapped_traitor2_take1.ogg'),
 			new /datum/dialogue_sound('sound/items/weapons/contractor_gun/kidnapped/traitor/kidnapped_traitor3_take1.ogg'),
 		),
+	)
+
+	// kidnapped_sounds_by_rank will take priority. If there are no special lines to the person we kidnapped, we fall back to "user_paid" which is our standard basically
+	user_paid = list( // Successfully kidnapped someone
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_1_take1.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_2_take4.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_3_take2.ogg'),
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_5_take1.ogg'),
+	)
+	user_paid_first_time = list( // Contractor's first kidnapping! I time worth celebrating!
+		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_first_time.ogg'),
 	)
 
 	mode_unlocked = list(
@@ -545,32 +566,7 @@
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_on_new_user_1_take1.ogg'),
 		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/speaker/speaker_on_new_user_2_take1.ogg'),
 	)
-
-	// kidnapped_sounds_by_rank will take priority. If there are no special lines to the person we kidnapped, we fall back to "user_paid" which is our standard basically
-	user_paid = list( // Successfully kidnapped someone
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_1_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_2_take4.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_3_take2.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_5_take1.ogg'),
-		new /datum/dialogue_sound('sound/items/weapons/contractor_gun/user_paid/user_paid_first_time.ogg'), // First kidnapping, non-repeatable the rest are RNG
-	)
-
-
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -583,6 +579,8 @@
 /datum/component/dialogue_system/contractor_gun/apply_dialogue_channel()
 	. = ..()
 	apply_channel_to_sound_pool_list(assoc_to_values(kidnapped_sounds_by_rank))
+	apply_channel_to_sound_list(user_paid)
+	apply_channel_to_sound_list(user_paid_first_time)
 	apply_channel_to_sound_pool_list(assoc_to_values(mode_swap_sounds_by_ammo_type))
 	apply_channel_to_sound_pool_list(assoc_to_values(mode_unlocked))
 	apply_channel_to_sound_list(unathorized_user)
@@ -778,10 +776,49 @@
 /datum/component/dialogue_system/contractor_gun/proc/on_kidnapped(mob/source, mob/living/victim)
 	SIGNAL_HANDLER
 
-	var/victim_rank = victim?.mind?.assigned_role?.title
+	var/victim_rank = get_special_rank(victim)
+	var/list/sound_pool = user_paid
 	var/list/sounds_for_rank = kidnapped_sounds_by_rank?[victim_rank]
-	var/datum/dialogue_sound/sound = pick_available_sound(sounds_for_rank, victim, parent)
+	if(length(sounds_for_rank))
+		sound_pool = sounds_for_rank
+
+	if(first_kidnapping)
+		first_kidnapping = FALSE
+		if(victim.stat != DEAD) // If our first victim is dead, we will never hear this wonderful line
+			sound_pool = user_paid_first_time
+
+	var/datum/dialogue_sound/sound = pick_available_sound(sound_pool, victim, parent)
 	sound?.delayed_play(victim, parent, 3 SECONDS)
+
+
+/**
+ * Gets the rank of our victim, will return a special rank if there is one based on priority of things we care about
+ * Returns the victim's job if there's nothing else we look for
+ */
+/datum/component/dialogue_system/contractor_gun/proc/get_special_rank(mob/living/victim)
+	if(!victim) // ?????
+		return
+	// Priority: Corpse -> Antagonist -> Head of staff
+	if(IS_SPY(victim))
+		if(victim.stat == DEAD) // Spy has a snowflake line for dead spies
+			return "Dead Spy"
+		return /datum/antagonist/spy
+
+	if(IS_CHANGELING(victim))
+		return /datum/antagonist/changeling
+
+	if(victim.stat == DEAD)
+		if(victim?.mind?.assigned_role?.job_flags & JOB_HEAD_OF_STAFF)
+			return "DEAD HEAD"
+		return "DEAD"
+	var/datum/antagonist/heretic/heretic_antag = GET_HERETIC(victim)
+	if(heretic_antag)
+		if(heretic_antag.ascended)
+			return "Ascended Heretic" // Lol, Lmao, even!
+		return /datum/antagonist/heretic
+	if(IS_TRAITOR(victim))
+		return /datum/antagonist/traitor
+	return victim?.mind?.assigned_role?.title
 
 /datum/component/dialogue_system/contractor_gun/proc/on_mode_changed(obj/item/gun/energy/gauss_rifle/source, mob/living/user, obj/item/ammo_casing/energy/new_mode)
 	SIGNAL_HANDLER
