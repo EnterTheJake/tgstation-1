@@ -12,7 +12,9 @@
 	cell = /obj/item/stock_parts/power_store/cell/bluespace
 	SET_BASE_PIXEL((ICON_SIZE_X - CONTRACTOR_BORG_ICON_SIZE) * 0.5, -8)
 	var/hovering = FALSE
+	/// Is the chassis supposed to look as if it's open for the animation
 	var/chassis_open = FALSE
+	///Are we in the process of "seating" someone
 	var/ingesting = FALSE
 	var/resisting = FALSE
 	/// whether we are mid-walking, we have a separate state during walking
