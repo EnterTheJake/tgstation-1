@@ -62,10 +62,9 @@
 	owner?.remove_shared_particles(/particles/smoke/burning/small)
 	return ..()
 
-/// Applies ongoing burn damage from the microfusion cascade while embedded
+/// Applies ongoing burn damage from the empowered shot while embedded
 /datum/embedding/gauss_thermite/process_effect(seconds_per_tick)
 	owner_limb.receive_damage(burn = overtime_damage * seconds_per_tick)
-	// The cascade feeds the fire for as long as the round stays embedded.
 	owner.adjust_fire_stacks(seconds_per_tick)
 	owner.ignite_mob()
 	return FALSE

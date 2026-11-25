@@ -85,14 +85,17 @@
 	empowered_shot = TRUE
 	return GAUSS_CHARGE_EMPOWERED
 
+/// The user that the charging cares about
 /obj/item/ammo_casing/energy/gauss/proc/get_charge_focus(atom/target, mob/living/user)
 	return user
 
+/// The dynamic duration of charging needed
 /obj/item/ammo_casing/energy/gauss/proc/get_charge_time(mob/living/user, atom/focus)
 	if(!seconds_per_distance)
 		return charge_time
 	return clamp(get_dist(user, focus) * seconds_per_distance, charge_time, max_charge_time)
 
+/// The charge fails if the shooter cancels the zoom-in
 /obj/item/ammo_casing/energy/gauss/proc/charge_checks(mob/living/user, atom/focus)
 	return HAS_TRAIT(user, TRAIT_USER_SCOPED)
 
@@ -102,10 +105,12 @@
 /obj/item/ammo_casing/energy/gauss/proc/on_charge_ended(mob/living/user, obj/item/gun/energy/gauss_rifle/rifle)
 	return
 
+/// What runs after a empowered round is fired, handles cooldowns and overheating
 /obj/item/ammo_casing/energy/gauss/proc/on_empowered_fire(mob/living/user)
 	if(charged_cooldown_time)
 		COOLDOWN_START(src, charged_cooldown, charged_cooldown_time)
 
+/// Extra charge used for a empowered shot
 /obj/item/ammo_casing/energy/gauss/proc/get_charge_surcharge()
 	if(!empowered_shot || isnull(charged_e_cost))
 		return 0

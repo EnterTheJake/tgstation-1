@@ -122,10 +122,12 @@
 	victim.Knockdown(charged_knockdown)
 	kick_victim(victim)
 
+/// tosses the victim a bit, lotta momentum in that thing
 /obj/projectile/bullet/gauss/gyro/proc/kick_victim(mob/living/victim)
 	var/throw_target = get_edge_target_turf(victim, angle2dir(angle))
 	victim.safe_throw_at(throw_target, impact_throw_distance, 3, firer, force = MOVE_FORCE_STRONG)
 
+/// shocks the target even if in a closet
 /obj/projectile/bullet/gauss/gyro/proc/shock_target(mob/living/victim)
 	var/obj/structure/closet/hiding_spot = victim.loc
 	victim.visible_message(

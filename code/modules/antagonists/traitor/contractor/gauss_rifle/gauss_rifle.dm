@@ -25,7 +25,7 @@
 	force = 11
 	fire_delay = 4
 	fire_sound = 'sound/items/weapons/thermalpistol.ogg'
-	/// If TRUE, scope art stretches fullscreen. If FALSE, it renders centered.
+	/// If TRUE, the scope overlay stretches for the entire screen
 	var/scope_overlay_stretches = FALSE
 	var/atom/movable/screen/gauss_ammo_display/ammo_display
 	var/overheated = FALSE
@@ -266,11 +266,10 @@
 	icon_state = "standard"
 	caliber = CALIBER_GAUSS
 	max_ammo = 5
-	// The rifle fabricates its own rounds from nanites, so the magazine only carries the pattern.
 	start_empty = TRUE
 	icon_state = ".50mag"
 	ammo_type = /obj/item/ammo_casing/energy/gauss
-	/// Blurb for describing the projectile type itself as a additional blurb
+	/// Additional description of the round the magazine itself produces
 	var/pattern_desc = "The projectile delivers enough kinetic energy into an impacted surface to liquify surrounding organic matter it passes through or render vehicles inoperable if aimed towards an engine block or battery pack."
 
 /obj/item/ammo_box/magazine/gauss/examine(mob/user)

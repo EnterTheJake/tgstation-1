@@ -9,7 +9,7 @@
 	max_charge_time = 4 SECONDS
 	charged_cooldown_time = 5 MINUTES
 	charge_alert = "charging..."
-	charge_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_charging.ogg'
+	charge_sound = 'sound/effects/magic/lightning_chargeup.ogg'
 	fire_sound = 'sound/items/weapons/contractor_gun/_bullet_sounds/darkmatter_fired.ogg'
 	/// How long the rifle stays overheated after it shoots
 	var/darkmatter_overheat = 15 SECONDS
@@ -58,7 +58,7 @@
 	var/obj/item/gun/energy/gauss_rifle/rifle = astype(loc)
 	if(isnull(rifle))
 		return
-	rifle.overheat(darkmatter_overheat)
+	rifle.overheat(antimatter_overheat)
 	rifle.cell?.use(rifle.cell.charge, force = TRUE)
 
 /obj/projectile/bullet/gauss/darkmatter
@@ -111,7 +111,7 @@
 	/// How long near-sightedness lasts after a victim is shot
 	var/vision_narrow_duration = 15 SECONDS
 	var/pull_radius = 1
-	/// Delay for the darkmatter discharge after the pre-firing line warning.
+	/// Delay to account for the warning animation before we run the actual effects
 	var/discharge_delay = 0.8 SECONDS
 	var/beam_lifetime = 2 SECONDS
 	var/pulse_interval = 0.3 SECONDS
@@ -203,6 +203,7 @@
 	if(knockback_cooldowns[victim_ref] && world.time < knockback_cooldowns[victim_ref])
 		return
 	knockback_cooldowns[victim_ref] = world.time + knockback_cooldown
+	// Launch along the line toward the true endpoint
 	var/throw_dir = (end_turf && get_turf(victim) != end_turf) ? get_dir(victim, end_turf) : beam_dir
 	victim.safe_throw_at(get_edge_target_turf(victim, throw_dir), length(beam_turfs), 5, firer, force = MOVE_FORCE_EXTREMELY_STRONG)
 
@@ -222,9 +223,10 @@
 	else
 		victim.apply_status_effect(/datum/status_effect/frail)
 
-/datum/darkmatter_discharge/proc/narrow_vision(mob/living/victim)
-	victim.assign_nearsightedness(GAUSS_DARKMATTER_TRAIT, 2, FALSE)
-	addtimer(CALLBACK(victim, TYPE_PROC_REF(/mob/living, remove_status_effect), /datum/status_effect/grouped/nearsighted, GAUSS_DARKMATTER_TRAIT), vision_narrow_duration)
+/// Shell-shocked, you're near-sighted for a short bit
+/datum/antimatter_discharge/proc/narrow_vision(mob/living/victim)
+	victim.assign_nearsightedness(GAUSS_ANTIMATTER_TRAIT, 2, FALSE)
+	addtimer(CALLBACK(victim, TYPE_PROC_REF(/mob/living, remove_status_effect), /datum/status_effect/grouped/nearsighted, GAUSS_ANTIMATTER_TRAIT), vision_narrow_duration)
 
 /datum/darkmatter_discharge/proc/end_discharge()
 	discharging = FALSE
@@ -237,7 +239,8 @@
 	firer_ref = null
 	return ..()
 
-/obj/effect/temp_visual/darkmatter_field
+/// Visual indicator for where you're gonna get pulled into the AOE
+/obj/effect/temp_visual/antimatter_field
 	icon = null
 	icon_state = null
 	duration = 1.5 SECONDS
@@ -254,7 +257,7 @@
 	if(particles)
 		particles.spawning = 0
 
-/obj/effect/temp_visual/darkmatter_anomaly
+/obj/effect/temp_visual/antimatter_anomaly
 	icon = 'icons/effects/effects.dmi'
 	icon_state = "shield2"
 	duration = 2 SECONDS
