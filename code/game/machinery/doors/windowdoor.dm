@@ -371,6 +371,7 @@
 
 /obj/machinery/door/window/emag_act(mob/user, obj/item/card/emag/emag_card)
 	if(!operating && density && !(obj_flags & EMAGGED))
+		emag_card?.use_charge(user)
 		obj_flags |= EMAGGED
 		operating = TRUE
 		flick("[base_state]spark", src)

@@ -38,7 +38,6 @@
 		/obj/item/guardian_creator/wizard = list(PAYCHECK_CREW * 5, INFINITY, "Good work retrieving the relic"),
 		/obj/item/guardian_creator/carp = list(PAYCHECK_CREW * 5, INFINITY, "Good work retrieving the relic"),
 		/obj/item/card/emag = list(PAYCHECK_CREW * 20, INFINITY, "Good work retrieving the contraband"),
-		/obj/item/card/emag/doorjack = list(PAYCHECK_CREW * 20, INFINITY, "Good work retrieving the contraband"),
 		/obj/item/card/emag/battlecruiser = list(PAYCHECK_CREW * 20, INFINITY, "Good work retrieving the con- oh, I recognize this, I'll see if I can scramble a team for the station"),//to-do, spawn a red alert security ert if this item is sold
 		/obj/item/disk/nuclear/fake = list(PAYCHECK_CREW * 20, INFINITY, "Good work retrieving the contraband, hard to tell these apart"),
 		/obj/item/gun/ballistic/revolver/syndicate/badass = list(PAYCHECK_CREW * 20, INFINITY, "Good work retrieving the contraband"),

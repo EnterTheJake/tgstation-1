@@ -99,11 +99,6 @@
 	template_item_type = /obj/item/card/emag
 	valid_slots = ITEM_SLOT_HANDS|ITEM_SLOT_LPOCKET|ITEM_SLOT_RPOCKET
 
-/datum/hallucination/fake_item/emag/make_fake_item(where_to_put_it, equip_flags)
-	if(prob(50))
-		template_item_type  = /obj/item/card/emag/doorjack
-	return ..()
-
 /datum/hallucination/fake_item/flashbang
 	template_item_type  = /obj/item/grenade/flashbang
 	valid_slots = ITEM_SLOT_HANDS

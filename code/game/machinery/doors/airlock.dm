@@ -1526,9 +1526,7 @@
 
 /obj/machinery/door/airlock/emag_act(mob/user, obj/item/card/emag/emag_card)
 	if(!operating && density && hasPower() && !(obj_flags & EMAGGED))
-		if(istype(emag_card, /obj/item/card/emag/doorjack))
-			var/obj/item/card/emag/doorjack/doorjack_card = emag_card
-			doorjack_card.use_charge(user)
+		emag_card?.use_charge(user)
 		set_machine_stat(machine_stat | MAINT) // flash the airlock lights and display some sparks
 		set_airlock_state(AIRLOCK_CLOSED)
 		operating = TRUE

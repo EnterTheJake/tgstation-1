@@ -115,13 +115,6 @@
 	item = /obj/item/storage/belt/military
 	cost = 1
 
-/datum/uplink_item/device_tools/doorjack
-	name = "Airlock Authentication Override Card"
-	desc = "A specialized cryptographic sequencer specifically designed to override station airlock access codes. \
-			After hacking a certain number of airlocks, the device will require some time to recharge."
-	item = /obj/item/card/emag/doorjack
-	cost = 3
-
 /datum/uplink_item/device_tools/fakenucleardisk
 	name = "Decoy Nuclear Authentication Disk"
 	desc = "It's just a normal disk. Visually it's identical to the real deal, but it won't hold up under closer scrutiny by the Captain. \
@@ -210,9 +203,9 @@
 /datum/uplink_item/device_tools/emag
 	name = "Cryptographic Sequencer"
 	desc = "The cryptographic sequencer, electromagnetic card, or emag, is a small card that unlocks hidden functions \
-			in electronic devices, subverts intended functions, and easily breaks security mechanisms. Cannot be used to open airlocks."
+			in electronic devices, subverts intended functions, and easily breaks security mechanisms. Can also override airlock access codes, but only a few times before it needs time to recharge."
 	item = /obj/item/card/emag
-	cost = 4
+	cost = 5
 
 /datum/uplink_item/device_tools/stimpack
 	name = "Stimpack"
